@@ -21,11 +21,11 @@ namespace ProjectHymn.Combat
             new PhrasePattern(d.displayName, d.pattern.ToArray(), d.requiredBeatsPerMeasure, d);
     }
 
-    public enum RegisterOutcome { Accepted, DoubleInput, Missed }
+    public enum RegisterOutcome { Accepted, DoubleInput, OffBeat }
 
     /// <summary>
     /// Records one action per beat and matches the longest equipped phrase that ends on the latest beat.
-    /// Beats with no input count as Rests. A miss (or a second input on the same beat) breaks the chain.
+    /// Beats with no input count as Rests. An off-beat action (or a second input on the same beat) breaks the chain.
     /// Also tracks full measures for the Bar Finisher. Pure C#.
     /// </summary>
     public sealed class ComboEngine
@@ -106,8 +106,8 @@ namespace ProjectHymn.Combat
             return RegisterOutcome.Accepted;
         }
 
-        /// <summary>Register a mistimed input. Breaks any phrase and the current bar.</summary>
-        public void RegisterMiss(BeatInfo beat) => Break(beat);
+        /// <summary>Register an off-beat action. Breaks any phrase and the current bar.</summary>
+        public void RegisterOffBeat(BeatInfo beat) => Break(beat);
 
         void Break(BeatInfo beat)
         {

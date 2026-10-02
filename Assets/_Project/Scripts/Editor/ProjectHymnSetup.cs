@@ -33,7 +33,7 @@ namespace ProjectHymn.EditorTools
 
             var phrases = CreatePhrases();
             var theme1 = CreateSong("BattleTheme1", "https://www.youtube.com/watch?v=Z3l0ehUm4lM",
-                new TempoSection(8, 140f, 4));
+                new TempoSection(112, 130f, 4));
             var theme2 = CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
                 new TempoSection(4, 150f, 4),
                 new TempoSection(4, 150f, 3),
@@ -59,6 +59,8 @@ namespace ProjectHymn.EditorTools
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.08f, 0.06f, 0.14f);
             camGo.transform.position = new Vector3(0, 0, -10);
+            // Environment pulse replaces the beat ring (GDD).
+            var pulse = camGo.AddComponent<BackgroundPulse>();
 
             // Conductor
             var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
@@ -94,6 +96,15 @@ namespace ProjectHymn.EditorTools
             FitToSize(dummy.transform, dsr.sprite, new Vector2(1.2f, 1.6f));
             dummy.GetComponent<BoxCollider2D>().size = dsr.sprite.bounds.size;
 
+            SetRef(pulse, "conductor", conductor);
+
+            // Feedback: hit-stop, key-matched quantized hit sounds, finisher shake.
+            var feedbackGo = new GameObject("CombatFeedback", typeof(CombatFeedback));
+            var feedback = feedbackGo.GetComponent<CombatFeedback>();
+            SetRef(feedback, "combat", combat);
+            SetRef(feedback, "conductor", conductor);
+            SetRef(feedback, "cameraRig", camGo.transform);
+
             BuildHud(conductor, combat, circle, square);
 
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
@@ -101,7 +112,7 @@ namespace ProjectHymn.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate.");
+            Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate. Off-beat actions cost stamina.");
         }
 
         static void BuildHud(Conductor conductor, BeatCombatController combat, Sprite circle, Sprite square)
@@ -122,6 +133,7 @@ namespace ProjectHymn.EditorTools
 
             var ring = NewImage("BeatRing", canvasGo.transform, circle, new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(180, 180));
             ring.raycastTarget = false;
+            ring.gameObject.SetActive(false); // optional accessibility cue, off by default (GDD)
 
             var pipRow = new GameObject("MeasurePips", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             var pipRt = (RectTransform)pipRow.transform;
@@ -149,6 +161,21 @@ namespace ProjectHymn.EditorTools
             grooveFill.fillMethod = Image.FillMethod.Horizontal;
             grooveFill.fillAmount = 0f;
 
+            var staminaLabel = NewText("StaminaLabel", canvasGo.transform, font, 22, new Vector2(0f, 1f), new Vector2(230, -122), new Vector2(400, 28));
+            staminaLabel.alignment = TextAnchor.MiddleLeft;
+            staminaLabel.text = "STAMINA";
+            var staminaBg = NewImage("StaminaBack", canvasGo.transform, square, new Vector2(0f, 1f), new Vector2(230, -150), new Vector2(400, 14));
+            staminaBg.color = new Color(1, 1, 1, 0.15f);
+            var staminaFill = NewImage("StaminaFill", canvasGo.transform, square, new Vector2(0f, 1f), new Vector2(230, -150), new Vector2(400, 14));
+            staminaFill.color = new Color(0.35f, 0.9f, 0.55f);
+            staminaFill.type = Image.Type.Filled;
+            staminaFill.fillMethod = Image.FillMethod.Horizontal;
+            staminaFill.fillAmount = 1f;
+
+            var score = NewText("Score", canvasGo.transform, font, 40, new Vector2(1f, 1f), new Vector2(-230, -50), new Vector2(400, 50));
+            score.alignment = TextAnchor.MiddleRight;
+            score.text = "0";
+
             var hud = canvasGo.GetComponent<HymnHud>();
             SetRef(hud, "conductor", conductor);
             SetRef(hud, "combat", combat);
@@ -161,6 +188,8 @@ namespace ProjectHymn.EditorTools
             SetRef(hud, "grooveText", groove);
             SetRef(hud, "grooveFill", grooveFill);
             SetRef(hud, "bannerText", banner);
+            SetRef(hud, "staminaFill", staminaFill);
+            SetRef(hud, "scoreText", score);
 
             var cal = canvasGo.GetComponent<CalibrationPanel>();
             SetRef(cal, "conductor", conductor);
@@ -205,6 +234,15 @@ namespace ProjectHymn.EditorTools
             s.referenceUrl = url;
             s.loop = true;
             s.sections = new List<TempoSection>(sections);
+            if (file == "BattleTheme1")
+            {
+                // Measured from the OC ReMix track: 130 BPM, 4/4, first downbeat 0.244 s, key E minor.
+                s.firstBeatOffset = 0.244;
+                s.loop = false;
+                s.keyRoot = 4;
+                s.minorKey = true;
+                s.referenceUrl = "https://ocremix.org/remix/OCR04994";
+            }
             AssetDatabase.CreateAsset(s, path);
             return s;
         }

@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace ProjectHymn.Core
 {
-    public enum Judgement { Miss = 0, Good = 1, Great = 2, Perfect = 3 }
+    /// <summary>OffBeat is not a failure: the action still happens, it just costs stamina and gets no rhythm bonus.</summary>
+    public enum Judgement { OffBeat = 0, Good = 1, Great = 2, Perfect = 3 }
 
     /// <summary>Timing windows in seconds either side of the beat. Defaults match the GDD.</summary>
     [Serializable]
@@ -33,7 +34,7 @@ namespace ProjectHymn.Core
             Judgement = judgement; Beat = beat; OffsetSeconds = offsetSeconds;
         }
 
-        public bool IsHit => Judgement != Judgement.Miss;
+        public bool IsOnBeat => Judgement != Judgement.OffBeat;
         public double OffsetMs => OffsetSeconds * 1000.0;
     }
 
@@ -57,15 +58,15 @@ namespace ProjectHymn.Core
             if (absOffset <= w.Perfect) return Judgement.Perfect;
             if (absOffset <= w.Great) return Judgement.Great;
             if (absOffset <= w.Good) return Judgement.Good;
-            return Judgement.Miss;
+            return Judgement.OffBeat;
         }
 
+        /// <summary>Kept deliberately small (GDD): accuracy shows mainly in animation flow and score.</summary>
         public static float DamageMultiplier(Judgement j) => j switch
         {
-            Judgement.Perfect => 1.5f,
-            Judgement.Great => 1.2f,
-            Judgement.Good => 1.0f,
-            _ => 0.4f,
+            Judgement.Perfect => 1.15f,
+            Judgement.Great => 1.10f,
+            _ => 1.0f,
         };
     }
 }

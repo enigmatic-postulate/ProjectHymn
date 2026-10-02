@@ -10,6 +10,14 @@ Rhythm-combat action RPG prototype for Unity 6. Attack on the beat of SNES-style
 4. Menu **Project Hymn → Build Prototype Scene**. This creates the starter Phrase and Song assets plus `Assets/_Project/Scenes/Prototype.unity`.
 5. Press **Play**. A metronome clicks; hit the pink training dummy on the beat.
 
+## Combat rules (M1)
+
+- **On-beat** (Perfect ±45 ms, Great ±90 ms, Good ±135 ms): free, builds Groove, counts toward Phrases and Bar Finishers, recovers faster and opens a cancel window lined up with the next beat.
+- **Off-beat**: still a normal attack at normal damage, but costs stamina (Strike 15, Smash 25, Step 20 of 100) and breaks the chain. With too little stamina the move still comes out, but you are **Winded** (75% slower recovery).
+- Damage barely changes with accuracy (Perfect +15%); **score** is where accuracy shows (Groove multiplies score ×1 to ×3).
+- No beat ring: timing comes from the music, the player's bob and the background pulse. (The ring still exists as an optional cue: HUD → Show Beat Cue.)
+- Perfect hits get a 40 ms hit-stop and a chime pitched to the song's key; hit sounds snap to the 16th-note grid.
+
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |

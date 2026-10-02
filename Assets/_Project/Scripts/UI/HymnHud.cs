@@ -8,15 +8,17 @@ using UnityEngine.UI;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// Prototype HUD: beat ring, measure pips (one per beat of the current meter), time signature,
-    /// judgement pop-up with ms offset, phrase name, groove meter, finisher banner.
+    /// Prototype HUD: measure pips (one per beat of the current meter), time signature, judgement
+    /// pop-up with ms offset, phrase name, groove, stamina, score, finisher banner.
+    /// No beat ring by default (GDD): it is kept only as an optional accessibility cue.
     /// </summary>
     public class HymnHud : MonoBehaviour
     {
         [SerializeField] Conductor conductor;
         [SerializeField] BeatCombatController combat;
 
-        [Header("Widgets")]
+        [Header("Optional beat cue (accessibility, off by default)")]
+        [SerializeField] bool showBeatCue = false;
         [SerializeField] RectTransform beatRing;
         [SerializeField] Image beatRingImage;
         [SerializeField] RectTransform pipRow;
@@ -26,12 +28,16 @@ namespace ProjectHymn.UI
         [SerializeField] Text grooveText;
         [SerializeField] Image grooveFill;
         [SerializeField] Text bannerText;
+        [SerializeField] Image staminaFill;
+        [SerializeField] Text scoreText;
 
         [Header("Colours")]
         [SerializeField] Color perfect = new Color(1f, 0.84f, 0.25f);
         [SerializeField] Color great = Color.white;
         [SerializeField] Color good = new Color(0.55f, 0.85f, 1f);
-        [SerializeField] Color miss = new Color(1f, 0.35f, 0.35f);
+        [SerializeField] Color offBeat = new Color(0.75f, 0.75f, 0.8f);
+        [SerializeField] Color stamina = new Color(0.35f, 0.9f, 0.55f);
+        [SerializeField] Color staminaLow = new Color(1f, 0.35f, 0.35f);
         [SerializeField] Color pipIdle = new Color(1f, 1f, 1f, 0.2f);
         [SerializeField] Color pipHit = new Color(0.4f, 1f, 0.6f);
         [SerializeField] Color pipNow = new Color(1f, 1f, 1f, 0.6f);
@@ -76,8 +82,10 @@ namespace ProjectHymn.UI
             if (conductor == null || !conductor.IsPlaying) return;
             var beat = conductor.CurrentBeat;
 
-            // Beat ring: shrinks toward the player as the next beat approaches, flashes on the beat.
-            if (beatRing != null)
+            // Optional beat ring: shrinks toward the player as the next beat approaches, flashes on the beat.
+            if (beatRing != null && beatRing.gameObject.activeSelf != showBeatCue)
+                beatRing.gameObject.SetActive(showBeatCue);
+            if (showBeatCue && beatRing != null)
             {
                 float closing = 1f - conductor.BeatPhase;
                 beatRing.localScale = Vector3.one * Mathf.Lerp(1f, 2.2f, closing * closing);
@@ -109,7 +117,14 @@ namespace ProjectHymn.UI
             {
                 var g = combat.Groove;
                 if (grooveFill != null) grooveFill.fillAmount = g.Value / 100f;
-                if (grooveText != null) grooveText.text = $"GROOVE x{g.Multiplier:0.#}";
+                if (grooveText != null) grooveText.text = $"GROOVE x{g.ScoreMultiplier:0.#}";
+                var st = combat.Stamina;
+                if (staminaFill != null)
+                {
+                    staminaFill.fillAmount = st.Normalized;
+                    staminaFill.color = Color.Lerp(staminaLow, stamina, Mathf.Clamp01(st.Normalized * 2f));
+                }
+                if (scoreText != null) scoreText.text = combat.Score.Total.ToString("N0");
             }
 
             Fade(judgementText, ref _judgeTimer, 0.5f);
@@ -137,17 +152,20 @@ namespace ProjectHymn.UI
             var j = r.Effective;
             if (r.Outcome == RegisterOutcome.Accepted && r.Judge.Beat.Measure == _measure)
                 _hitBeatsInMeasure.Add(r.Judge.Beat.BeatInMeasure);
-            if (j == Judgement.Miss) _hitBeatsInMeasure.Clear();
+            if (j == Judgement.OffBeat) _hitBeatsInMeasure.Clear();
 
             if (judgementText == null) return;
-            string label = r.Outcome == RegisterOutcome.DoubleInput ? "DOUBLE" : j.ToString().ToUpperInvariant();
+            string label = r.Outcome == RegisterOutcome.DoubleInput ? "DOUBLE"
+                         : j == Judgement.OffBeat ? "OFF-BEAT"
+                         : j.ToString().ToUpperInvariant();
+            if (r.Winded) label += "  WINDED";
             judgementText.text = $"{label}  {r.Judge.OffsetMs:+0;-0;0} ms";
             judgementText.color = j switch
             {
                 Judgement.Perfect => perfect,
                 Judgement.Great => great,
                 Judgement.Good => good,
-                _ => miss,
+                _ => offBeat,
             };
             _judgeTimer = 0.5f;
         }

@@ -77,7 +77,7 @@ namespace ProjectHymn.Tests
         [TestCase(1.04, Judgement.Perfect)]
         [TestCase(0.93, Judgement.Great)]
         [TestCase(1.12, Judgement.Good)]
-        [TestCase(1.20, Judgement.Miss)]
+        [TestCase(1.20, Judgement.OffBeat)]
         public void Classifies(double t, Judgement expected)
         {
             Assert.AreEqual(expected, BeatJudge.Judge(_map, t, _w).Judgement);
@@ -150,10 +150,10 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
-        public void MissBreaksPhrase()
+        public void OffBeatBreaksPhrase()
         {
             Play(0, S);
-            _engine.RegisterMiss(_map.GetBeat(1));
+            _engine.RegisterOffBeat(_map.GetBeat(1));
             Assert.IsNull(Play(2, H));
         }
 
@@ -225,8 +225,9 @@ namespace ProjectHymn.Tests
             var g = new GrooveMeter();
             for (int i = 0; i < 5; i++) g.Add(Judgement.Perfect); // 30
             Assert.AreEqual(1, g.Tier);
-            Assert.AreEqual(1.5f, g.Multiplier);
-            g.Add(Judgement.Miss); // 21
+            Assert.AreEqual(1.5f, g.ScoreMultiplier);
+            Assert.AreEqual(1.0833f, g.DamageMultiplier);
+            g.Add(Judgement.OffBeat); // 21
             Assert.AreEqual(0, g.Tier);
         }
 
@@ -237,6 +238,135 @@ namespace ProjectHymn.Tests
             for (int i = 0; i < 10; i++) g.Add(Judgement.Perfect); // 60
             g.Tick(2.5f);   // idle passes 2 s delay → decays 12.5
             Assert.Less(g.Value, 60f);
+        }
+    }
+
+    public class DamageTableTests
+    {
+        [TestCase(Judgement.Perfect, 1.15f)]
+        [TestCase(Judgement.Great, 1.10f)]
+        [TestCase(Judgement.Good, 1.0f)]
+        [TestCase(Judgement.OffBeat, 1.0f)]
+        public void SmallDifferencesOnly(Judgement j, float expected)
+        {
+            Assert.AreEqual(expected, BeatJudge.DamageMultiplier(j));
+        }
+    }
+
+    public class StaminaMeterTests
+    {
+        [Test]
+        public void OffBeatActionsSpend()
+        {
+            var s = new StaminaMeter();
+            Assert.IsTrue(s.Spend(BeatAction.Smash));
+            Assert.AreEqual(75f, s.Value);
+        }
+
+        [Test]
+        public void EmptyStaminaLeavesPlayerWinded()
+        {
+            var s = new StaminaMeter();
+            for (int i = 0; i < 4; i++) s.Spend(BeatAction.Smash); // 100 -> 0
+            Assert.IsFalse(s.Spend(BeatAction.Strike));
+            Assert.AreEqual(0f, s.Value);
+        }
+
+        [Test]
+        public void RegenWaitsForDelay()
+        {
+            var s = new StaminaMeter();
+            s.Spend(BeatAction.Smash);           // 75
+            s.Tick(0.5f);                        // still inside 0.6 s delay
+            Assert.AreEqual(75f, s.Value);
+            s.Tick(0.5f);                        // past delay: +17.5
+            Assert.AreEqual(92.5f, s.Value);
+            s.NotifyAction();                    // an on-beat action pauses regen again
+            s.Tick(0.3f);
+            Assert.AreEqual(92.5f, s.Value);
+        }
+
+        [Test]
+        public void GuardIsFree()
+        {
+            var s = new StaminaMeter();
+            Assert.IsTrue(s.Spend(BeatAction.Guard));
+            Assert.AreEqual(100f, s.Value);
+        }
+    }
+
+    public class AttackTimingTests
+    {
+        static readonly FrameData Strike = new FrameData(0.05f, 0.07f, 0.30f);
+        readonly TimingWindows _w = TimingWindows.Default;
+
+        [Test]
+        public void PerfectRecoversFasterThanOffBeat()
+        {
+            var p = AttackTiming.Compute(Strike, Judgement.Perfect, false, 1.0, 1.5, _w);
+            var o = AttackTiming.Compute(Strike, Judgement.OffBeat, false, 1.0, 1.5, _w);
+            Assert.AreEqual(1.0 + 0.12 + 0.12, p.RecoveryEnd, 1e-6);
+            Assert.AreEqual(1.0 + 0.12 + 0.30, o.RecoveryEnd, 1e-6);
+            Assert.IsTrue(p.Flourish);
+            Assert.IsFalse(o.Flourish);
+        }
+
+        [Test]
+        public void OnBeatOpensCancelBeforeNextBeat()
+        {
+            var smash = new FrameData(0.08f, 0.08f, 0.42f);       // 0.58 s, longer than a 0.5 s beat
+            var g = AttackTiming.Compute(smash, Judgement.Good, false, 1.0, 1.5, _w);
+            Assert.AreEqual(1.5 - 0.090, g.CancelOpen, 1e-6);     // Good: cancel from next beat's Great window
+            Assert.IsTrue(g.CanAct(1.42));
+            Assert.IsFalse(g.CanAct(1.40));
+            var pf = AttackTiming.Compute(smash, Judgement.Perfect, false, 1.0, 1.5, _w);
+            Assert.AreEqual(1.5 - 0.135, pf.CancelOpen, 1e-6);    // Perfect: from next beat's Good window
+        }
+
+        [Test]
+        public void OffBeatHasNoCancelSoNextBeatIsMissed()
+        {
+            var smash = new FrameData(0.08f, 0.08f, 0.42f);
+            var o = AttackTiming.Compute(smash, Judgement.OffBeat, false, 1.2, 1.5, _w);
+            Assert.IsFalse(o.HasCancel);
+            Assert.IsFalse(o.CanAct(1.5 + 0.135));               // locked through the whole next-beat window
+        }
+
+        [Test]
+        public void CancelNeverBeforeActiveFramesEnd()
+        {
+            var l = AttackTiming.Compute(Strike, Judgement.Perfect, false, 1.0, 1.1, _w);
+            Assert.AreEqual(l.ActiveEnd, l.CancelOpen, 1e-9);
+        }
+
+        [Test]
+        public void WindedRecoversSlower()
+        {
+            var w = AttackTiming.Compute(Strike, Judgement.OffBeat, true, 0.0, 0.5, _w);
+            Assert.AreEqual(0.12 + 0.30 * 1.75, w.RecoveryEnd, 1e-6);
+            Assert.IsTrue(w.Winded);
+        }
+    }
+
+    public class ScoreKeeperTests
+    {
+        [Test]
+        public void GrooveScalesScore()
+        {
+            var s = new ScoreKeeper();
+            s.AddJudgement(Judgement.Perfect, 1f);
+            s.AddJudgement(Judgement.Perfect, 3f);
+            s.AddJudgement(Judgement.OffBeat, 1f);
+            Assert.AreEqual(300 + 900 + 10, s.Total);
+        }
+
+        [Test]
+        public void PhraseAndFinisherBonuses()
+        {
+            var s = new ScoreKeeper();
+            s.AddPhrase(3, 2f);      // 150*3*2
+            s.AddFinisher(7, 1f);    // 250*7
+            Assert.AreEqual(900 + 1750, s.Total);
         }
     }
 }

@@ -16,6 +16,8 @@ MonoBehaviour:
   firstBeatOffset: 0.244
   loop: 0
   referenceUrl: https://ocremix.org/remix/OCR04994
+  keyRoot: 4
+  minorKey: 1
   sections:
   - measures: 112
     bpm: 130

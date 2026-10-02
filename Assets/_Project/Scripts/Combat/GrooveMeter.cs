@@ -4,15 +4,17 @@ using ProjectHymn.Core;
 namespace ProjectHymn.Combat
 {
     /// <summary>
-    /// Groove: 0–100, four tiers of damage multiplier. Rises with accurate play, falls on misses and
+    /// Groove: 0–100, four tiers. Each tier multiplies score (x1 to x3) and adds a little damage (+0% to +25%).
+    /// Rises with accurate play, falls on off-beat actions and
     /// on taking damage, decays when the player stops acting. Pure C#.
     /// </summary>
     public sealed class GrooveMeter
     {
         public static readonly float[] TierThresholds = { 0f, 25f, 50f, 80f };
-        public static readonly float[] TierMultipliers = { 1f, 1.5f, 2f, 3f };
+        public static readonly float[] TierScoreMultipliers = { 1f, 1.5f, 2f, 3f };
+        public static readonly float[] TierDamageMultipliers = { 1f, 1.0833f, 1.1667f, 1.25f };
 
-        public float PerfectGain = 6f, GreatGain = 3f, GoodGain = 0f, MissLoss = 9f, HurtLoss = 20f;
+        public float PerfectGain = 6f, GreatGain = 3f, GoodGain = 0f, OffBeatLoss = 9f, HurtLoss = 20f;
         public float IdleDelay = 2f, DecayPerSecond = 5f;
 
         float _idle;
@@ -27,7 +29,8 @@ namespace ProjectHymn.Combat
                 return 0;
             }
         }
-        public float Multiplier => TierMultipliers[Tier];
+        public float ScoreMultiplier => TierScoreMultipliers[Tier];
+        public float DamageMultiplier => TierDamageMultipliers[Tier];
 
         public event Action<int> TierChanged;
 
@@ -39,7 +42,7 @@ namespace ProjectHymn.Combat
                 Judgement.Perfect => PerfectGain,
                 Judgement.Great => GreatGain,
                 Judgement.Good => GoodGain,
-                _ => -MissLoss,
+                _ => -OffBeatLoss,
             };
             Set(Value + delta);
         }

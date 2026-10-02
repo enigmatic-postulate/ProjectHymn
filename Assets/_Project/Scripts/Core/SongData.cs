@@ -45,6 +45,11 @@ namespace ProjectHymn.Core
         [Tooltip("Where the reference track lives (e.g. a YouTube link). Notes only.")]
         public string referenceUrl;
 
+        [Header("Key (for pitched hit sounds)")]
+        [Tooltip("Tonic pitch class: 0 = C, 1 = C#, 2 = D ... 4 = E ... 11 = B.")]
+        [Range(0, 11)] public int keyRoot;
+        public bool minorKey;
+
         public List<TempoSection> sections = new List<TempoSection> { new TempoSection(4, 140f, 4) };
 
         public TempoMap BuildTempoMap() => new TempoMap(sections, loop);
