@@ -34,6 +34,9 @@ namespace ProjectHymn.UI
         [SerializeField] Text scoreText;
         [SerializeField] Image hpFill;
         [SerializeField] Text waveText;
+        [SerializeField] Image bossFill;
+        [SerializeField] Text bossText;
+        [SerializeField] GameObject bossBar;
 
         [Header("Colours")]
         [SerializeField] Color perfect = new Color(1f, 0.84f, 0.25f);
@@ -69,6 +72,7 @@ namespace ProjectHymn.UI
                 combat.FinisherFired += OnFinisherFired;
             }
             if (conductor != null) conductor.SectionChanged += OnSection;
+            if (conductor != null) conductor.SectionChangeUpcoming += OnSectionUpcoming;
             if (combat != null) combat.Parried += OnParried;
             if (arena != null)
             {
@@ -78,7 +82,10 @@ namespace ProjectHymn.UI
                 arena.ArenaCleared += OnArenaCleared;
                 arena.EnemyGuarded += OnGuarded;
                 arena.EnemyGuardBroken += OnGuardBroken;
+                arena.BossSpawned += OnBossSpawned;
+                arena.BossDefeated += OnBossDefeated;
             }
+            if (bossBar != null) bossBar.SetActive(false);
         }
 
         void OnDisable()
@@ -91,6 +98,7 @@ namespace ProjectHymn.UI
                 combat.FinisherFired -= OnFinisherFired;
             }
             if (conductor != null) conductor.SectionChanged -= OnSection;
+            if (conductor != null) conductor.SectionChangeUpcoming -= OnSectionUpcoming;
             if (combat != null) combat.Parried -= OnParried;
             if (arena != null)
             {
@@ -100,7 +108,10 @@ namespace ProjectHymn.UI
                 arena.ArenaCleared -= OnArenaCleared;
                 arena.EnemyGuarded -= OnGuarded;
                 arena.EnemyGuardBroken -= OnGuardBroken;
+                arena.BossSpawned -= OnBossSpawned;
+                arena.BossDefeated -= OnBossDefeated;
             }
+            UnhookBoss();
         }
 
         void Update()
@@ -154,9 +165,23 @@ namespace ProjectHymn.UI
             }
 
             if (health != null && hpFill != null) hpFill.fillAmount = health.Hp / health.MaxHp;
+
+            var boss = arena != null ? arena.Boss : null;
+            bool showBoss = boss != null && boss.Enemy != null && !boss.Enemy.IsDead;
+            if (bossBar != null && bossBar.activeSelf != showBoss) bossBar.SetActive(showBoss);
+            if (showBoss)
+            {
+                if (bossFill != null) bossFill.fillAmount = boss.Enemy.Hp / boss.Enemy.MaxHp;
+                if (bossText != null)
+                    bossText.text = boss.TransitionPending ? $"{boss.Definition.displayName}  ·  the music is changing…" : boss.Definition.displayName;
+            }
             if (arena != null && waveText != null)
             {
                 if (arena.IsCleared) waveText.text = "ARENA CLEAR";
+                else if (arena.IsRunning && arena.IsBossFight && arena.Boss != null)
+                {
+                    waveText.text = $"{arena.Boss.Definition.displayName.ToUpperInvariant()}  —  {arena.Boss.PhaseName}";
+                }
                 else if (arena.IsRunning)
                 {
                     int t = Mathf.CeilToInt(arena.TimeLeft);
@@ -232,6 +257,41 @@ namespace ProjectHymn.UI
             phraseText.text = "GUARDED — try Syncopate (Strike, rest, Smash)";
             _phraseTimer = 1.2f;
         }
+
+        void OnSectionUpcoming(BeatInfo next) => ShowBanner($"{next.Signature} @ {next.Bpm:0} — NEXT BAR", 2f);
+
+        BossController _hookedBoss;
+
+        void OnBossSpawned(BossController b)
+        {
+            UnhookBoss();
+            _hookedBoss = b;
+            b.PhaseStarted += OnBossPhase;
+            b.FinisherNeeded += OnFinisherNeeded;
+            OnBossPhase(b.Phase, b.Definition.phases[Mathf.Max(0, b.Phase)]);
+        }
+
+        void UnhookBoss()
+        {
+            if (_hookedBoss == null) return;
+            _hookedBoss.PhaseStarted -= OnBossPhase;
+            _hookedBoss.FinisherNeeded -= OnFinisherNeeded;
+            _hookedBoss = null;
+        }
+
+        void OnBossPhase(int index, BossPhase phase)
+        {
+            ShowBanner(phase.name.ToUpperInvariant(), 2.5f);
+            if (!string.IsNullOrEmpty(phase.hint) && phraseText != null)
+            {
+                phraseText.text = phase.hint;
+                _phraseTimer = 4f;
+            }
+        }
+
+        void OnFinisherNeeded() => ShowBanner("FINISH IT — PLAY A FULL BAR ON THE BEAT", 4f);
+
+        void OnBossDefeated(BossController b) => ShowBanner($"{b.Definition.displayName.ToUpperInvariant()} DEFEATED", 6f);
 
         void ShowBanner(string text, float seconds)
         {

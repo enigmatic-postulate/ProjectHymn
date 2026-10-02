@@ -28,6 +28,14 @@ namespace ProjectHymn.Gameplay
         static readonly Color StaggerColor = new Color(0.55f, 0.55f, 0.6f);
 
         EnemyDefinition _def;
+
+        // Current fighting profile: starts from the definition, a boss swaps it per phase.
+        EnemyPattern _pattern;
+        float _damage, _attackRange;
+        bool _heavy, _guarded;
+        string _guardBreakEffect = "guard_break";
+        Color _color;
+        string _name;
         Conductor _conductor;
         Transform _player;
         BeatCombatController _combat;
@@ -56,7 +64,11 @@ namespace ProjectHymn.Gameplay
         public float MaxHp { get; private set; }
         public bool IsDead { get; private set; }
         public bool IsStaggered => _conductor != null && _conductor.SongTime < _resumeAt;
-        public bool GuardUp => _def != null && _def.guarded && _guardUp;
+        public bool GuardUp => _def != null && _guarded && _guardUp;
+        public string DisplayName => _name;
+        public float AttackRange => _attackRange;
+        /// <summary>HP can't drop below this except from a Bar Finisher (boss phase gates, finisher-only kills).</summary>
+        public float HpFloor { get; set; }
 
         public event Action<BeatEnemy> Died;
         public event Action<BeatEnemy, DefenseResult> AttackResolved;
@@ -73,16 +85,35 @@ namespace ProjectHymn.Gameplay
             _baseScale = transform.localScale;
             _hpBarScale = hpBar != null ? hpBar.localScale : Vector3.one;
             MaxHp = Hp = def.maxHp * hpMultiplier;
-            _guardUp = def.guarded;
+            _name = def.displayName;
+            ApplyProfile(def.pattern, def.damage, def.attackRange, def.heavy, def.guarded, "guard_break", def.color);
             _orbitAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
         }
+
+        /// <summary>Swap how this enemy fights (boss phases). Re-plans attacks from the next full telegraph.</summary>
+        public void ApplyProfile(EnemyPattern pattern, float damage, float attackRange, bool heavy, bool guarded,
+                                 string guardBreakEffect, Color color)
+        {
+            _pattern = pattern;
+            _damage = damage;
+            _attackRange = attackRange;
+            _heavy = heavy;
+            _guarded = guarded;
+            _guardUp = guarded;
+            _guardBreakEffect = string.IsNullOrEmpty(guardBreakEffect) ? "guard_break" : guardBreakEffect;
+            _color = color;
+            _upcoming.Clear();
+            _lastPlannedBeat = double.NaN;
+        }
+
+        public void SetDisplayName(string name) => _name = name;
 
         void Update()
         {
             if (IsDead || _def == null || _conductor == null || !_conductor.IsPlaying) return;
             double now = _conductor.SongTime;
 
-            if (_def.guarded && !_guardUp && now >= _guardRestoreAt) _guardUp = true;
+            if (_guarded && !_guardUp && now >= _guardRestoreAt) _guardUp = true;
 
             Plan(now);
             CueTelegraphs(now);
@@ -101,7 +132,7 @@ namespace ProjectHymn.Gameplay
 
             if (double.IsNaN(_lastPlannedBeat))
             {
-                var first = EnemyRhythm.FirstFullyTelegraphed(map, _def.pattern, now);
+                var first = EnemyRhythm.FirstFullyTelegraphed(map, _pattern, now);
                 if (first == null) return;
                 _upcoming.Add(first.Value);
                 _lastPlannedBeat = first.Value.BeatPosition;
@@ -110,7 +141,7 @@ namespace ProjectHymn.Gameplay
             // Keep planning until the next attack's telegraph is still in the future (handles bursts).
             for (int i = 0; i < 8 && (_upcoming.Count == 0 || _upcoming[_upcoming.Count - 1].TelegraphStart <= now); i++)
             {
-                var next = EnemyRhythm.Next(map, _def.pattern, _lastPlannedBeat);
+                var next = EnemyRhythm.Next(map, _pattern, _lastPlannedBeat);
                 if (next == null) break;
                 _upcoming.Add(next.Value);
                 _lastPlannedBeat = next.Value.BeatPosition;
@@ -123,7 +154,7 @@ namespace ProjectHymn.Gameplay
             {
                 if (a.BeatPosition <= _lastCuedBeat || now < a.TelegraphStart) continue;
                 _lastCuedBeat = a.BeatPosition;
-                if (_fx != null) _fx.PlayTelegraph(_def.heavy);
+                if (_fx != null) _fx.PlayTelegraph(_heavy);
             }
         }
 
@@ -140,10 +171,10 @@ namespace ProjectHymn.Gameplay
                 _landed.Add(new Landed
                 {
                     Attack = a,
-                    InRange = dist <= _def.attackRange + 0.35f, // + player radius
+                    InRange = dist <= _attackRange + 0.35f, // + player radius
                     StepIFrames = stepIFrames,
                     Grace = grace,
-                    ResolveAt = a.Time + ParryJudge.Window(_combat.Windows, _def.heavy),
+                    ResolveAt = a.Time + ParryJudge.Window(_combat.Windows, _heavy),
                 });
                 _lungeUntil = now + 0.12;
             }
@@ -160,16 +191,16 @@ namespace ProjectHymn.Gameplay
                 if (l.Grace || (_health != null && _health.IsDown)) continue;
 
                 var result = ParryJudge.Resolve(l.InRange, l.StepIFrames, _combat.LastGuardPressTime,
-                                                l.Attack.Time, _combat.Windows, _def.heavy);
+                                                l.Attack.Time, _combat.Windows, _heavy);
                 switch (result)
                 {
                     case DefenseResult.Parried:
-                        _combat.RegisterParry(_def.displayName);
+                        _combat.RegisterParry(_name);
                         if (_fx != null) _fx.PlayParry();
                         Stagger(1);
                         break;
                     case DefenseResult.Hit:
-                        if (_health != null) _health.TakeHit(_def.damage);
+                        if (_health != null) _health.TakeHit(_damage);
                         if (_fx != null) _fx.PlayHurt();
                         break;
                 }
@@ -209,20 +240,20 @@ namespace ProjectHymn.Gameplay
                     {
                         // Hops forward right after each beat, then settles.
                         float hop = Mathf.Exp(-_conductor.BeatPhase * 5f) * 2f;
-                        float stop = _def.attackRange * 0.7f;
+                        float stop = _attackRange * 0.7f;
                         if (dist > stop) move = dir * speed * hop;
                         break;
                     }
                     case EnemyMovement.Skirmisher:
                     {
-                        float want = prog > 0.7 ? _def.attackRange * 0.7f : _def.preferredDistance;
+                        float want = prog > 0.7 ? _attackRange * 0.7f : _def.preferredDistance;
                         float k = prog > 0.7 ? 2.5f : 1f;
                         move = dir * Mathf.Clamp(dist - want, -1f, 1f) * speed * k;
                         break;
                     }
                     case EnemyMovement.Juggernaut:
                     {
-                        float stop = _def.attackRange * 0.8f;
+                        float stop = _attackRange * 0.8f;
                         if (dist > stop) move = dir * speed;
                         break;
                     }
@@ -269,7 +300,7 @@ namespace ProjectHymn.Gameplay
         {
             if (_body == null || _flashing) return;
 
-            Color baseColor = _def.color;
+            Color baseColor = _color;
             if (GuardUp) baseColor = Color.Lerp(baseColor, Color.black, 0.25f);
 
             if (IsStaggered) { _body.color = StaggerColor; transform.localScale = _baseScale; return; }
@@ -290,7 +321,7 @@ namespace ProjectHymn.Gameplay
         {
             if (IsDead) return;
             float dmg = hit.Damage;
-            bool breaker = hit.IsFinisher || hit.EffectId == "guard_break";
+            bool breaker = hit.IsFinisher || hit.EffectId == _guardBreakEffect;
 
             if (GuardUp)
             {
@@ -311,7 +342,7 @@ namespace ProjectHymn.Gameplay
 
             if (hit.EffectId == "stagger") Stagger(1);
 
-            Hp -= dmg;
+            Hp = hit.IsFinisher ? Hp - dmg : Mathf.Max(Hp - dmg, Mathf.Min(Hp, HpFloor));
             _knockback += hit.Direction * (hit.IsFinisher ? 7f : 2.5f);
             if (_hpBar != null)
             {

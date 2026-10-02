@@ -27,6 +27,25 @@ namespace ProjectHymn.Core
     }
 
     /// <summary>
+    /// A stretch of the song that loops while the fight is in one phase (adaptive music). The engine only
+    /// chooses which composed stretch plays next; meter changes stay composed into the music (GDD).
+    /// </summary>
+    [Serializable]
+    public struct SongPhase
+    {
+        public string name;
+        [Tooltip("Index into Sections where this phase starts.")]
+        [Min(0)] public int firstSection;
+        [Tooltip("How many consecutive sections make up this phase's loop.")]
+        [Min(1)] public int sectionCount;
+
+        public SongPhase(string name, int firstSection, int sectionCount)
+        {
+            this.name = name; this.firstSection = firstSection; this.sectionCount = sectionCount;
+        }
+    }
+
+    /// <summary>
     /// A battle theme: the audio clip plus its tempo map. Tempo and time-signature changes are
     /// first-class so a boss can shift from 4/4 to 7/8 mid-fight.
     /// </summary>
@@ -51,6 +70,11 @@ namespace ProjectHymn.Core
         public bool minorKey;
 
         public List<TempoSection> sections = new List<TempoSection> { new TempoSection(4, 140f, 4) };
+
+        [Tooltip("Optional. When set, the Conductor plays adaptively: it loops the current phase's sections until asked to move to another phase, switching at the end of a loop.")]
+        public List<SongPhase> phases = new List<SongPhase>();
+
+        public bool IsAdaptive => phases != null && phases.Count > 0;
 
         public TempoMap BuildTempoMap() => new TempoMap(sections, loop);
 

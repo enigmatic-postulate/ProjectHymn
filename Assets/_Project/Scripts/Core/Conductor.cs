@@ -35,6 +35,14 @@ namespace ProjectHymn.Core
         long _lastMeasureFired = long.MinValue;
         int _lastSection = -1;
 
+        // Adaptive (phase-looping) playback
+        AdaptiveTimeline _timeline;
+        AudioSource[] _blockSources;
+        int _nextBlockSource;
+        int _blocksScheduled;
+        int _currentPhase;
+        bool _warnedClipLength;
+
         public SongData Song => song;
         public TempoMap Map { get; private set; }
         public bool IsPlaying { get; private set; }
@@ -54,6 +62,23 @@ namespace ProjectHymn.Core
         public event Action<BeatInfo> BeatStarted;
         public event Action<BeatInfo> MeasureStarted;
         public event Action<BeatInfo> SectionChanged;   // fires when tempo or meter changes
+        /// <summary>Fires on the downbeat one measure before a tempo or meter change (GDD: count-in and swell). Arg = first beat after the change.</summary>
+        public event Action<BeatInfo> SectionChangeUpcoming;
+        /// <summary>Adaptive songs only: the music has moved into a new phase (fires on that phase's first beat).</summary>
+        public event Action<int, BeatInfo> PhaseChanged;
+
+        public bool IsAdaptive => _timeline != null;
+        /// <summary>Phase currently heard (0 for non-adaptive songs).</summary>
+        public int CurrentPhase => _currentPhase;
+        public int RequestedPhase => _timeline != null ? _timeline.RequestedPhase : 0;
+        public int PhaseCount => _timeline != null ? _timeline.PhaseCount : 1;
+        public string PhaseName(int phase) => _timeline?.PhaseName(phase);
+
+        /// <summary>
+        /// Adaptive songs: move to another phase. Blocks already scheduled (a few bars ahead) still play,
+        /// so the change lands on the next loop boundary of composed music.
+        /// </summary>
+        public void RequestPhase(int phase) { if (_timeline != null) _timeline.RequestPhase(phase); }
 
         public bool MetronomeEnabled { get => metronome; set => metronome = value; }
 
@@ -72,6 +97,14 @@ namespace ProjectHymn.Core
                 src.playOnAwake = false;
                 _clickSources[i] = src;
             }
+            _blockSources = new AudioSource[4];
+            for (int i = 0; i < _blockSources.Length; i++)
+            {
+                var src = gameObject.AddComponent<AudioSource>();
+                src.playOnAwake = false;
+                src.loop = false;
+                _blockSources[i] = src;
+            }
         }
 
         void Start()
@@ -89,13 +122,28 @@ namespace ProjectHymn.Core
         public void Play(SongData data)
         {
             song = data;
-            Map = song.BuildTempoMap();
+            _timeline = null;
+            _currentPhase = 0;
+            _blocksScheduled = 0;
+            _warnedClipLength = false;
 
             double now = AudioSettings.dspTime;
             _dspSongStart = now + startDelay;
             _lastDsp = _smoothedDsp = now;
 
-            if (song.clip != null)
+            if (song.IsAdaptive)
+            {
+                _timeline = new AdaptiveTimeline(song.sections, song.phases, 0);
+                _timeline.Extend(LookaheadSeconds(_timeline.Map.GetBeat(0)));
+                Map = _timeline.Map;
+                ScheduleBlocks();
+            }
+            else
+            {
+                Map = song.BuildTempoMap();
+            }
+
+            if (song.clip != null && !song.IsAdaptive)
             {
                 _music.clip = song.clip;
                 _music.loop = song.loop;
@@ -115,6 +163,7 @@ namespace ProjectHymn.Core
             IsPlaying = false;
             _music.Stop();
             foreach (var s in _clickSources) s.Stop();
+            foreach (var s in _blockSources) s.Stop();
         }
 
         public void SaveCalibration(float ms)
@@ -128,6 +177,14 @@ namespace ProjectHymn.Core
         {
             if (!IsPlaying) return;
             UpdateClock();
+            if (_timeline != null)
+            {
+                if (_timeline.Extend(SongTime + LookaheadSeconds(CurrentBeat)))
+                {
+                    Map = _timeline.Map;
+                    ScheduleBlocks();
+                }
+            }
             ScheduleClicks();
             FireBeatEvents();
         }
@@ -166,6 +223,23 @@ namespace ProjectHymn.Core
                 SectionChanged?.Invoke(beat);
             }
 
+            if (_timeline != null && SongTime >= 0)
+            {
+                int phase = _timeline.PhaseAt(SongTime);
+                if (phase != _currentPhase)
+                {
+                    _currentPhase = phase;
+                    PhaseChanged?.Invoke(phase, beat);
+                }
+            }
+
+            if (beat.IsDownbeat)
+            {
+                // One measure early: is the next bar in a different tempo or meter?
+                var next = Map.GetBeat(Map.MeasureStartBeat(beat.Measure + 1));
+                if (next.SectionIndex != beat.SectionIndex) SectionChangeUpcoming?.Invoke(next);
+            }
+
             if (beat.IsDownbeat && beat.Measure != _lastMeasureFired)
             {
                 _lastMeasureFired = beat.Measure;
@@ -194,6 +268,52 @@ namespace ProjectHymn.Core
                     src.PlayScheduled(dspAt);
                 }
                 _nextClickBeat++;
+            }
+        }
+
+        /// <summary>Plan at least three measures ahead (and 3 s), so enemy telegraphs never cross unplanned music.</summary>
+        static double LookaheadSeconds(BeatInfo beat) => Math.Max(3.0, 3 * beat.BeatsPerMeasure * beat.SecondsPerBeat);
+
+        /// <summary>
+        /// Schedules each new timeline block's slice of the clip on the audio clock, back to back, so loops
+        /// and phase switches are sample-accurate. (Use Decompress On Load or Compressed In Memory for
+        /// adaptive songs; streamed clips may not honour a start position set before PlayScheduled.)
+        /// </summary>
+        void ScheduleBlocks()
+        {
+            if (_timeline == null) return;
+            var blocks = _timeline.Blocks;
+            for (; _blocksScheduled < blocks.Count; _blocksScheduled++)
+            {
+                if (song.clip == null) continue;
+                var b = blocks[_blocksScheduled];
+                var clip = song.clip;
+                double clipStart = song.firstBeatOffset + b.SourceStart;
+                double clipEnd = song.firstBeatOffset + b.SourceEnd;
+                if (clipEnd > clip.length + 0.01 && !_warnedClipLength)
+                {
+                    _warnedClipLength = true;
+                    Debug.LogWarning($"[Conductor] '{song.name}' phase '{_timeline.PhaseName(b.Phase)}' runs past the end of the clip ({clipEnd:F2}s > {clip.length:F2}s). Check its sections.", this);
+                }
+
+                var src = _blockSources[_nextBlockSource];
+                _nextBlockSource = (_nextBlockSource + 1) % _blockSources.Length;
+                src.Stop();
+                src.clip = clip;
+                double dspEnd = _dspSongStart + song.firstBeatOffset + b.EndTime;
+                bool firstFromTop = _blocksScheduled == 0 && b.SourceStart <= 1e-6;
+                if (firstFromTop)
+                {
+                    // Include any intro before beat 0.
+                    src.timeSamples = 0;
+                    src.PlayScheduled(_dspSongStart);
+                }
+                else
+                {
+                    src.timeSamples = Mathf.Clamp((int)(clipStart * clip.frequency), 0, Math.Max(0, clip.samples - 1));
+                    src.PlayScheduled(_dspSongStart + song.firstBeatOffset + b.StartTime);
+                }
+                src.SetScheduledEndTime(dspEnd);
             }
         }
 

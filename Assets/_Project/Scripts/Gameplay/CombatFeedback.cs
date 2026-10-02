@@ -56,6 +56,7 @@ namespace ProjectHymn.Gameplay
 
         void OnEnable()
         {
+            if (conductor != null) conductor.SectionChangeUpcoming += OnSectionUpcoming;
             if (combat == null) return;
             combat.ActionJudged += OnJudged;
             combat.FinisherFired += OnFinisher;
@@ -63,6 +64,7 @@ namespace ProjectHymn.Gameplay
 
         void OnDisable()
         {
+            if (conductor != null) conductor.SectionChangeUpcoming -= OnSectionUpcoming;
             if (combat == null) return;
             combat.ActionJudged -= OnJudged;
             combat.FinisherFired -= OnFinisher;
@@ -118,6 +120,14 @@ namespace ProjectHymn.Gameplay
                 if (_shake != null) StopCoroutine(_shake);
                 _shake = StartCoroutine(Shake());
             }
+        }
+
+        /// <summary>GDD: a cymbal swell over the bar before a tempo or meter change.</summary>
+        void OnSectionUpcoming(BeatInfo next)
+        {
+            var now = conductor.CurrentBeat;
+            float bar = (float)(now.BeatsPerMeasure * now.SecondsPerBeat);
+            PlayNow(Synth.Swell("MeterSwell", Mathf.Clamp(bar, 0.5f, 4f)), 0.7f);
         }
 
         /// <summary>Enemy attack telegraph cue (one measure before it lands).</summary>
@@ -226,6 +236,27 @@ namespace ProjectHymn.Gameplay
                         if (bright) s += 0.35f * Mathf.Sin(2f * Mathf.PI * f * 2f * t) * Mathf.Exp(-t * decay * 2f);
                     }
                     data[i] = s * norm * env;
+                }
+                var clip = AudioClip.Create(name, n, 1, Rate, false);
+                clip.SetData(data, 0);
+                return clip;
+            }
+
+            /// <summary>Rising, brightening noise that peaks right at the end: a reverse-cymbal swell.</summary>
+            public static AudioClip Swell(string name, float seconds)
+            {
+                int n = Mathf.CeilToInt(seconds * Rate);
+                var data = new float[n];
+                var rng = new System.Random(11);
+                float hp = 0f, prev = 0f;
+                for (int i = 0; i < n; i++)
+                {
+                    float k = i / (float)n;
+                    float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
+                    hp = 0.92f * (hp + noise - prev); // high-passed hiss
+                    prev = noise;
+                    float env = k * k * k;            // slow start, fast rise
+                    data[i] = hp * env * 0.5f;
                 }
                 var clip = AudioClip.Create(name, n, 1, Rate, false);
                 clip.SetData(data, 0);

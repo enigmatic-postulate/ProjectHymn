@@ -535,4 +535,85 @@ namespace ProjectHymn.Tests
             Assert.IsTrue(json.Contains("\"meterAdaptation\": null"));
         }
     }
+
+    public class AdaptiveTimelineTests
+    {
+        // Placeholder Battle Theme 2: 4 bars 4/4 @150, 4 bars 3/4 @150, 4 bars 7/8 @165
+        static readonly List<TempoSection> Sections = new List<TempoSection>
+        {
+            new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8),
+        };
+        static readonly List<SongPhase> Phases = new List<SongPhase>
+        {
+            new SongPhase("Overture", 0, 1), new SongPhase("Waltz", 1, 1), new SongPhase("Finale", 2, 1),
+        };
+        const double Bar44 = 4 * 0.4;   // 1.6 s
+        const double Bar34 = 3 * 0.4;   // 1.2 s
+
+        [Test]
+        public void LoopsCurrentPhaseUntilAsked()
+        {
+            var t = new AdaptiveTimeline(Sections, Phases);
+            t.Extend(20.0);
+            foreach (var b in t.Blocks) Assert.AreEqual(0, b.Phase);
+            Assert.AreEqual(0, t.PhaseAt(15.0));
+            Assert.AreEqual(4, t.Map.GetBeat(16 * 3).BeatsPerMeasure);   // still 4/4 three loops later
+            Assert.AreEqual(1, t.Map.SectionCount);                        // identical loops merged into one segment
+        }
+
+        [Test]
+        public void PhaseChangeLandsOnNextBlockBoundary()
+        {
+            var t = new AdaptiveTimeline(Sections, Phases);
+            t.Extend(1.0);                    // block 0: 0 - 6.4 s
+            t.RequestPhase(1);
+            t.Extend(10.0);                   // block 1 is the Waltz
+            Assert.AreEqual(1, t.Blocks[1].Phase);
+            Assert.AreEqual(4 * Bar44, t.Blocks[1].StartTime, 1e-9);
+            Assert.AreEqual(0, t.PhaseAt(6.3));
+            Assert.AreEqual(1, t.PhaseAt(6.5));
+            var b = t.Map.GetBeat(16);        // first beat after the switch
+            Assert.IsTrue(b.IsDownbeat);
+            Assert.AreEqual(3, b.BeatsPerMeasure);
+            Assert.AreEqual(6.4, b.Time, 1e-9);
+        }
+
+        [Test]
+        public void SourceRangesPointIntoTheOriginalSong()
+        {
+            var t = new AdaptiveTimeline(Sections, Phases);
+            t.RequestPhase(2);
+            t.Extend(7.0);
+            var fin = t.Blocks[1];
+            Assert.AreEqual(2, fin.Phase);
+            Assert.AreEqual(4 * Bar44 + 4 * Bar34, fin.SourceStart, 1e-9); // 11.2 s into the linear song
+            Assert.AreEqual(fin.SourceStart + 4 * 7 * 60.0 / 165.0, fin.SourceEnd, 1e-9);
+            Assert.AreEqual(fin.SourceEnd - fin.SourceStart, fin.Duration, 1e-9);
+        }
+
+        [Test]
+        public void NextPhaseChangeIsVisibleAheadOfTime()
+        {
+            var t = new AdaptiveTimeline(Sections, Phases);
+            t.RequestPhase(1);
+            t.Extend(7.0);
+            var next = t.NextPhaseChangeAfter(5.0);
+            Assert.IsTrue(next.HasValue);
+            Assert.AreEqual(1, next.Value.Phase);
+            Assert.AreEqual(6.4, next.Value.StartTime, 1e-9);
+        }
+
+        [Test]
+        public void EnemiesScheduleCorrectlyAcrossTheSwitch()
+        {
+            var t = new AdaptiveTimeline(Sections, Phases);
+            t.RequestPhase(1);
+            t.Extend(12.0);
+            var imp = new EnemyPattern(1, 0, 1f, 3f);                      // beat 4 doesn't exist in 3/4
+            var a = EnemyRhythm.Next(t.Map, imp, 15.0).Value;              // first attack in the Waltz
+            Assert.AreEqual(17.0, a.BeatPosition, 1e-9);
+            var b = EnemyRhythm.Next(t.Map, imp, a.BeatPosition).Value;
+            Assert.AreEqual(20.0, b.BeatPosition, 1e-9);
+        }
+    }
 }

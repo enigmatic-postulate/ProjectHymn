@@ -24,11 +24,20 @@ namespace ProjectHymn.EditorTools
         const string EnemyDir = Root + "/Data/Enemies";
         const string SceneDir = Root + "/Scenes";
         const string ScenePath = SceneDir + "/Prototype.unity";
+        const string BossScenePath = SceneDir + "/Boss.unity";
+        const string BossDir = Root + "/Data/Bosses";
 
         [MenuItem("Project Hymn/Build Prototype Scene", priority = 0)]
-        public static void BuildPrototypeScene()
+        public static void BuildPrototypeScene() => BuildArenaScene(false);
+
+        /// <summary>The First Conductor on Battle Theme 2 (M3). Its music loops each phase until the boss moves on.</summary>
+        [MenuItem("Project Hymn/Build Boss Scene", priority = 1)]
+        public static void BuildBossScene() => BuildArenaScene(true);
+
+        static void BuildArenaScene(bool bossFight)
         {
-            foreach (var dir in new[] { PhraseDir, SongDir, EnemyDir, SceneDir, Root + "/Audio/Music", Root + "/Art", Root + "/Prefabs" })
+            string scenePath = bossFight ? BossScenePath : ScenePath;
+            foreach (var dir in new[] { PhraseDir, SongDir, EnemyDir, BossDir, SceneDir, Root + "/Audio/Music", Root + "/Art", Root + "/Prefabs" })
                 Directory.CreateDirectory(dir);
             AssetDatabase.Refresh();
 
@@ -40,6 +49,8 @@ namespace ProjectHymn.EditorTools
                 new TempoSection(4, 150f, 3),
                 new TempoSection(4, 165f, 7, 8));
             CreateEnemies();
+            AssetDatabase.SaveAssets();
+            CreateBoss();
             AssetDatabase.SaveAssets();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -55,6 +66,8 @@ namespace ProjectHymn.EditorTools
             var imp = LoadEnemy("SnareImp");
             var knight = LoadEnemy("TubaKnight");
             var bat = LoadEnemy("PiccoloBat");
+            var firstConductor = AssetDatabase.LoadAssetAtPath<BossDefinition>($"{BossDir}/FirstConductor.asset");
+            EnsureBossThemePhases(theme2);
 
             // Camera
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
@@ -71,7 +84,7 @@ namespace ProjectHymn.EditorTools
             // Conductor
             var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
             var conductor = condGo.GetComponent<Conductor>();
-            SetRef(conductor, "song", theme1);
+            SetRef(conductor, "song", bossFight ? theme2 : theme1);
 
             var square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
@@ -117,7 +130,8 @@ namespace ProjectHymn.EditorTools
             SetRef(arena, "circleSprite", circle);
             SetRef(arena, "squareSprite", square);
             if (spriteMat != null) SetRef(arena, "spriteMaterial", spriteMat);
-            SetWaves(arena, new (string, EnemyDefinition[])[]
+            if (bossFight) SetRef(arena, "boss", firstConductor);
+            else SetWaves(arena, new (string, EnemyDefinition[])[]
             {
                 ("Slimes", new[] { slime, slime }),
                 ("Backbeat", new[] { slime, imp }),
@@ -136,9 +150,10 @@ namespace ProjectHymn.EditorTools
 
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuild(ScenePath);
-            Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+            EditorSceneManager.SaveScene(scene, scenePath);
+            AddSceneToBuild(scenePath);
+            Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+            if (bossFight) Debug.Log("[Project Hymn] Boss scene built: The First Conductor on Battle Theme 2. Phase 2 (3/4): Waltz (Strike x3) breaks its guard. Phase 3 (7/8): only a Bar Finisher ends it.");
             Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate. Off-beat actions cost stamina; L parries enemy hits, on-beat Space dodges them.");
         }
 
@@ -288,6 +303,77 @@ namespace ProjectHymn.EditorTools
                 d.movement = EnemyMovement.Flyer; d.moveSpeed = 3.5f; d.preferredDistance = 3.2f; d.attackRange = 1.1f;
                 d.shape = EnemyShape.Circle; d.color = new Color(0.75f, 0.45f, 1f); d.size = new Vector2(0.6f, 0.45f);
             });
+        }
+
+        static void CreateBoss()
+        {
+            string bodyPath = $"{BossDir}/FirstConductorBody.asset";
+            var body = AssetDatabase.LoadAssetAtPath<EnemyDefinition>(bodyPath);
+            if (body == null)
+            {
+                body = ScriptableObject.CreateInstance<EnemyDefinition>();
+                body.displayName = "The First Conductor";
+                body.teaches = "Boss of the vertical slice. Its phases follow Battle Theme 2: 4/4, then 3/4, then 7/8 10% faster.";
+                body.maxHp = 600; body.scoreValue = 5000;
+                body.movement = EnemyMovement.Juggernaut; body.moveSpeed = 0.9f; body.preferredDistance = 1.8f; body.attackRange = 2.3f;
+                body.shape = EnemyShape.Square; body.color = new Color(0.85f, 0.75f, 0.35f); body.size = new Vector2(1.6f, 2.2f);
+                AssetDatabase.CreateAsset(body, bodyPath);
+            }
+
+            string bossPath = $"{BossDir}/FirstConductor.asset";
+            if (AssetDatabase.LoadAssetAtPath<BossDefinition>(bossPath) != null) return; // keep tuned values
+            var slime = LoadEnemy("MetronomeSlime");
+            var imp = LoadEnemy("SnareImp");
+            var bat = LoadEnemy("PiccoloBat");
+            var boss = ScriptableObject.CreateInstance<BossDefinition>();
+            boss.displayName = "The First Conductor";
+            boss.body = body;
+            boss.phases = new List<BossPhase>
+            {
+                new BossPhase
+                {
+                    name = "Overture", enterAtHpFraction = 1f,
+                    pattern = new EnemyPattern(1, 0, 0f, 2f), damage = 15f, attackRange = 2.3f,
+                    color = new Color(0.85f, 0.75f, 0.35f), summons = new[] { slime, slime },
+                    hint = "4/4: baton strikes on beats 1 and 3. Parry them with Guard.",
+                },
+                new BossPhase
+                {
+                    name = "Waltz", enterAtHpFraction = 0.66f,
+                    pattern = new EnemyPattern(1, 0, 0f), damage = 22f, attackRange = 2.6f, heavy = true,
+                    guarded = true, guardBreakEffect = "spin",
+                    color = new Color(0.7f, 0.45f, 0.85f), summons = new[] { imp },
+                    hint = "3/4: guarded. Waltz (Strike, Strike, Strike) breaks the guard.",
+                },
+                new BossPhase
+                {
+                    name = "Finale", enterAtHpFraction = 0.33f,
+                    pattern = new EnemyPattern(1, 0, 0f, 2f, 4f), damage = 12f, attackRange = 2.3f,
+                    finisherOnly = true,
+                    color = new Color(0.95f, 0.35f, 0.3f), summons = new[] { bat },
+                    hint = "7/8, faster: hits on 1, 3 and 5. Fill a whole bar on the beat to finish it.",
+                },
+            };
+            AssetDatabase.CreateAsset(boss, bossPath);
+        }
+
+        /// <summary>Battle Theme 2's sections become the three boss phases (placeholder map: 4/4, 3/4, 7/8).</summary>
+        static void EnsureBossThemePhases(SongData theme2)
+        {
+            if (theme2 == null || theme2.IsAdaptive) return;
+            if (theme2.sections == null || theme2.sections.Count < 3)
+            {
+                Debug.LogWarning("[Project Hymn] BattleTheme2 needs at least 3 sections (one per boss phase); phases not set.");
+                return;
+            }
+            theme2.phases = new List<SongPhase>
+            {
+                new SongPhase("Overture", 0, 1),
+                new SongPhase("Waltz", 1, 1),
+                new SongPhase("Finale", 2, 1),
+            };
+            EditorUtility.SetDirty(theme2);
+            AssetDatabase.SaveAssets();
         }
 
         static void CreateEnemy(string file, System.Action<EnemyDefinition> setup)

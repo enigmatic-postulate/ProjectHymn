@@ -35,6 +35,20 @@ Build Prototype Scene now creates a 2-minute arena instead of the training dummy
 - Going down restarts the current wave two bars later at full HP.
 - After each fight a playstyle log (time-signature adaptation, block rate, aggressiveness, weapon preference, dodge rate) is written to `%USERPROFILE%\AppData\LocalLow\<company>\<product>\Playstyle\` (the Console prints the exact path).
 
+## Boss (M3): The First Conductor
+
+Menu **Project Hymn → Build Boss Scene** creates `Scenes/Boss.unity` on Battle Theme 2.
+
+| Phase | HP | Meter | It does | Beat it with |
+| --- | --- | --- | --- | --- |
+| Overture | 100–66% | 4/4 | strikes on beats 1 and 3, summons 2 Slimes | parry, hit between strikes |
+| Waltz | 66–33% | 3/4 | one heavy hit per bar, guarded, summons an Imp | **Waltz** (Strike ×3) breaks the guard |
+| Finale | 33% → | 7/8, 10% faster | hits on 1, 3 and 5, summons a Bat | HP stops at 1: only a **Bar Finisher** (all 7 beats on time) ends it |
+
+- **Adaptive music:** each song phase loops until the boss reaches its next HP gate, then the music moves on at the end of the loop, so a phase change always lands on a bar line. The boss's HP is held at the gate until the new meter is heard.
+- **One-bar warning:** on the downbeat before any tempo or meter change, the HUD shows "3/4 @ 150 — NEXT BAR" and a cymbal-style swell rises into it.
+- Battle Theme 2 has no audio yet: it runs on its placeholder tempo map (4 bars 4/4 @150, 4 bars 3/4 @150, 4 bars 7/8 @165), one section per phase. With real music, set its sections and point each phase at its loop.
+
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |

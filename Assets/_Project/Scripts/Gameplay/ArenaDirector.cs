@@ -29,6 +29,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] CombatFeedback feedback;
 
         [SerializeField] List<ArenaWave> waves = new List<ArenaWave>();
+        [Tooltip("Boss arena: when set, the boss is fought instead of the waves, with no time limit.")]
+        [SerializeField] BossDefinition boss;
         [SerializeField] Rect bounds = new Rect(-7.5f, -4f, 15f, 8f);
         [SerializeField] float fightLengthSeconds = 120f;
         [SerializeField, Min(0)] int countInMeasures = 2;
@@ -46,6 +48,7 @@ namespace ProjectHymn.Gameplay
         int _waveIndex, _loop;
         double _fightSeconds;
         readonly List<BeatEnemy> _enemies = new List<BeatEnemy>();
+        BossController _bossCtl;
 
         public Rect Bounds => bounds;
         public IReadOnlyList<BeatEnemy> Enemies => _enemies;
@@ -54,6 +57,8 @@ namespace ProjectHymn.Gameplay
         public int WaveNumber => _waveIndex + 1;
         public double FightSeconds => _fightSeconds;
         public float TimeLeft => Mathf.Max(0f, fightLengthSeconds - (float)_fightSeconds);
+        public bool IsBossFight => boss != null;
+        public BossController Boss => _bossCtl;
 
         public event Action<int, string> WaveStarted;
         public event Action<int> WaveCleared;
@@ -63,6 +68,8 @@ namespace ProjectHymn.Gameplay
         public event Action<BeatEnemy> EnemyKilled;
         public event Action<BeatEnemy> EnemyGuarded;
         public event Action<BeatEnemy> EnemyGuardBroken;
+        public event Action<BossController> BossSpawned;
+        public event Action<BossController> BossDefeated;
 
         void Awake()
         {
@@ -91,10 +98,19 @@ namespace ProjectHymn.Gameplay
             if (IsRunning)
             {
                 _fightSeconds += Time.deltaTime;
-                if (_fightSeconds >= fightLengthSeconds) { ClearArena(); return; }
+                if (!IsBossFight && _fightSeconds >= fightLengthSeconds) { ClearArena(); return; }
             }
 
             _enemies.RemoveAll(e => e == null);
+            if (IsBossFight)
+            {
+                if (_state == State.Fighting && _bossCtl != null && _bossCtl.Enemy.IsDead)
+                {
+                    BossDefeated?.Invoke(_bossCtl);
+                    ClearArena();
+                }
+                return;
+            }
             if (_state == State.Fighting && AliveCount() == 0)
             {
                 WaveCleared?.Invoke(WaveNumber);
@@ -107,7 +123,7 @@ namespace ProjectHymn.Gameplay
 
         void OnMeasureStarted(BeatInfo beat)
         {
-            if (_state == State.Cleared || waves.Count == 0) return;
+            if (_state == State.Cleared || (waves.Count == 0 && !IsBossFight)) return;
             if (_actOnMeasure == long.MaxValue)
             {
                 if (beat.Measure < 0) return; // still in the song's count-in
@@ -118,7 +134,7 @@ namespace ProjectHymn.Gameplay
             if (_state == State.Downed && playerHealth != null) playerHealth.Revive();
             if (_state == State.Waiting || _state == State.Between || _state == State.Downed)
             {
-                SpawnWave();
+                if (IsBossFight) SpawnBoss(); else SpawnWave();
                 _actOnMeasure = long.MaxValue - 1; // nothing scheduled until this wave ends
             }
         }
@@ -138,6 +154,26 @@ namespace ProjectHymn.Gameplay
             _state = State.Fighting;
             string label = _loop > 0 ? $"{wave.name} +{_loop}" : wave.name;
             WaveStarted?.Invoke(WaveNumber, label);
+        }
+
+        void SpawnBoss()
+        {
+            if (boss.body == null) { Debug.LogError($"[ArenaDirector] Boss '{boss.name}' has no body EnemyDefinition.", this); return; }
+            var pos = new Vector2(bounds.center.x, bounds.yMax - 1.5f);
+            var e = Spawn(boss.body, pos, 1f);
+            _bossCtl = e.gameObject.AddComponent<BossController>();
+            _bossCtl.Init(boss, conductor, this);
+            _state = State.Fighting;
+            WaveStarted?.Invoke(1, boss.displayName);
+            BossSpawned?.Invoke(_bossCtl);
+        }
+
+        /// <summary>Summon an extra enemy at the arena edge (boss adds).</summary>
+        public BeatEnemy SpawnAdd(EnemyDefinition def)
+        {
+            if (def == null) return null;
+            Vector2 playerPos = combat != null ? (Vector2)combat.transform.position : Vector2.zero;
+            return Spawn(def, SpawnPoint(playerPos, UnityEngine.Random.Range(0, 4)), 1f);
         }
 
         Vector2 SpawnPoint(Vector2 playerPos, int i)
@@ -231,6 +267,7 @@ namespace ProjectHymn.Gameplay
         {
             foreach (var e in _enemies) if (e != null) Destroy(e.gameObject);
             _enemies.Clear();
+            _bossCtl = null;
         }
 
         int AliveCount()
