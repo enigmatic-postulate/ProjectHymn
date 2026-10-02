@@ -32,6 +32,7 @@ namespace ProjectHymn.Gameplay
         AudioSource[] _voices;
         int _nextVoice;
         AudioClip _perfect, _great, _good, _thud, _finisher;
+        AudioClip _telegraph, _telegraphHeavy, _parry, _hurt;
         Coroutine _hitStop, _shake;
         Vector3 _rigBase;
 
@@ -82,6 +83,13 @@ namespace ProjectHymn.Gameplay
             _good = Synth.Chord("HitGood", new[] { tonic - 12 + third + 12 }, 0.12f, 30f, bright: false);
             _finisher = Synth.Chord("HitFinisher", new[] { tonic - 12, tonic - 5, tonic, tonic + third, tonic + 7 }, 0.6f, 6f, bright: true);
             _thud = Synth.Thud("HitOffBeat");
+
+            // Enemy cues: a low tonic blip one measure before each attack (lower and longer for heavies),
+            // a bright clang for a parry, a dull hit when the player is struck.
+            _telegraph = Synth.Chord("EnemyTelegraph", new[] { tonic - 12 }, 0.09f, 40f, bright: false);
+            _telegraphHeavy = Synth.Chord("EnemyTelegraphHeavy", new[] { tonic - 24, tonic - 17 }, 0.22f, 16f, bright: false);
+            _parry = Synth.Chord("Parry", new[] { tonic + 24, tonic + 28, tonic + 31 }, 0.35f, 10f, bright: true);
+            _hurt = Synth.Thud("PlayerHurt");
         }
 
         void OnJudged(BeatActionResult r)
@@ -112,8 +120,28 @@ namespace ProjectHymn.Gameplay
             }
         }
 
+        /// <summary>Enemy attack telegraph cue (one measure before it lands).</summary>
+        public void PlayTelegraph(bool heavy) => PlayNow(heavy ? _telegraphHeavy : _telegraph, heavy ? 0.9f : 0.6f);
+
+        public void PlayParry()
+        {
+            PlayQuantized(_parry, 1f);
+            HitStop(perfectHitStop * 1.5f);
+        }
+
+        public void PlayHurt()
+        {
+            PlayNow(_hurt, 1f);
+            if (cameraRig != null)
+            {
+                if (_shake != null) StopCoroutine(_shake);
+                _shake = StartCoroutine(Shake());
+            }
+        }
+
         void PlayQuantized(AudioClip clip, float volume)
         {
+            if (clip == null) return;
             if (conductor == null || !conductor.IsPlaying) { PlayNow(clip, volume); return; }
             // Next 16th note on the tempo map, measured from what the player hears.
             double now = conductor.SongTime;
@@ -130,6 +158,7 @@ namespace ProjectHymn.Gameplay
 
         void PlayNow(AudioClip clip, float volume)
         {
+            if (clip == null) return;
             var v = NextVoice();
             v.clip = clip;
             v.volume = sfxVolume * volume;

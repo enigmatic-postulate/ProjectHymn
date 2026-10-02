@@ -56,6 +56,7 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float smashDamage = 18f;
         [SerializeField] float downbeatBonus = 1.25f;
         [SerializeField] float finisherDamage = 60f;
+        [SerializeField] int parryPoints = 400;
 
         [Header("Hit area")]
         [SerializeField] float attackRange = 1.1f;
@@ -69,7 +70,7 @@ namespace ProjectHymn.Gameplay
         bool _hasBuffered;
         BeatAction _bufferedAction;
         double _bufferedPressTime;
-        long _guardBeat = long.MinValue;
+        double _lastGuardPress = double.NegativeInfinity;
         readonly List<Collider2D> _hits = new List<Collider2D>();
 
         public ComboEngine Combo { get; } = new ComboEngine();
@@ -79,11 +80,16 @@ namespace ProjectHymn.Gameplay
         public Conductor Conductor => conductor;
         public bool FinisherQueued => _finisherQueued;
         public ActionLock CurrentLock => _lock;
+        public TimingWindows Windows => windows;
+        /// <summary>Calibrated song time of the last Guard press, on-beat or not. Enemies judge parries against it.</summary>
+        public double LastGuardPressTime => _lastGuardPress;
 
         public event Action<BeatActionResult> ActionJudged;
         public event Action<PhrasePattern> PhraseTriggered;
         public event Action<BeatInfo> FinisherReady;
         public event Action<float> FinisherFired;
+        /// <summary>An enemy attack was parried (enemy name).</summary>
+        public event Action<string> Parried;
         /// <summary>A press arrived too early in a recovery to be buffered and was dropped.</summary>
         public event Action<BeatAction> InputDropped;
 
@@ -167,14 +173,15 @@ namespace ProjectHymn.Gameplay
                 case BeatAction.Strike:
                 case BeatAction.Smash:
                     damage = ComputeDamage(action, effective, judge.Beat, phrase);
-                    DealDamage(damage, phrase?.Source is PhraseData pd ? pd.effectId : null, false);
+                    var effect = phrase?.Source is PhraseData pd ? pd.effectId : null;
+                    DealDamage(damage, effect, false, RadiusScale(effect));
                     break;
                 case BeatAction.Step:
                     if (_motor != null) _motor.Dash(onBeat);
                     break;
                 case BeatAction.Guard:
-                    // Parry window = this beat. Enemy attacks check IsGuarding(beat) when they land.
-                    _guardBeat = onBeat ? judge.Beat.Index : long.MinValue;
+                    // Enemies compare this press with their hit time (ParryJudge), so off-beat attacks can be parried too.
+                    _lastGuardPress = pressTime;
                     break;
             }
 
@@ -182,8 +189,16 @@ namespace ProjectHymn.Gameplay
             ActionJudged?.Invoke(new BeatActionResult(action, judge, outcome, phrase, damage, winded, _lock, points));
         }
 
-        /// <summary>True if the player pressed Guard on time for the given beat. Enemies call this when their hit lands.</summary>
-        public bool IsGuarding(long beatIndex) => _guardBeat == beatIndex && _input != null && _input.GuardHeld;
+        /// <summary>Called by an enemy when the player parried it: rewards like a Perfect hit plus a bonus.</summary>
+        public void RegisterParry(string enemyName)
+        {
+            Groove.Add(Judgement.Perfect);
+            Score.AddBonus(parryPoints, Groove.ScoreMultiplier);
+            Parried?.Invoke(enemyName);
+        }
+
+        /// <summary>Called when the player takes a hit.</summary>
+        public void RegisterHurt() => Groove.Hurt();
 
         FrameData FramesFor(BeatAction a) => a switch
         {
@@ -211,15 +226,24 @@ namespace ProjectHymn.Gameplay
             // Bigger meters need more inputs to fill, so they pay more.
             float dmg = finisherDamage * (beat.BeatsPerMeasure / 4f) * Groove.DamageMultiplier;
             Score.AddFinisher(beat.BeatsPerMeasure, Groove.ScoreMultiplier);
-            DealDamage(dmg, "finisher", true);
+            DealDamage(dmg, "finisher", true, 2.5f);
             FinisherFired?.Invoke(dmg);
         }
 
-        void DealDamage(float damage, string effectId, bool finisher)
+        /// <summary>Area phrases hit wider: Backbeat shockwave, Waltz spin.</summary>
+        static float RadiusScale(string effect) => effect switch
+        {
+            "shockwave" => 2f,
+            "spin" => 2.5f,
+            _ => 1f,
+        };
+
+        void DealDamage(float damage, string effectId, bool finisher, float radiusScale)
         {
             var facing = _motor != null ? _motor.Facing : Vector2.right;
-            Vector2 center = (Vector2)transform.position + facing * attackRange;
-            float radius = finisher ? attackRadius * 2.5f : attackRadius;
+            // Wide hits are centred on the player; normal hits in front of them.
+            Vector2 center = radiusScale > 1f ? (Vector2)transform.position : (Vector2)transform.position + facing * attackRange;
+            float radius = attackRadius * radiusScale;
             var filter = new ContactFilter2D { useLayerMask = true, layerMask = hittable, useTriggers = true };
             int count = Physics2D.OverlapCircle(center, radius, filter, _hits);
             for (int i = 0; i < count; i++)

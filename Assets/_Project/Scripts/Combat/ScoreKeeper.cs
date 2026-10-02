@@ -31,6 +31,9 @@ namespace ProjectHymn.Combat
 
         public int AddFinisher(int beatsPerMeasure, float grooveMultiplier) => Add(FinisherPointsPerBeat * beatsPerMeasure * grooveMultiplier);
 
+        /// <summary>Flat bonus (kills, parries), scaled by Groove.</summary>
+        public int AddBonus(int points, float grooveMultiplier) => Add(points * grooveMultiplier);
+
         public void Reset() => Total = 0;
 
         int Add(double points)

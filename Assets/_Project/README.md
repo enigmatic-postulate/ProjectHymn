@@ -18,6 +18,23 @@ Rhythm-combat action RPG prototype for Unity 6. Attack on the beat of SNES-style
 - No beat ring: timing comes from the music, the player's bob and the background pulse. (The ring still exists as an optional cue: HUD → Show Beat Cue.)
 - Perfect hits get a 40 ms hit-stop and a chime pitched to the song's key; hit sounds snap to the 16th-note grid.
 
+## Arena (M2)
+
+Build Prototype Scene now creates a 2-minute arena instead of the training dummy. Waves spawn on a downbeat after a two-bar count-in; the next wave comes a bar after the last enemy falls, and the list loops with tougher enemies.
+
+| Enemy | Attacks on | Counter |
+| --- | --- | --- |
+| Metronome Slime | beat 1 every bar | basic on-beat hits |
+| Snare Imp | beats 2 and 4 | parry the backbeat with Guard (L) |
+| Tuba Knight | beat 1 every other bar, heavy, guarded | Syncopate (Strike, rest, Smash) or a Bar Finisher breaks its guard |
+| Piccolo Bat | eighth-note pecks (beats 3, 3-and, 4) every other bar | Off-step (Step, Strike) to reach it |
+
+- Every enemy attack is telegraphed **one full bar ahead**: low sound cue, colour ramps to red, white flash just before it lands.
+- **Parry**: press Guard within ±135 ms of the hit (±90 ms for heavy hits). Parries stagger the enemy for a bar and count like a Perfect.
+- **Dodge**: an on-beat Step gives i-frames; stepping out of reach also works.
+- Going down restarts the current wave two bars later at full HP.
+- After each fight a playstyle log (time-signature adaptation, block rate, aggressiveness, weapon preference, dodge rate) is written to `%USERPROFILE%\AppData\LocalLow\<company>\<product>\Playstyle\` (the Console prints the exact path).
+
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |

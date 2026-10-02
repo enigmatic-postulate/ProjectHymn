@@ -21,13 +21,14 @@ namespace ProjectHymn.EditorTools
         const string Root = "Assets/_Project";
         const string PhraseDir = Root + "/Data/Phrases";
         const string SongDir = Root + "/Data/Songs";
+        const string EnemyDir = Root + "/Data/Enemies";
         const string SceneDir = Root + "/Scenes";
         const string ScenePath = SceneDir + "/Prototype.unity";
 
         [MenuItem("Project Hymn/Build Prototype Scene", priority = 0)]
         public static void BuildPrototypeScene()
         {
-            foreach (var dir in new[] { PhraseDir, SongDir, SceneDir, Root + "/Audio/Music", Root + "/Art", Root + "/Prefabs" })
+            foreach (var dir in new[] { PhraseDir, SongDir, EnemyDir, SceneDir, Root + "/Audio/Music", Root + "/Art", Root + "/Prefabs" })
                 Directory.CreateDirectory(dir);
             AssetDatabase.Refresh();
 
@@ -38,6 +39,7 @@ namespace ProjectHymn.EditorTools
                 new TempoSection(4, 150f, 4),
                 new TempoSection(4, 150f, 3),
                 new TempoSection(4, 165f, 7, 8));
+            CreateEnemies();
             AssetDatabase.SaveAssets();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -49,6 +51,10 @@ namespace ProjectHymn.EditorTools
             theme2 = AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme2.asset");
             for (int i = 0; i < phrases.Count; i++)
                 phrases[i] = AssetDatabase.LoadAssetAtPath<PhraseData>(AssetDatabase.GetAssetPath(phrases[i]));
+            var slime = LoadEnemy("MetronomeSlime");
+            var imp = LoadEnemy("SnareImp");
+            var knight = LoadEnemy("TubaKnight");
+            var bat = LoadEnemy("PiccoloBat");
 
             // Camera
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
@@ -74,7 +80,7 @@ namespace ProjectHymn.EditorTools
 
             // Player
             var player = new GameObject("Player", typeof(Rigidbody2D), typeof(CircleCollider2D),
-                typeof(PlayerInputReader), typeof(PlayerMotor), typeof(BeatCombatController));
+                typeof(PlayerInputReader), typeof(PlayerMotor), typeof(BeatCombatController), typeof(PlayerHealth));
             var playerArt = new GameObject("Sprite", typeof(SpriteRenderer), typeof(BeatPulse));
             playerArt.transform.SetParent(player.transform, false);
             var psr = playerArt.GetComponent<SpriteRenderer>();
@@ -83,18 +89,14 @@ namespace ProjectHymn.EditorTools
             if (spriteMat != null) psr.sharedMaterial = spriteMat;
             FitToSize(playerArt.transform, psr.sprite, new Vector2(1f, 1f));
             var combat = player.GetComponent<BeatCombatController>();
+            var health = player.GetComponent<PlayerHealth>();
+            SetRef(health, "sprite", psr);
             SetRef(combat, "conductor", conductor);
             SetList(combat, "equippedPhrases", phrases);
 
-            // Training dummy
-            var dummy = new GameObject("TrainingDummy", typeof(BoxCollider2D), typeof(TrainingDummy));
-            dummy.transform.position = new Vector3(2.2f, 0, 0);
-            var dsr = dummy.AddComponent<SpriteRenderer>();
-            dsr.sprite = square;
-            dsr.color = new Color(0.9f, 0.4f, 0.5f);
-            if (spriteMat != null) dsr.sharedMaterial = spriteMat;
-            FitToSize(dummy.transform, dsr.sprite, new Vector2(1.2f, 1.6f));
-            dummy.GetComponent<BoxCollider2D>().size = dsr.sprite.bounds.size;
+            // Arena: walls around a 15 x 8 floor (the training dummy is retired; TrainingDummy.cs stays for tests).
+            var arenaRect = new Rect(-7.5f, -4f, 15f, 8f);
+            BuildArenaWalls(arenaRect, square, spriteMat);
 
             SetRef(pulse, "conductor", conductor);
 
@@ -105,17 +107,42 @@ namespace ProjectHymn.EditorTools
             SetRef(feedback, "conductor", conductor);
             SetRef(feedback, "cameraRig", camGo.transform);
 
-            BuildHud(conductor, combat, circle, square);
+            // Arena director: the waves of the 2-minute fight.
+            var arenaGo = new GameObject("ArenaDirector", typeof(ArenaDirector), typeof(PlaystyleTracker));
+            var arena = arenaGo.GetComponent<ArenaDirector>();
+            SetRef(arena, "conductor", conductor);
+            SetRef(arena, "combat", combat);
+            SetRef(arena, "playerHealth", health);
+            SetRef(arena, "feedback", feedback);
+            SetRef(arena, "circleSprite", circle);
+            SetRef(arena, "squareSprite", square);
+            if (spriteMat != null) SetRef(arena, "spriteMaterial", spriteMat);
+            SetWaves(arena, new (string, EnemyDefinition[])[]
+            {
+                ("Slimes", new[] { slime, slime }),
+                ("Backbeat", new[] { slime, imp }),
+                ("Snare Line", new[] { imp, imp }),
+                ("Wings", new[] { bat, slime }),
+                ("Brass", new[] { knight }),
+                ("Ensemble", new[] { knight, imp, bat }),
+                ("Full Band", new[] { slime, imp, bat, knight }),
+            });
+            var tracker = arenaGo.GetComponent<PlaystyleTracker>();
+            SetRef(tracker, "conductor", conductor);
+            SetRef(tracker, "combat", combat);
+            SetRef(tracker, "arena", arena);
+
+            BuildHud(conductor, combat, health, arena, circle, square);
 
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate. Off-beat actions cost stamina.");
+            Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate. Off-beat actions cost stamina; L parries enemy hits, on-beat Space dodges them.");
         }
 
-        static void BuildHud(Conductor conductor, BeatCombatController combat, Sprite circle, Sprite square)
+        static void BuildHud(Conductor conductor, BeatCombatController combat, PlayerHealth health, ArenaDirector arena, Sprite circle, Sprite square)
         {
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
@@ -172,6 +199,20 @@ namespace ProjectHymn.EditorTools
             staminaFill.fillMethod = Image.FillMethod.Horizontal;
             staminaFill.fillAmount = 1f;
 
+            var hpLabel = NewText("HpLabel", canvasGo.transform, font, 22, new Vector2(0f, 1f), new Vector2(230, -178), new Vector2(400, 28));
+            hpLabel.alignment = TextAnchor.MiddleLeft;
+            hpLabel.text = "HP";
+            var hpBg = NewImage("HpBack", canvasGo.transform, square, new Vector2(0f, 1f), new Vector2(230, -206), new Vector2(400, 14));
+            hpBg.color = new Color(1, 1, 1, 0.15f);
+            var hpFill = NewImage("HpFill", canvasGo.transform, square, new Vector2(0f, 1f), new Vector2(230, -206), new Vector2(400, 14));
+            hpFill.color = new Color(1f, 0.35f, 0.4f);
+            hpFill.type = Image.Type.Filled;
+            hpFill.fillMethod = Image.FillMethod.Horizontal;
+            hpFill.fillAmount = 1f;
+
+            var wave = NewText("Wave", canvasGo.transform, font, 34, new Vector2(0.5f, 1f), new Vector2(0, -45), new Vector2(800, 50));
+            wave.text = "GET READY";
+
             var score = NewText("Score", canvasGo.transform, font, 40, new Vector2(1f, 1f), new Vector2(-230, -50), new Vector2(400, 50));
             score.alignment = TextAnchor.MiddleRight;
             score.text = "0";
@@ -190,6 +231,10 @@ namespace ProjectHymn.EditorTools
             SetRef(hud, "bannerText", banner);
             SetRef(hud, "staminaFill", staminaFill);
             SetRef(hud, "scoreText", score);
+            SetRef(hud, "health", health);
+            SetRef(hud, "arena", arena);
+            SetRef(hud, "hpFill", hpFill);
+            SetRef(hud, "waveText", wave);
 
             var cal = canvasGo.GetComponent<CalibrationPanel>();
             SetRef(cal, "conductor", conductor);
@@ -207,6 +252,93 @@ namespace ProjectHymn.EditorTools
                 CreatePhrase("OffStep", "Off-step", "Dash-through slash.", 0, 1.4f, "dash_slash", D, S),
                 CreatePhrase("Waltz", "Waltz", "Spinning AoE. Only in 3/4.", 3, 2.2f, "spin", S, S, S),
             };
+        }
+
+        static void CreateEnemies()
+        {
+            CreateEnemy("MetronomeSlime", d =>
+            {
+                d.displayName = "Metronome Slime"; d.teaches = "Downbeat accent and basic timing. Hops on every beat, strikes on beat 1.";
+                d.maxHp = 40; d.damage = 8; d.scoreValue = 200;
+                d.pattern = new EnemyPattern(1, 0, 0f);
+                d.movement = EnemyMovement.Hopper; d.moveSpeed = 2.2f; d.preferredDistance = 0.9f; d.attackRange = 1.3f;
+                d.shape = EnemyShape.Circle; d.color = new Color(0.4f, 0.9f, 0.45f); d.size = new Vector2(0.9f, 0.75f);
+            });
+            CreateEnemy("SnareImp", d =>
+            {
+                d.displayName = "Snare Imp"; d.teaches = "Parrying the backbeat. Keeps its distance, darts in on beats 2 and 4.";
+                d.maxHp = 55; d.damage = 10; d.scoreValue = 300;
+                d.pattern = new EnemyPattern(1, 0, 1f, 3f);
+                d.movement = EnemyMovement.Skirmisher; d.moveSpeed = 3f; d.preferredDistance = 2.4f; d.attackRange = 1.3f;
+                d.shape = EnemyShape.Square; d.color = new Color(1f, 0.6f, 0.2f); d.size = new Vector2(0.7f, 0.9f);
+            });
+            CreateEnemy("TubaKnight", d =>
+            {
+                d.displayName = "Tuba Knight"; d.teaches = "Guard-break with Syncopate (Strike, rest, Smash). Heavy hit every other measure.";
+                d.maxHp = 160; d.damage = 25; d.heavy = true; d.guarded = true; d.scoreValue = 800;
+                d.pattern = new EnemyPattern(2, 1, 0f);
+                d.movement = EnemyMovement.Juggernaut; d.moveSpeed = 1.1f; d.preferredDistance = 1.2f; d.attackRange = 1.7f;
+                d.shape = EnemyShape.Square; d.color = new Color(0.55f, 0.62f, 0.9f); d.size = new Vector2(1.3f, 1.6f);
+            });
+            CreateEnemy("PiccoloBat", d =>
+            {
+                d.displayName = "Piccolo Bat"; d.teaches = "Off-step. Circles out of reach, swoops in for eighth-note pecks.";
+                d.maxHp = 30; d.damage = 5; d.scoreValue = 350;
+                d.pattern = new EnemyPattern(2, 0, 2f, 2.5f, 3f);
+                d.movement = EnemyMovement.Flyer; d.moveSpeed = 3.5f; d.preferredDistance = 3.2f; d.attackRange = 1.1f;
+                d.shape = EnemyShape.Circle; d.color = new Color(0.75f, 0.45f, 1f); d.size = new Vector2(0.6f, 0.45f);
+            });
+        }
+
+        static void CreateEnemy(string file, System.Action<EnemyDefinition> setup)
+        {
+            string path = $"{EnemyDir}/{file}.asset";
+            if (AssetDatabase.LoadAssetAtPath<EnemyDefinition>(path) != null) return; // keep tuned values
+            var d = ScriptableObject.CreateInstance<EnemyDefinition>();
+            setup(d);
+            AssetDatabase.CreateAsset(d, path);
+        }
+
+        static EnemyDefinition LoadEnemy(string file) => AssetDatabase.LoadAssetAtPath<EnemyDefinition>($"{EnemyDir}/{file}.asset");
+
+        static void SetWaves(ArenaDirector arena, (string name, EnemyDefinition[] enemies)[] waves)
+        {
+            var so = new SerializedObject(arena);
+            var list = so.FindProperty("waves");
+            list.arraySize = waves.Length;
+            for (int i = 0; i < waves.Length; i++)
+            {
+                var w = list.GetArrayElementAtIndex(i);
+                w.FindPropertyRelative("name").stringValue = waves[i].name;
+                var arr = w.FindPropertyRelative("enemies");
+                arr.arraySize = waves[i].enemies.Length;
+                for (int j = 0; j < waves[i].enemies.Length; j++)
+                    arr.GetArrayElementAtIndex(j).objectReferenceValue = waves[i].enemies[j];
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void BuildArenaWalls(Rect r, Sprite square, Material mat)
+        {
+            var root = new GameObject("Arena");
+            const float t = 0.3f;
+            MakeWall(root.transform, "WallTop", new Vector2(r.center.x, r.yMax + t / 2), new Vector2(r.width + 2 * t, t), square, mat);
+            MakeWall(root.transform, "WallBottom", new Vector2(r.center.x, r.yMin - t / 2), new Vector2(r.width + 2 * t, t), square, mat);
+            MakeWall(root.transform, "WallLeft", new Vector2(r.xMin - t / 2, r.center.y), new Vector2(t, r.height), square, mat);
+            MakeWall(root.transform, "WallRight", new Vector2(r.xMax + t / 2, r.center.y), new Vector2(t, r.height), square, mat);
+        }
+
+        static void MakeWall(Transform parent, string name, Vector2 pos, Vector2 size, Sprite square, Material mat)
+        {
+            var go = new GameObject(name, typeof(SpriteRenderer), typeof(BoxCollider2D));
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.color = new Color(0.35f, 0.3f, 0.5f);
+            if (mat != null) sr.sharedMaterial = mat;
+            FitToSize(go.transform, square, size);
+            go.GetComponent<BoxCollider2D>().size = square.bounds.size;
         }
 
         static PhraseData CreatePhrase(string file, string display, string desc, int meter, float mult, string effect, params BeatAction[] pattern)

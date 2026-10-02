@@ -16,6 +16,8 @@ namespace ProjectHymn.UI
     {
         [SerializeField] Conductor conductor;
         [SerializeField] BeatCombatController combat;
+        [SerializeField] PlayerHealth health;
+        [SerializeField] ArenaDirector arena;
 
         [Header("Optional beat cue (accessibility, off by default)")]
         [SerializeField] bool showBeatCue = false;
@@ -30,6 +32,8 @@ namespace ProjectHymn.UI
         [SerializeField] Text bannerText;
         [SerializeField] Image staminaFill;
         [SerializeField] Text scoreText;
+        [SerializeField] Image hpFill;
+        [SerializeField] Text waveText;
 
         [Header("Colours")]
         [SerializeField] Color perfect = new Color(1f, 0.84f, 0.25f);
@@ -51,6 +55,8 @@ namespace ProjectHymn.UI
         {
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
             if (combat == null) combat = FindAnyObjectByType<BeatCombatController>();
+            if (health == null && combat != null) health = combat.GetComponent<PlayerHealth>();
+            if (arena == null) arena = FindAnyObjectByType<ArenaDirector>();
         }
 
         void OnEnable()
@@ -63,6 +69,16 @@ namespace ProjectHymn.UI
                 combat.FinisherFired += OnFinisherFired;
             }
             if (conductor != null) conductor.SectionChanged += OnSection;
+            if (combat != null) combat.Parried += OnParried;
+            if (arena != null)
+            {
+                arena.WaveStarted += OnWaveStarted;
+                arena.WaveCleared += OnWaveCleared;
+                arena.PlayerDowned += OnDowned;
+                arena.ArenaCleared += OnArenaCleared;
+                arena.EnemyGuarded += OnGuarded;
+                arena.EnemyGuardBroken += OnGuardBroken;
+            }
         }
 
         void OnDisable()
@@ -75,6 +91,16 @@ namespace ProjectHymn.UI
                 combat.FinisherFired -= OnFinisherFired;
             }
             if (conductor != null) conductor.SectionChanged -= OnSection;
+            if (combat != null) combat.Parried -= OnParried;
+            if (arena != null)
+            {
+                arena.WaveStarted -= OnWaveStarted;
+                arena.WaveCleared -= OnWaveCleared;
+                arena.PlayerDowned -= OnDowned;
+                arena.ArenaCleared -= OnArenaCleared;
+                arena.EnemyGuarded -= OnGuarded;
+                arena.EnemyGuardBroken -= OnGuardBroken;
+            }
         }
 
         void Update()
@@ -125,6 +151,18 @@ namespace ProjectHymn.UI
                     staminaFill.color = Color.Lerp(staminaLow, stamina, Mathf.Clamp01(st.Normalized * 2f));
                 }
                 if (scoreText != null) scoreText.text = combat.Score.Total.ToString("N0");
+            }
+
+            if (health != null && hpFill != null) hpFill.fillAmount = health.Hp / health.MaxHp;
+            if (arena != null && waveText != null)
+            {
+                if (arena.IsCleared) waveText.text = "ARENA CLEAR";
+                else if (arena.IsRunning)
+                {
+                    int t = Mathf.CeilToInt(arena.TimeLeft);
+                    waveText.text = $"WAVE {arena.WaveNumber}   {t / 60}:{t % 60:00}";
+                }
+                else waveText.text = "GET READY";
             }
 
             Fade(judgementText, ref _judgeTimer, 0.5f);
@@ -180,6 +218,27 @@ namespace ProjectHymn.UI
         void OnFinisherReady(BeatInfo b) => ShowBanner("BAR COMPLETE");
         void OnFinisherFired(float dmg) => ShowBanner($"FINISHER  {dmg:0}");
         void OnSection(BeatInfo b) => ShowBanner($"{b.Signature} @ {b.Bpm:0}");
+
+        void OnParried(string enemy) => ShowBanner("PARRY!");
+        void OnWaveStarted(int n, string name) => ShowBanner($"WAVE {n}: {name.ToUpperInvariant()}");
+        void OnWaveCleared(int n) => ShowBanner("WAVE CLEAR");
+        void OnDowned() => ShowBanner("DOWN — RETRYING WAVE");
+        void OnArenaCleared(long score) => ShowBanner($"ARENA CLEAR  {score:N0}", 6f);
+        void OnGuardBroken(BeatEnemy e) => ShowBanner("GUARD BROKEN!");
+
+        void OnGuarded(BeatEnemy e)
+        {
+            if (phraseText == null) return;
+            phraseText.text = "GUARDED — try Syncopate (Strike, rest, Smash)";
+            _phraseTimer = 1.2f;
+        }
+
+        void ShowBanner(string text, float seconds)
+        {
+            if (bannerText == null) return;
+            bannerText.text = text;
+            _bannerTimer = seconds;
+        }
 
         void ShowBanner(string text)
         {

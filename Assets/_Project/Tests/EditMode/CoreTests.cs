@@ -369,4 +369,170 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(900 + 1750, s.Total);
         }
     }
+
+    public class EnemyRhythmTests
+    {
+        // 4 bars 4/4 @120 (beats 0-15, 0.5 s each), then 2 bars 3/4 @120 (beats 16-21)
+        readonly TempoMap _map = new TempoMap(new List<TempoSection> { new TempoSection(4, 120f, 4), new TempoSection(2, 120f, 3) }, false);
+
+        [Test]
+        public void MeasureStartBeatAcrossMeterChange()
+        {
+            Assert.AreEqual(0L, _map.MeasureStartBeat(0));
+            Assert.AreEqual(12L, _map.MeasureStartBeat(3));
+            Assert.AreEqual(16L, _map.MeasureStartBeat(4));
+            Assert.AreEqual(19L, _map.MeasureStartBeat(5));
+        }
+
+        [Test]
+        public void MeasureStartBeatLoops()
+        {
+            var m = new TempoMap(new List<TempoSection> { new TempoSection(2, 120f, 4) }, true);
+            Assert.AreEqual(8L, m.MeasureStartBeat(2));
+            Assert.AreEqual(12L, m.MeasureStartBeat(3));
+        }
+
+        [Test]
+        public void SlimeAttacksEveryDownbeatWithOneMeasureTelegraph()
+        {
+            var slime = new EnemyPattern(1, 0, 0f);
+            var a = EnemyRhythm.Next(_map, slime, 0.0).Value;
+            Assert.AreEqual(4.0, a.BeatPosition, 1e-9);
+            Assert.AreEqual(2.0, a.Time, 1e-9);
+            Assert.AreEqual(0.0, a.TelegraphStart, 1e-9);
+            Assert.IsTrue(a.IsOnBeat);
+        }
+
+        [Test]
+        public void ImpHitsTheBackbeat()
+        {
+            var imp = new EnemyPattern(1, 0, 1f, 3f);
+            var a = EnemyRhythm.Next(_map, imp, 0.0).Value;
+            var b = EnemyRhythm.Next(_map, imp, a.BeatPosition).Value;
+            Assert.AreEqual(1.0, a.BeatPosition, 1e-9);
+            Assert.AreEqual(3.0, b.BeatPosition, 1e-9);
+        }
+
+        [Test]
+        public void KnightEveryOtherMeasure()
+        {
+            var knight = new EnemyPattern(2, 1, 0f);
+            var a = EnemyRhythm.Next(_map, knight, 0.0).Value;
+            var b = EnemyRhythm.Next(_map, knight, a.BeatPosition).Value;
+            Assert.AreEqual(1L, a.Measure);
+            Assert.AreEqual(3L, b.Measure);
+        }
+
+        [Test]
+        public void BatEighthNoteBurst()
+        {
+            var bat = new EnemyPattern(1, 0, 2f, 2.5f, 3f);
+            var a = EnemyRhythm.Next(_map, bat, 0.0).Value;
+            var b = EnemyRhythm.Next(_map, bat, a.BeatPosition).Value;
+            Assert.AreEqual(2.5, b.BeatPosition, 1e-9);
+            Assert.IsFalse(b.IsOnBeat);
+            Assert.AreEqual(1.25, b.Time, 1e-9);
+        }
+
+        [Test]
+        public void SkipsOffsetsMissingInShorterMeter()
+        {
+            var imp = new EnemyPattern(1, 0, 1f, 3f);
+            var a = EnemyRhythm.Next(_map, imp, 16.5).Value;   // 3/4 bar starting at beat 16: only offset 1 exists
+            var b = EnemyRhythm.Next(_map, imp, a.BeatPosition).Value;
+            Assert.AreEqual(17.0, a.BeatPosition, 1e-9);
+            Assert.AreEqual(20.0, b.BeatPosition, 1e-9);        // next 3/4 bar's beat 2, not beat 19
+            Assert.AreEqual(3, b.BeatsPerMeasure);
+        }
+
+        [Test]
+        public void NewSpawnGetsAFullTelegraph()
+        {
+            var slime = new EnemyPattern(1, 0, 0f);
+            var a = EnemyRhythm.FirstFullyTelegraphed(_map, slime, 0.7).Value; // mid-way through bar 0
+            Assert.IsTrue(a.TelegraphStart >= 0.7);
+            Assert.AreEqual(8.0, a.BeatPosition, 1e-9);
+        }
+    }
+
+    public class ParryJudgeTests
+    {
+        readonly TimingWindows _w = TimingWindows.Default;
+
+        [Test]
+        public void ParryWithinGoodWindow()
+        {
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, false, 1.10, 1.0, _w, false));
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, false, 1.20, 1.0, _w, false));
+        }
+
+        [Test]
+        public void HeavyNeedsTighterTiming()
+        {
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, false, 1.11, 1.0, _w, true));
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, false, 1.08, 1.0, _w, true));
+        }
+
+        [Test]
+        public void DodgeAndRange()
+        {
+            Assert.AreEqual(DefenseResult.Dodged, ParryJudge.Resolve(true, true, -10, 1.0, _w, false));
+            Assert.AreEqual(DefenseResult.OutOfRange, ParryJudge.Resolve(false, false, 1.0, 1.0, _w, false));
+        }
+    }
+
+    public class PlaystyleMetricsTests
+    {
+        static BeatInfo Beat(long measure, int bpm = 4) => new BeatInfo(measure * bpm, measure, 0, bpm, 4, 120, 0, 0);
+
+        [Test]
+        public void BlockAndDodgeRatesIgnoreOutOfRange()
+        {
+            var m = new PlaystyleMetrics();
+            m.RecordDefense(DefenseResult.Parried);
+            m.RecordDefense(DefenseResult.Dodged);
+            m.RecordDefense(DefenseResult.Hit);
+            m.RecordDefense(DefenseResult.Hit);
+            m.RecordDefense(DefenseResult.OutOfRange);
+            Assert.AreEqual(0.25, m.BlockRate, 1e-9);
+            Assert.AreEqual(0.25, m.DodgeRate, 1e-9);
+            Assert.AreEqual(1, m.AttacksAvoidedByPosition);
+        }
+
+        [Test]
+        public void AggressivenessBlendsRateAndProximity()
+        {
+            var m = new PlaystyleMetrics();
+            for (int i = 0; i < 30; i++) m.RecordAction(BeatAction.Strike, Judgement.Great, Beat(0));
+            m.Tick(30, true, "Blade");   // 30 attacks in 30 s near enemies
+            m.Tick(30, false, "Blade");  // 30 more seconds away
+            Assert.AreEqual(30.0, m.AttacksPerMinute, 1e-9);
+            Assert.AreEqual(0.5 * 0.5 + 0.5 * 0.5, m.Aggressiveness, 1e-9);
+            Assert.AreEqual("Blade", m.PreferredWeapon);
+        }
+
+        [Test]
+        public void MeterAdaptationComparesPostChangeAccuracy()
+        {
+            var m = new PlaystyleMetrics();
+            for (int i = 0; i < 8; i++) m.RecordAction(BeatAction.Strike, Judgement.Perfect, Beat(0)); // 8/8 before
+            m.RecordMeterChange(Beat(4, 3));
+            m.RecordAction(BeatAction.Strike, Judgement.Perfect, Beat(4, 3));
+            m.RecordAction(BeatAction.Strike, Judgement.OffBeat, Beat(5, 3));
+            m.RecordAction(BeatAction.Strike, Judgement.Perfect, Beat(6, 3));  // outside the 2-bar window
+            // after change: 1/2 = 0.5; overall 10/11
+            Assert.AreEqual(0.5 / (10.0 / 11.0), m.MeterAdaptation, 1e-9);
+            Assert.AreEqual(2.0 / 3.0, m.MeterAccuracy("3/4"), 1e-9);
+        }
+
+        [Test]
+        public void JsonHasAllFiveSignals()
+        {
+            var m = new PlaystyleMetrics();
+            var json = m.ToJson("BattleTheme1", new System.DateTime(2026, 10, 2, 0, 0, 0, System.DateTimeKind.Utc));
+            foreach (var k in new[] { "meterAdaptation", "blockRate", "aggressiveness", "preferredWeapon", "dodgeRate" })
+                Assert.IsTrue(json.Contains("\"" + k + "\""));
+            Assert.IsTrue(json.Contains("\"meterAdaptation\": null"));
+        }
+    }
 }
