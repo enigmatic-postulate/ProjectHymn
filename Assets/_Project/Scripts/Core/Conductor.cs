@@ -122,6 +122,8 @@ namespace ProjectHymn.Core
         public void Play(SongData data)
         {
             song = data;
+            // Scheduled playback needs the samples ready; clips imported without "Preload Audio Data" aren't.
+            if (song.clip != null && song.clip.loadState != AudioDataLoadState.Loaded) song.clip.LoadAudioData();
             _timeline = null;
             _currentPhase = 0;
             _blocksScheduled = 0;

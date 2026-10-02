@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08cda7fd1689ea64ca04e7c70d6b5e90, type: 3}
+  m_Name: Level2Theme
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Core.SongData
+  clip: {fileID: 8300000, guid: b42a3a84e5a702e478d2bf783c638c66, type: 3}
+  firstBeatOffset: 0.03
+  loop: 0
+  referenceUrl: https://ocremix.org/remix/OCR02936
+  keyRoot: 0
+  minorKey: 1
+  sections:
+  - measures: 8
+    bpm: 150
+    beatsPerMeasure: 4
+    beatUnit: 4
+  - measures: 80
+    bpm: 150
+    beatsPerMeasure: 4
+    beatUnit: 4
+  - measures: 8
+    bpm: 150
+    beatsPerMeasure: 4
+    beatUnit: 4
+  phases:
+  - name: Fight
+    firstSection: 1
+    sectionCount: 1
