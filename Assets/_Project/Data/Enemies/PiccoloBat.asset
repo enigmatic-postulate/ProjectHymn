@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e3a289087444312a33096f628367103, type: 3}
+  m_Name: PiccoloBat
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.EnemyDefinition
+  displayName: Piccolo Bat
+  teaches: Off-step. Circles out of reach, swoops in for eighth-note pecks.
+  maxHp: 30
+  damage: 5
+  heavy: 0
+  guarded: 0
+  scoreValue: 350
+  pattern:
+    everyMeasures: 2
+    measurePhase: 0
+    beatOffsets:
+    - 2
+    - 2.5
+    - 3
+  movement: 3
+  moveSpeed: 3.5
+  preferredDistance: 3.2
+  attackRange: 1.1
+  shape: 0
+  color: {r: 0.75, g: 0.45, b: 1, a: 1}
+  size: {x: 0.6, y: 0.45}
