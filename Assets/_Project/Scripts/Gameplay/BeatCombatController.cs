@@ -30,6 +30,14 @@ namespace ProjectHymn.Gameplay
         public bool IsAttack => Action == BeatAction.Strike || Action == BeatAction.Smash;
     }
 
+    /// <summary>Instruments (GDD): weapons change how the verbs behave.</summary>
+    public enum WeaponType
+    {
+        Blade,      // balanced
+        DrumHammer, // Smash hits twice: again half a beat later
+        LuteBow,    // Strike fires a projectile (reaches the Piccolo Bat; enables ranged Phrases)
+    }
+
     /// <summary>
     /// The rhythm combat loop (GDD M1 rules):
     /// press → judge against the Conductor → on-beat: combo + groove, free; off-beat: costs stamina,
@@ -58,6 +66,12 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float finisherDamage = 60f;
         [SerializeField] int parryPoints = 400;
 
+        [Header("Weapon")]
+        [SerializeField] WeaponType weapon = WeaponType.Blade;
+        [SerializeField] Sprite projectileSprite;
+        [SerializeField] Material projectileMaterial;
+        [SerializeField] float projectileSpeed = 12f;
+
         [Header("Hit area")]
         [SerializeField] float attackRange = 1.1f;
         [SerializeField] float attackRadius = 0.8f;
@@ -72,6 +86,7 @@ namespace ProjectHymn.Gameplay
         double _bufferedPressTime;
         double _lastGuardPress = double.NegativeInfinity;
         readonly List<Collider2D> _hits = new List<Collider2D>();
+        readonly List<(double time, float damage, string effect)> _echoes = new List<(double, float, string)>();
 
         public ComboEngine Combo { get; } = new ComboEngine();
         public GrooveMeter Groove { get; } = new GrooveMeter();
@@ -80,6 +95,35 @@ namespace ProjectHymn.Gameplay
         public Conductor Conductor => conductor;
         public bool FinisherQueued => _finisherQueued;
         public ActionLock CurrentLock => _lock;
+        public WeaponType Weapon => weapon;
+
+        // Run stats for the arena rank (GDD: accuracy and Groove peak).
+        public int TotalActions { get; private set; }
+        public int OnBeatActions { get; private set; }
+        public float PeakGroove { get; private set; }
+        public double Accuracy => TotalActions == 0 ? 0 : (double)OnBeatActions / TotalActions;
+
+        public void SetWeapon(WeaponType w) => weapon = w;
+
+        /// <summary>Replace the equipped Phrases (loadout from the save).</summary>
+        public void SetPhrases(IEnumerable<PhraseData> phrases)
+        {
+            equippedPhrases = new List<PhraseData>();
+            var patterns = new List<PhrasePattern>();
+            foreach (var p in phrases)
+            {
+                if (p == null || !p.IsValid) continue;
+                equippedPhrases.Add(p);
+                patterns.Add(PhrasePattern.From(p));
+            }
+            Combo.SetPhrases(patterns);
+            Combo.Reset();
+        }
+
+        public IReadOnlyList<PhraseData> EquippedPhrases => equippedPhrases;
+
+        /// <summary>Easy mode and settings: scale every timing window.</summary>
+        public void SetTimingScale(float scale) => windows.scale = Mathf.Max(0.1f, scale);
         public TimingWindows Windows => windows;
         /// <summary>Calibrated song time of the last Guard press, on-beat or not. Enemies judge parries against it.</summary>
         public double LastGuardPressTime => _lastGuardPress;
@@ -111,7 +155,8 @@ namespace ProjectHymn.Gameplay
 
         void Update()
         {
-            if (conductor == null || !conductor.IsPlaying || _input == null) return;
+            if (conductor == null || !conductor.IsPlaying || conductor.IsPaused || _input == null) return;
+            ProcessEchoes();
             Groove.Tick(Time.deltaTime);
             Stamina.Tick(Time.deltaTime);
 
@@ -161,6 +206,9 @@ namespace ProjectHymn.Gameplay
             else winded = !Stamina.Spend(action);
 
             Groove.Add(effective);
+            TotalActions++;
+            if (onBeat) OnBeatActions++;
+            PeakGroove = Mathf.Max(PeakGroove, Groove.Value);
             int points = Score.AddJudgement(effective, Groove.ScoreMultiplier);
             if (phrase.HasValue) points += Score.AddPhrase(phrase.Value.Pattern.Length, Groove.ScoreMultiplier);
 
@@ -172,9 +220,18 @@ namespace ProjectHymn.Gameplay
             {
                 case BeatAction.Strike:
                 case BeatAction.Smash:
-                    damage = ComputeDamage(action, effective, judge.Beat, phrase);
+                    damage = ComputeDamage(action, effective, judge.Beat, phrase) * WeaponScale(action);
                     var effect = phrase?.Source is PhraseData pd ? pd.effectId : null;
-                    DealDamage(damage, effect, false, RadiusScale(effect));
+                    if (weapon == WeaponType.LuteBow && action == BeatAction.Strike && RadiusScale(effect) <= 1f)
+                    {
+                        FireProjectile(damage, effect);
+                    }
+                    else
+                    {
+                        DealDamage(damage, effect, false, RadiusScale(effect));
+                        if (weapon == WeaponType.DrumHammer && action == BeatAction.Smash)
+                            _echoes.Add((judge.Beat.Time + 0.5 * judge.Beat.SecondsPerBeat, damage * 0.55f, effect));
+                    }
                     break;
                 case BeatAction.Step:
                     if (_motor != null) _motor.Dash(onBeat);
@@ -199,6 +256,40 @@ namespace ProjectHymn.Gameplay
 
         /// <summary>Called when the player takes a hit.</summary>
         public void RegisterHurt() => Groove.Hurt();
+
+        float WeaponScale(BeatAction a) => weapon switch
+        {
+            WeaponType.DrumHammer => a == BeatAction.Smash ? 1.2f : 0.9f,
+            WeaponType.LuteBow => a == BeatAction.Strike ? 0.85f : 1f,
+            _ => 1f,
+        };
+
+        /// <summary>Drum Hammer: the second hit of a Smash lands half a beat later, on the music's clock.</summary>
+        void ProcessEchoes()
+        {
+            if (_echoes.Count == 0) return;
+            double now = conductor.SongTime;
+            for (int i = _echoes.Count - 1; i >= 0; i--)
+            {
+                if (now < _echoes[i].time) continue;
+                var e = _echoes[i];
+                _echoes.RemoveAt(i);
+                DealDamage(e.damage, e.effect, false, RadiusScale(e.effect));
+            }
+        }
+
+        void FireProjectile(float damage, string effect)
+        {
+            var facing = _motor != null ? _motor.Facing : Vector2.right;
+            var go = new GameObject("Note Arrow");
+            go.transform.position = (Vector2)transform.position + facing * 0.6f;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = projectileSprite;
+            if (projectileMaterial != null) sr.sharedMaterial = projectileMaterial;
+            sr.sortingOrder = 8;
+            var p = go.AddComponent<Projectile>();
+            p.Launch(facing * projectileSpeed, new HitData(damage, facing, effect, false), gameObject, hittable);
+        }
 
         FrameData FramesFor(BeatAction a) => a switch
         {

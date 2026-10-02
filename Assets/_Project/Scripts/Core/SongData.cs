@@ -55,6 +55,9 @@ namespace ProjectHymn.Core
         [Tooltip("Optional. Leave empty to run on the metronome alone while prototyping.")]
         public AudioClip clip;
 
+        [Tooltip("Optional stems, all the same length and aligned with each other: drums, bass, harmony, lead. When set they play instead of Clip, and Groove brings them in tier by tier (GDD). Without stems the single Clip opens up from muffled to full as Groove rises.")]
+        public List<AudioClip> stems = new List<AudioClip>();
+
         [Tooltip("Seconds into the clip where beat 0 (the first downbeat) lands. Use 0 for looping songs (trim the clip to start on a downbeat).")]
         [Min(0f)] public double firstBeatOffset;
 

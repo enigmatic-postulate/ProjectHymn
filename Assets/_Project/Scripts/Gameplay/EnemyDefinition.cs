@@ -43,6 +43,8 @@ namespace ProjectHymn.Gameplay
         [Min(0f)] public float attackRange = 1.3f;
 
         [Header("Look")]
+        [Tooltip("Pixel sprite. When empty, the coloured Shape below is drawn instead.")]
+        public Sprite sprite;
         public EnemyShape shape = EnemyShape.Circle;
         public Color color = Color.green;
         public Vector2 size = new Vector2(0.8f, 0.8f);

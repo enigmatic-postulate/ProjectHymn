@@ -54,6 +54,8 @@ namespace ProjectHymn.UI
         long _measure = long.MinValue;
         float _judgeTimer, _phraseTimer, _bannerTimer;
 
+        public bool ShowBeatCue { get => showBeatCue; set => showBeatCue = value; }
+
         void Awake()
         {
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();

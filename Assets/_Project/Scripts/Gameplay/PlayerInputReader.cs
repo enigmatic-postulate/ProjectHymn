@@ -17,6 +17,10 @@ namespace ProjectHymn.Gameplay
         public bool StepPressed { get; private set; }
         public bool GuardPressed { get; private set; }
         public bool GuardHeld { get; private set; }
+        /// <summary>Esc / Start: pause menu.</summary>
+        public bool PausePressed { get; private set; }
+        /// <summary>E or J / X: talk, open, enter (town).</summary>
+        public bool InteractPressed { get; private set; }
 
         void Update()
         {
@@ -37,6 +41,8 @@ namespace ProjectHymn.Gameplay
             StepPressed = (kb?.spaceKey.wasPressedThisFrame ?? false) || (gp?.buttonSouth.wasPressedThisFrame ?? false);
             GuardPressed = (kb?.lKey.wasPressedThisFrame ?? false) || (gp?.buttonEast.wasPressedThisFrame ?? false);
             GuardHeld = (kb?.lKey.isPressed ?? false) || (gp?.buttonEast.isPressed ?? false);
+            PausePressed = (kb?.escapeKey.wasPressedThisFrame ?? false) || (gp?.startButton.wasPressedThisFrame ?? false);
+            InteractPressed = (kb?.eKey.wasPressedThisFrame ?? false) || StrikePressed;
 #else
             Move = Vector2.ClampMagnitude(new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")), 1f);
             StrikePressed = Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.JoystickButton2);
@@ -44,6 +50,8 @@ namespace ProjectHymn.Gameplay
             StepPressed = Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0);
             GuardPressed = Input.GetKeyDown(KeyCode.L) || Input.GetKeyDown(KeyCode.JoystickButton1);
             GuardHeld = Input.GetKey(KeyCode.L) || Input.GetKey(KeyCode.JoystickButton1);
+            PausePressed = Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton7);
+            InteractPressed = Input.GetKeyDown(KeyCode.E) || StrikePressed;
 #endif
         }
     }

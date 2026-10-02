@@ -58,6 +58,8 @@ namespace ProjectHymn.Gameplay
         public double FightSeconds => _fightSeconds;
         public float TimeLeft => Mathf.Max(0f, fightLengthSeconds - (float)_fightSeconds);
         public bool IsBossFight => boss != null;
+        /// <summary>How many times the player went down this run (each costs a rank step).</summary>
+        public int TimesDowned { get; private set; }
         public BossController Boss => _bossCtl;
 
         public event Action<int, string> WaveStarted;
@@ -201,9 +203,9 @@ namespace ProjectHymn.Gameplay
             go.transform.position = position;
 
             var body = go.AddComponent<SpriteRenderer>();
-            body.sprite = def.shape == EnemyShape.Circle ? circleSprite : squareSprite;
+            body.sprite = def.sprite != null ? def.sprite : def.shape == EnemyShape.Circle ? circleSprite : squareSprite;
             if (spriteMaterial != null) body.sharedMaterial = spriteMaterial;
-            body.color = def.color;
+            body.color = def.sprite != null ? Color.white : def.color;
             body.sortingOrder = 5;
             var spriteSize = body.sprite != null ? (Vector2)body.sprite.bounds.size : Vector2.one;
             go.transform.localScale = new Vector3(def.size.x / Mathf.Max(0.001f, spriteSize.x), def.size.y / Mathf.Max(0.001f, spriteSize.y), 1f);
@@ -251,6 +253,7 @@ namespace ProjectHymn.Gameplay
         {
             if (_state == State.Cleared) return;
             DespawnAll();
+            TimesDowned++;
             _state = State.Downed;
             _actOnMeasure = conductor.CurrentBeat.Measure + 2;
             PlayerDowned?.Invoke();

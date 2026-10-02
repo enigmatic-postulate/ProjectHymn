@@ -36,6 +36,15 @@ namespace ProjectHymn.Gameplay
             if (sprite != null) _baseColor = sprite.color;
         }
 
+        /// <summary>Armor bonus: change max HP and refill.</summary>
+        public void SetMaxHp(float value)
+        {
+            maxHp = Mathf.Max(1f, value);
+            Hp = maxHp;
+        }
+
+        public float BaseMaxHp => 100f;
+
         public void TakeHit(float damage)
         {
             if (IsDown) return;

@@ -19,6 +19,8 @@ namespace ProjectHymn.Gameplay
         bool _dashing;
 
         public Vector2 Facing { get; private set; } = Vector2.right;
+        /// <summary>Armor can slow or speed the player (1 = normal).</summary>
+        public float SpeedMultiplier { get; set; } = 1f;
         public bool Invulnerable { get; private set; }
 
         void Awake()
@@ -34,7 +36,7 @@ namespace ProjectHymn.Gameplay
             if (_dashing || _input == null) return;
             var move = _input.Move;
             if (move.sqrMagnitude > 0.01f) Facing = move.normalized;
-            SetVelocity(move * moveSpeed);
+            SetVelocity(move * moveSpeed * SpeedMultiplier);
         }
 
         void SetVelocity(Vector2 v)

@@ -24,6 +24,7 @@ namespace ProjectHymn.Gameplay
         bool _written;
 
         public PlaystyleMetrics Metrics { get; private set; } = new PlaystyleMetrics();
+        public string WeaponName { get => weaponName; set => weaponName = value; }
         public string LastWrittenPath { get; private set; }
 
         void Awake()

@@ -27,6 +27,12 @@ namespace ProjectHymn.Combat
         [Tooltip("Free-form id the combat controller maps to an effect (stagger, shockwave, aoe...).")]
         public string effectId = "stagger";
 
+        [Tooltip("Price in Notes at the town shop (0 = not sold).")]
+        [Min(0)] public int price;
+
+        /// <summary>Save-file id: the asset's name.</summary>
+        public string Id => name;
+
         public int Length => pattern?.Count ?? 0;
 
         public bool IsValid => Length > 0 && pattern[Length - 1] != BeatAction.Rest;

@@ -52,6 +52,8 @@ namespace ProjectHymn.Gameplay
             }
         }
 
+        public float SfxVolume { get => sfxVolume; set => sfxVolume = Mathf.Clamp01(value); }
+
         void Start() => BuildSounds();
 
         void OnEnable()

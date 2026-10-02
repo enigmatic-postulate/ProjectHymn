@@ -3,6 +3,7 @@ using System.IO;
 using ProjectHymn.Combat;
 using ProjectHymn.Core;
 using ProjectHymn.Gameplay;
+using ProjectHymn.Progression;
 using ProjectHymn.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -59,6 +60,7 @@ namespace ProjectHymn.EditorTools
             AssetDatabase.SaveAssets();
             CreateBoss();
             AssetDatabase.SaveAssets();
+            WorldBuilder.EnsureContent();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -76,6 +78,7 @@ namespace ProjectHymn.EditorTools
             var firstConductor = AssetDatabase.LoadAssetAtPath<BossDefinition>($"{BossDir}/FirstConductor.asset");
             EnsureBossThemePhases(theme2);
             var level2Theme = level2 ? CreateLevel2Theme() : null;
+            var catalog = WorldBuilder.LoadCatalog();
 
             // Camera
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
@@ -99,17 +102,16 @@ namespace ProjectHymn.EditorTools
             // URP projects: use the unlit sprite material so sprites render without 2D lights.
             var spriteMat = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
 
-            // Player
+            // Backdrop (pre-rendered arena art), behind everything
+            WorldBuilder.Backdrop(bossFight ? "bg_arena_boss" : level2 ? "bg_arena_garden" : "bg_arena_practice", Vector2.zero, spriteMat);
+
+            // Player: pixel-art Cantor, weapon in hand, loadout from the save
             var player = new GameObject("Player", typeof(Rigidbody2D), typeof(CircleCollider2D),
-                typeof(PlayerInputReader), typeof(PlayerMotor), typeof(BeatCombatController), typeof(PlayerHealth));
-            var playerArt = new GameObject("Sprite", typeof(SpriteRenderer), typeof(BeatPulse));
-            playerArt.transform.SetParent(player.transform, false);
-            var psr = playerArt.GetComponent<SpriteRenderer>();
-            psr.sprite = circle;
-            psr.color = new Color(0.35f, 0.75f, 1f);
-            if (spriteMat != null) psr.sharedMaterial = spriteMat;
-            FitToSize(playerArt.transform, psr.sprite, new Vector2(1f, 1f));
+                typeof(PlayerInputReader), typeof(PlayerMotor), typeof(BeatCombatController), typeof(PlayerHealth), typeof(LoadoutApplier));
+            var psr = WorldBuilder.DecoratePlayer(player, spriteMat, catalog, out var playerArt);
             var combat = player.GetComponent<BeatCombatController>();
+            SetRef(combat, "projectileSprite", ArtGenerator.Load("note_shot"));
+            if (spriteMat != null) SetRef(combat, "projectileMaterial", spriteMat);
             var health = player.GetComponent<PlayerHealth>();
             SetRef(health, "sprite", psr);
             SetRef(combat, "conductor", conductor);
@@ -155,6 +157,21 @@ namespace ProjectHymn.EditorTools
             SetRef(tracker, "arena", arena);
 
             BuildHud(conductor, combat, health, arena, circle, square);
+
+            // Game systems: Groove-driven music layers, pause menu, results/progress, settings
+            var game = new GameObject("Game", typeof(MusicMixer), typeof(PauseMenu), typeof(ResultsScreen), typeof(SettingsApplier));
+            SetRef(game.GetComponent<MusicMixer>(), "conductor", conductor);
+            SetRef(game.GetComponent<MusicMixer>(), "combat", combat);
+            SetRef(game.GetComponent<PauseMenu>(), "input", player.GetComponent<PlayerInputReader>());
+            var results = game.GetComponent<ResultsScreen>();
+            SetRef(results, "arena", arena);
+            SetRef(results, "combat", combat);
+            var (arenaId, arenaName, reward) = bossFight ? ("boss", "The First Conductor", "")
+                                             : level2 ? ("arena2", "Moonlit Garden", "OddTime")
+                                             : ("arena1", "Practice Hall", "Backbeat");
+            SetString(results, "arenaId", arenaId);
+            SetString(results, "arenaName", arenaName);
+            SetString(results, "firstClearPhrase", reward);
 
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
@@ -232,6 +249,25 @@ namespace ProjectHymn.EditorTools
             hpFill.type = Image.Type.Filled;
             hpFill.fillMethod = Image.FillMethod.Horizontal;
             hpFill.fillAmount = 1f;
+
+            // Phrase trail: last four inputs, bottom centre above the measure pips
+            var trailRow = new GameObject("PhraseTrail", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(PhraseTrail));
+            var trailRt = (RectTransform)trailRow.transform;
+            trailRt.SetParent(canvasGo.transform, false);
+            Anchor(trailRt, new Vector2(0.5f, 0f), new Vector2(0, 200), new Vector2(360, 56));
+            var trailLayout = trailRow.GetComponent<HorizontalLayoutGroup>();
+            trailLayout.childAlignment = TextAnchor.MiddleCenter;
+            trailLayout.spacing = 18;
+            trailLayout.childControlWidth = trailLayout.childControlHeight = false;
+            var trailSlots = new Text[4];
+            for (int i = 0; i < 4; i++)
+            {
+                trailSlots[i] = NewText($"Slot{i}", trailRow.transform, font, 46, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(64, 56));
+                trailSlots[i].text = "";
+            }
+            var trail = trailRow.GetComponent<PhraseTrail>();
+            SetRef(trail, "combat", combat);
+            SetList(trail, "slots", new List<Text>(trailSlots));
 
             var wave = NewText("Wave", canvasGo.transform, font, 34, new Vector2(0.5f, 1f), new Vector2(0, -45), new Vector2(800, 50));
             wave.text = "GET READY";
@@ -393,7 +429,7 @@ namespace ProjectHymn.EditorTools
             AssetDatabase.CreateAsset(d, path);
         }
 
-        static EnemyDefinition LoadEnemy(string file) => AssetDatabase.LoadAssetAtPath<EnemyDefinition>($"{EnemyDir}/{file}.asset");
+        internal static EnemyDefinition LoadEnemy(string file) => AssetDatabase.LoadAssetAtPath<EnemyDefinition>($"{EnemyDir}/{file}.asset");
 
         static void SetWaves(ArenaDirector arena, (string name, EnemyDefinition[] enemies)[] waves)
         {
@@ -412,7 +448,7 @@ namespace ProjectHymn.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void BuildArenaWalls(Rect r, Sprite square, Material mat)
+        internal static void BuildArenaWalls(Rect r, Sprite square, Material mat)
         {
             var root = new GameObject("Arena");
             const float t = 0.3f;
@@ -422,7 +458,7 @@ namespace ProjectHymn.EditorTools
             MakeWall(root.transform, "WallRight", new Vector2(r.xMax + t / 2, r.center.y), new Vector2(t, r.height), square, mat);
         }
 
-        static void MakeWall(Transform parent, string name, Vector2 pos, Vector2 size, Sprite square, Material mat)
+        internal static void MakeWall(Transform parent, string name, Vector2 pos, Vector2 size, Sprite square, Material mat)
         {
             var go = new GameObject(name, typeof(SpriteRenderer), typeof(BoxCollider2D));
             go.transform.SetParent(parent, false);
@@ -486,7 +522,7 @@ namespace ProjectHymn.EditorTools
             return AssetDatabase.LoadAssetAtPath<SongData>(path);
         }
 
-        static SongData CreateSong(string file, string url, params TempoSection[] sections)
+        internal static SongData CreateSong(string file, string url, params TempoSection[] sections)
         {
             string path = $"{SongDir}/{file}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<SongData>(path);
@@ -509,13 +545,13 @@ namespace ProjectHymn.EditorTools
         }
 
         /// <summary>Scales a transform so its sprite covers the given world size.</summary>
-        static void FitToSize(Transform t, Sprite sprite, Vector2 worldSize)
+        internal static void FitToSize(Transform t, Sprite sprite, Vector2 worldSize)
         {
             var b = sprite != null ? (Vector2)sprite.bounds.size : Vector2.one;
             t.localScale = new Vector3(worldSize.x / Mathf.Max(0.001f, b.x), worldSize.y / Mathf.Max(0.001f, b.y), 1f);
         }
 
-        static Image NewImage(string name, Transform parent, Sprite sprite, Vector2 anchor, Vector2 pos, Vector2 size)
+        internal static Image NewImage(string name, Transform parent, Sprite sprite, Vector2 anchor, Vector2 pos, Vector2 size)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
@@ -525,7 +561,7 @@ namespace ProjectHymn.EditorTools
             return img;
         }
 
-        static Text NewText(string name, Transform parent, Font font, int size, Vector2 anchor, Vector2 pos, Vector2 box)
+        internal static Text NewText(string name, Transform parent, Font font, int size, Vector2 anchor, Vector2 pos, Vector2 box)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
@@ -539,7 +575,7 @@ namespace ProjectHymn.EditorTools
             return t;
         }
 
-        static void Anchor(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size)
+        internal static void Anchor(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size)
         {
             rt.anchorMin = rt.anchorMax = anchor;
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -547,7 +583,7 @@ namespace ProjectHymn.EditorTools
             rt.sizeDelta = size;
         }
 
-        static void SetRef(Object target, string field, Object value)
+        internal static void SetRef(Object target, string field, Object value)
         {
             var so = new SerializedObject(target);
             var prop = so.FindProperty(field);
@@ -556,7 +592,16 @@ namespace ProjectHymn.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void SetList<T>(Object target, string field, List<T> values) where T : Object
+        internal static void SetString(Object target, string field, string value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field);
+            if (prop == null) { Debug.LogError($"Field '{field}' not found on {target.GetType().Name}"); return; }
+            prop.stringValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        internal static void SetList<T>(Object target, string field, List<T> values) where T : Object
         {
             var so = new SerializedObject(target);
             var prop = so.FindProperty(field);
@@ -565,7 +610,7 @@ namespace ProjectHymn.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void AddSceneToBuild(string path)
+        internal static void AddSceneToBuild(string path)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             if (scenes.Exists(s => s.path == path)) return;

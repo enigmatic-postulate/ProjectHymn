@@ -300,7 +300,7 @@ namespace ProjectHymn.Gameplay
         {
             if (_body == null || _flashing) return;
 
-            Color baseColor = _color;
+            Color baseColor = _def.sprite != null ? Color.Lerp(Color.white, _color, 0.25f) : _color;
             if (GuardUp) baseColor = Color.Lerp(baseColor, Color.black, 0.25f);
 
             if (IsStaggered) { _body.color = StaggerColor; transform.localScale = _baseScale; return; }

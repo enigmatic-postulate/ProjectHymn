@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using ProjectHymn.Combat;
 using ProjectHymn.Core;
+using ProjectHymn.Progression;
 
 namespace ProjectHymn.Tests
 {
@@ -614,6 +615,85 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(17.0, a.BeatPosition, 1e-9);
             var b = EnemyRhythm.Next(t.Map, imp, a.BeatPosition).Value;
             Assert.AreEqual(20.0, b.BeatPosition, 1e-9);
+        }
+    }
+
+    public class ProgressionTests
+    {
+        [Test]
+        public void NewGameHasStarterLoadout()
+        {
+            var d = SaveData.NewGame();
+            Assert.AreEqual(3, d.equippedPhrases.Count);
+            Assert.AreEqual("Blade", d.weaponId);
+            Assert.IsTrue(d.ownedItems.Contains("CantorRobe"));
+        }
+
+        [Test]
+        public void BuyingNeedsNotesAndOnlyOnce()
+        {
+            var r = new ProgressionRules(SaveData.NewGame());
+            Assert.IsFalse(r.BuyItem("DrumHammer", 800));
+            r.AddNotes(1000);
+            Assert.IsTrue(r.BuyItem("DrumHammer", 800));
+            Assert.AreEqual(200, r.Data.notes);
+            Assert.IsFalse(r.BuyItem("DrumHammer", 0));
+            Assert.IsTrue(r.EquipWeapon("DrumHammer"));
+            Assert.IsFalse(r.EquipArmor("BrassPlate"));
+        }
+
+        [Test]
+        public void SixPhraseLimitAndAtLeastOne()
+        {
+            var r = new ProgressionRules(SaveData.NewGame());
+            foreach (var p in new[] { "Backbeat", "Waltz", "OddTime" }) r.UnlockPhrase(p); // 6 equipped
+            Assert.AreEqual(6, r.Data.equippedPhrases.Count);
+            r.UnlockPhrase("Extra");                                                      // learned, not equipped
+            Assert.IsFalse(r.IsEquipped("Extra"));
+            Assert.IsFalse(r.TogglePhrase("Extra"));                                      // full
+            Assert.IsTrue(r.TogglePhrase("Waltz"));                                       // unequip
+            Assert.IsTrue(r.TogglePhrase("Extra"));
+            var one = new ProgressionRules(new SaveData { unlockedPhrases = { "A" }, equippedPhrases = { "A" } });
+            Assert.IsFalse(one.TogglePhrase("A"));
+        }
+
+        [Test]
+        public void ArenaRecordAwardsNotesPhraseAndRemix()
+        {
+            var r = new ProgressionRules(SaveData.NewGame());
+            var first = r.RecordArena("arena1", Rank.S, 40000, "Backbeat");
+            Assert.IsTrue(first.FirstClear);
+            Assert.AreEqual("Backbeat", first.PhraseUnlocked);
+            Assert.AreEqual(40000 / 200 + 300, first.NotesEarned);
+            Assert.IsTrue(first.RemixUnlocked);
+            var again = r.RecordArena("arena1", Rank.B, 10000, "Backbeat");
+            Assert.IsFalse(again.FirstClear);
+            Assert.IsNull(again.PhraseUnlocked);
+            Assert.IsFalse(again.NewBestRank);
+            Assert.AreEqual((int)Rank.S, r.Arena("arena1").bestRank);
+            Assert.AreEqual(40000L, r.Arena("arena1").bestScore);
+        }
+
+        [Test]
+        public void LoreIsFoundOnce()
+        {
+            var r = new ProgressionRules(SaveData.NewGame());
+            Assert.IsTrue(r.FindLore("verse1", 100));
+            Assert.IsFalse(r.FindLore("verse1", 100));
+            Assert.AreEqual(100, r.Data.notes);
+        }
+
+        [TestCase(0.95, 85f, 0, Rank.S)]
+        [TestCase(0.95, 60f, 0, Rank.A)]
+        [TestCase(0.82, 55f, 0, Rank.A)]
+        [TestCase(0.70, 90f, 0, Rank.B)]
+        [TestCase(0.55, 10f, 0, Rank.C)]
+        [TestCase(0.30, 10f, 0, Rank.D)]
+        [TestCase(0.95, 85f, 2, Rank.B)]
+        [TestCase(0.30, 10f, 3, Rank.D)]
+        public void RankFromAccuracyGrooveAndDowns(double acc, float peak, int downs, Rank expected)
+        {
+            Assert.AreEqual(expected, RankCalculator.Calculate(acc, peak, downs));
         }
     }
 }
