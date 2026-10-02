@@ -30,13 +30,20 @@ namespace ProjectHymn.EditorTools
         [MenuItem("Project Hymn/Build Prototype Scene", priority = 0)]
         public static void BuildPrototypeScene() => BuildArenaScene(false);
 
+        const string Level2ScenePath = SceneDir + "/Level2.unity";
+        const string Level2Clip = Root + "/Audio/Music/Donkey_Kong_Country_A_Different_Kind_of_Peace_OC_ReMix.mp3";
+
+        /// <summary>The wave arena on the Level 2 track (OC ReMix OCR02936), looping its main body.</summary>
+        [MenuItem("Project Hymn/Build Level 2 Scene", priority = 1)]
+        public static void BuildLevel2Scene() => BuildArenaScene(false, level2: true);
+
         /// <summary>The First Conductor on Battle Theme 2 (M3). Its music loops each phase until the boss moves on.</summary>
-        [MenuItem("Project Hymn/Build Boss Scene", priority = 1)]
+        [MenuItem("Project Hymn/Build Boss Scene", priority = 2)]
         public static void BuildBossScene() => BuildArenaScene(true);
 
-        static void BuildArenaScene(bool bossFight)
+        static void BuildArenaScene(bool bossFight, bool level2 = false)
         {
-            string scenePath = bossFight ? BossScenePath : ScenePath;
+            string scenePath = bossFight ? BossScenePath : level2 ? Level2ScenePath : ScenePath;
             foreach (var dir in new[] { PhraseDir, SongDir, EnemyDir, BossDir, SceneDir, Root + "/Audio/Music", Root + "/Art", Root + "/Prefabs" })
                 Directory.CreateDirectory(dir);
             AssetDatabase.Refresh();
@@ -68,6 +75,7 @@ namespace ProjectHymn.EditorTools
             var bat = LoadEnemy("PiccoloBat");
             var firstConductor = AssetDatabase.LoadAssetAtPath<BossDefinition>($"{BossDir}/FirstConductor.asset");
             EnsureBossThemePhases(theme2);
+            var level2Theme = level2 ? CreateLevel2Theme() : null;
 
             // Camera
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
@@ -84,7 +92,7 @@ namespace ProjectHymn.EditorTools
             // Conductor
             var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
             var conductor = condGo.GetComponent<Conductor>();
-            SetRef(conductor, "song", bossFight ? theme2 : theme1);
+            SetRef(conductor, "song", bossFight ? theme2 : level2 ? level2Theme : theme1);
 
             var square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
@@ -441,6 +449,41 @@ namespace ProjectHymn.EditorTools
             p.pattern = new List<BeatAction>(pattern);
             AssetDatabase.CreateAsset(p, path);
             return p;
+        }
+
+        /// <summary>
+        /// Measured from the track: 150 BPM, 4/4, first downbeat 0.03 s, C minor, 96 bars in 8-bar
+        /// phrases (quiet 8-bar intro, 80-bar body, 8-bar outro). The arena loops the body.
+        /// </summary>
+        static SongData CreateLevel2Theme()
+        {
+            string path = $"{SongDir}/Level2Theme.asset";
+            var s = AssetDatabase.LoadAssetAtPath<SongData>(path);
+            if (s == null)
+            {
+                s = ScriptableObject.CreateInstance<SongData>();
+                s.referenceUrl = "https://ocremix.org/remix/OCR02936";
+                s.firstBeatOffset = 0.03;
+                s.loop = false;
+                s.keyRoot = 0;       // C
+                s.minorKey = true;
+                s.sections = new List<TempoSection>
+                {
+                    new TempoSection(8, 150f, 4),   // intro (quiet)
+                    new TempoSection(80, 150f, 4),  // body
+                    new TempoSection(8, 150f, 4),   // outro
+                };
+                s.phases = new List<SongPhase> { new SongPhase("Fight", 1, 1) }; // loop bars 9-88
+                AssetDatabase.CreateAsset(s, path);
+            }
+            if (s.clip == null)
+            {
+                s.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(Level2Clip);
+                if (s.clip == null) Debug.LogWarning($"[Project Hymn] Level 2 track not found at {Level2Clip}; the arena will run on the metronome.");
+                EditorUtility.SetDirty(s);
+            }
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<SongData>(path);
         }
 
         static SongData CreateSong(string file, string url, params TempoSection[] sections)
