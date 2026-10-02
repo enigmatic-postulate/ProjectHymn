@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08cda7fd1689ea64ca04e7c70d6b5e90, type: 3}
+  m_Name: BattleTheme1
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Core.SongData
+  clip: {fileID: 8300000, guid: 252942716e1449f298b77718f46d21f0, type: 3}
+  firstBeatOffset: 0.244
+  loop: 0
+  referenceUrl: https://ocremix.org/remix/OCR04994
+  sections:
+  - measures: 112
+    bpm: 130
+    beatsPerMeasure: 4
+    beatUnit: 4
