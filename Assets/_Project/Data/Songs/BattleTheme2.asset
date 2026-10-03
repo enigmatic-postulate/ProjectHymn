@@ -16,8 +16,6 @@ MonoBehaviour:
   firstBeatOffset: 0
   loop: 1
   referenceUrl: https://www.youtube.com/watch?v=fGCFGbvfNCQ
-  keyRoot: 0
-  minorKey: 0
   sections:
   - measures: 4
     bpm: 150
@@ -31,13 +29,3 @@ MonoBehaviour:
     bpm: 165
     beatsPerMeasure: 7
     beatUnit: 8
-  phases:
-  - name: Overture
-    firstSection: 0
-    sectionCount: 1
-  - name: Waltz
-    firstSection: 1
-    sectionCount: 1
-  - name: Finale
-    firstSection: 2
-    sectionCount: 1

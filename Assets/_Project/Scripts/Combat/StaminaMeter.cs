@@ -15,8 +15,6 @@ namespace ProjectHymn.Combat
         public float RegenPerSecond = 35f;
         public float RegenDelay = 0.6f;
         public float StrikeCost = 15f, SmashCost = 25f, StepCost = 20f, GuardCost = 0f;
-        /// <summary>Jump always costs stamina, on the beat or not (GDD M6: jumping must not beat everything).</summary>
-        public float JumpCost = 20f;
 
         float _sinceAction;
 
@@ -33,7 +31,6 @@ namespace ProjectHymn.Combat
             BeatAction.Smash => SmashCost,
             BeatAction.Step => StepCost,
             BeatAction.Guard => GuardCost,
-            BeatAction.Jump => JumpCost,
             _ => 0f,
         };
 

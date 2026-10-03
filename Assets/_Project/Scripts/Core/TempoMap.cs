@@ -147,22 +147,6 @@ namespace ProjectHymn.Core
             return new BeatInfo(index, measure, (int)beatInMeasure, s.BeatsPerMeasure, s.BeatUnit, s.Bpm, time, i);
         }
 
-        /// <summary>Absolute beat index of a measure's downbeat (counts across loops; negative measures extrapolate).</summary>
-        public long MeasureStartBeat(long measure)
-        {
-            long loops = 0, local = measure;
-            if (Loops && measure >= LengthMeasures)
-            {
-                loops = measure / LengthMeasures;
-                local = measure - loops * LengthMeasures;
-            }
-
-            int i = 0;
-            while (i < _segs.Length - 1 && local >= _segs[i].StartMeasure + _segs[i].Measures) i++;
-            var s = _segs[i];
-            return loops * LengthBeats + (long)Math.Round(s.StartBeat) + (local - s.StartMeasure) * s.BeatsPerMeasure;
-        }
-
         int FindSegmentByTime(double time)
         {
             for (int i = 0; i < _segs.Length - 1; i++)

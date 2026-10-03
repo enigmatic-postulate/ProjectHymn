@@ -30,8 +30,7 @@ namespace ProjectHymn.Combat
     /// </summary>
     public sealed class ComboEngine
     {
-        // Same values as BeatAction for the actions; Broken comes after every action.
-        enum Slot : byte { Rest, Strike, Smash, Step, Guard, Jump, Broken = 255 }
+        enum Slot : byte { Rest, Strike, Smash, Step, Guard, Broken }
 
         readonly List<PhrasePattern> _phrases = new List<PhrasePattern>();
         readonly Dictionary<long, Slot> _history = new Dictionary<long, Slot>();

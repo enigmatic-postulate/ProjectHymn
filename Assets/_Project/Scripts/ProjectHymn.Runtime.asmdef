@@ -2,8 +2,7 @@
     "name": "ProjectHymn.Runtime",
     "rootNamespace": "ProjectHymn",
     "references": [
-        "Unity.InputSystem",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

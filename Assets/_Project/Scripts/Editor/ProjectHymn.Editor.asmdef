@@ -3,9 +3,7 @@
     "rootNamespace": "ProjectHymn.EditorTools",
     "references": [
         "ProjectHymn.Runtime",
-        "Unity.InputSystem",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

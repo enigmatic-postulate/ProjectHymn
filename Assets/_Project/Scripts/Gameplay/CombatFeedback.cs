@@ -14,8 +14,7 @@ namespace ProjectHymn.Gameplay
     {
         [SerializeField] BeatCombatController combat;
         [SerializeField] Conductor conductor;
-        [Tooltip("The angled camera rig; shakes go through it so they never fight the follow.")]
-        [SerializeField] CameraRig cameraRig;
+        [SerializeField] Transform cameraRig;
 
         [Header("Hit-stop")]
         [SerializeField] float perfectHitStop = 0.04f;
@@ -33,14 +32,15 @@ namespace ProjectHymn.Gameplay
         AudioSource[] _voices;
         int _nextVoice;
         AudioClip _perfect, _great, _good, _thud, _finisher;
-        AudioClip _telegraph, _telegraphHeavy, _parry, _hurt;
-        Coroutine _hitStop;
+        Coroutine _hitStop, _shake;
+        Vector3 _rigBase;
 
         void Awake()
         {
             if (combat == null) combat = FindAnyObjectByType<BeatCombatController>();
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
-            if (cameraRig == null) cameraRig = FindAnyObjectByType<CameraRig>();
+            if (cameraRig == null && Camera.main != null) cameraRig = Camera.main.transform;
+            if (cameraRig != null) _rigBase = cameraRig.localPosition;
 
             _voices = new AudioSource[8];
             for (int i = 0; i < _voices.Length; i++)
@@ -51,13 +51,10 @@ namespace ProjectHymn.Gameplay
             }
         }
 
-        public float SfxVolume { get => sfxVolume; set => sfxVolume = Mathf.Clamp01(value); }
-
         void Start() => BuildSounds();
 
         void OnEnable()
         {
-            if (conductor != null) conductor.SectionChangeUpcoming += OnSectionUpcoming;
             if (combat == null) return;
             combat.ActionJudged += OnJudged;
             combat.FinisherFired += OnFinisher;
@@ -65,7 +62,6 @@ namespace ProjectHymn.Gameplay
 
         void OnDisable()
         {
-            if (conductor != null) conductor.SectionChangeUpcoming -= OnSectionUpcoming;
             if (combat == null) return;
             combat.ActionJudged -= OnJudged;
             combat.FinisherFired -= OnFinisher;
@@ -86,13 +82,6 @@ namespace ProjectHymn.Gameplay
             _good = Synth.Chord("HitGood", new[] { tonic - 12 + third + 12 }, 0.12f, 30f, bright: false);
             _finisher = Synth.Chord("HitFinisher", new[] { tonic - 12, tonic - 5, tonic, tonic + third, tonic + 7 }, 0.6f, 6f, bright: true);
             _thud = Synth.Thud("HitOffBeat");
-
-            // Enemy cues: a low tonic blip one measure before each attack (lower and longer for heavies),
-            // a bright clang for a parry, a dull hit when the player is struck.
-            _telegraph = Synth.Chord("EnemyTelegraph", new[] { tonic - 12 }, 0.09f, 40f, bright: false);
-            _telegraphHeavy = Synth.Chord("EnemyTelegraphHeavy", new[] { tonic - 24, tonic - 17 }, 0.22f, 16f, bright: false);
-            _parry = Synth.Chord("Parry", new[] { tonic + 24, tonic + 28, tonic + 31 }, 0.35f, 10f, bright: true);
-            _hurt = Synth.Thud("PlayerHurt");
         }
 
         void OnJudged(BeatActionResult r)
@@ -116,35 +105,15 @@ namespace ProjectHymn.Gameplay
         {
             PlayQuantized(_finisher, 1f);
             HitStop(finisherHitStop);
-            if (cameraRig != null) cameraRig.Shake(shakeAmount, shakeDuration);
-        }
-
-        /// <summary>GDD: a cymbal swell over the bar before a tempo or meter change.</summary>
-        void OnSectionUpcoming(BeatInfo next)
-        {
-            var now = conductor.CurrentBeat;
-            float bar = (float)(now.BeatsPerMeasure * now.SecondsPerBeat);
-            PlayNow(Synth.Swell("MeterSwell", Mathf.Clamp(bar, 0.5f, 4f)), 0.7f);
-        }
-
-        /// <summary>Enemy attack telegraph cue (one measure before it lands).</summary>
-        public void PlayTelegraph(bool heavy) => PlayNow(heavy ? _telegraphHeavy : _telegraph, heavy ? 0.9f : 0.6f);
-
-        public void PlayParry()
-        {
-            PlayQuantized(_parry, 1f);
-            HitStop(perfectHitStop * 1.5f);
-        }
-
-        public void PlayHurt()
-        {
-            PlayNow(_hurt, 1f);
-            if (cameraRig != null) cameraRig.Shake(shakeAmount, shakeDuration);
+            if (cameraRig != null)
+            {
+                if (_shake != null) StopCoroutine(_shake);
+                _shake = StartCoroutine(Shake());
+            }
         }
 
         void PlayQuantized(AudioClip clip, float volume)
         {
-            if (clip == null) return;
             if (conductor == null || !conductor.IsPlaying) { PlayNow(clip, volume); return; }
             // Next 16th note on the tempo map, measured from what the player hears.
             double now = conductor.SongTime;
@@ -161,7 +130,6 @@ namespace ProjectHymn.Gameplay
 
         void PlayNow(AudioClip clip, float volume)
         {
-            if (clip == null) return;
             var v = NextVoice();
             v.clip = clip;
             v.volume = sfxVolume * volume;
@@ -191,6 +159,20 @@ namespace ProjectHymn.Gameplay
             _hitStop = null;
         }
 
+        IEnumerator Shake()
+        {
+            float t = 0f;
+            while (t < shakeDuration)
+            {
+                float k = 1f - t / shakeDuration;
+                cameraRig.localPosition = _rigBase + (Vector3)(Random.insideUnitCircle * shakeAmount * k);
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            cameraRig.localPosition = _rigBase;
+            _shake = null;
+        }
+
         /// <summary>Tiny procedural synth so the prototype needs no audio assets.</summary>
         static class Synth
         {
@@ -215,27 +197,6 @@ namespace ProjectHymn.Gameplay
                         if (bright) s += 0.35f * Mathf.Sin(2f * Mathf.PI * f * 2f * t) * Mathf.Exp(-t * decay * 2f);
                     }
                     data[i] = s * norm * env;
-                }
-                var clip = AudioClip.Create(name, n, 1, Rate, false);
-                clip.SetData(data, 0);
-                return clip;
-            }
-
-            /// <summary>Rising, brightening noise that peaks right at the end: a reverse-cymbal swell.</summary>
-            public static AudioClip Swell(string name, float seconds)
-            {
-                int n = Mathf.CeilToInt(seconds * Rate);
-                var data = new float[n];
-                var rng = new System.Random(11);
-                float hp = 0f, prev = 0f;
-                for (int i = 0; i < n; i++)
-                {
-                    float k = i / (float)n;
-                    float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
-                    hp = 0.92f * (hp + noise - prev); // high-passed hiss
-                    prev = noise;
-                    float env = k * k * k;            // slow start, fast rise
-                    data[i] = hp * env * 0.5f;
                 }
                 var clip = AudioClip.Create(name, n, 1, Rate, false);
                 clip.SetData(data, 0);

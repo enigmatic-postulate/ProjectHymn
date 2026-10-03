@@ -56,8 +56,6 @@ namespace ProjectHymn.UI
             {
                 float ms = (float)(_sum / _taps * 1000.0);
                 conductor.SaveCalibration(ms);
-                ProjectHymn.Progression.SaveSystem.Current.settings.calibrationMs = ms;
-                ProjectHymn.Progression.SaveSystem.Save();
                 if (label != null) label.text = $"Calibration saved: {ms:+0;-0;0} ms   (C to redo)";
             }
             else if (label != null) label.text = "Press C to calibrate audio latency";

@@ -16,8 +16,6 @@ namespace ProjectHymn.UI
     {
         [SerializeField] Conductor conductor;
         [SerializeField] BeatCombatController combat;
-        [SerializeField] PlayerHealth health;
-        [SerializeField] ArenaDirector arena;
 
         [Header("Optional beat cue (accessibility, off by default)")]
         [SerializeField] bool showBeatCue = false;
@@ -32,11 +30,6 @@ namespace ProjectHymn.UI
         [SerializeField] Text bannerText;
         [SerializeField] Image staminaFill;
         [SerializeField] Text scoreText;
-        [SerializeField] Image hpFill;
-        [SerializeField] Text waveText;
-        [SerializeField] Image bossFill;
-        [SerializeField] Text bossText;
-        [SerializeField] GameObject bossBar;
 
         [Header("Colours")]
         [SerializeField] Color perfect = new Color(1f, 0.84f, 0.25f);
@@ -54,14 +47,10 @@ namespace ProjectHymn.UI
         long _measure = long.MinValue;
         float _judgeTimer, _phraseTimer, _bannerTimer;
 
-        public bool ShowBeatCue { get => showBeatCue; set => showBeatCue = value; }
-
         void Awake()
         {
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
             if (combat == null) combat = FindAnyObjectByType<BeatCombatController>();
-            if (health == null && combat != null) health = combat.GetComponent<PlayerHealth>();
-            if (arena == null) arena = FindAnyObjectByType<ArenaDirector>();
         }
 
         void OnEnable()
@@ -72,26 +61,8 @@ namespace ProjectHymn.UI
                 combat.PhraseTriggered += OnPhrase;
                 combat.FinisherReady += OnFinisherReady;
                 combat.FinisherFired += OnFinisherFired;
-                combat.SpellCast += OnSpell;
             }
             if (conductor != null) conductor.SectionChanged += OnSection;
-            if (conductor != null) conductor.SectionChangeUpcoming += OnSectionUpcoming;
-            if (combat != null) combat.Parried += OnParried;
-            if (arena != null)
-            {
-                arena.WaveStarted += OnWaveStarted;
-                arena.WaveCleared += OnWaveCleared;
-                arena.PlayerDowned += OnDowned;
-                arena.ArenaCleared += OnArenaCleared;
-                arena.EnemyGuarded += OnGuarded;
-                arena.EnemyGuardBroken += OnGuardBroken;
-                arena.BossSpawned += OnBossSpawned;
-                arena.BossDefeated += OnBossDefeated;
-                arena.RoomEntered += OnRoomEntered;
-                arena.DoorOpened += OnDoorOpened;
-                arena.SwitchNeeded += OnSwitchNeeded;
-            }
-            if (bossBar != null) bossBar.SetActive(false);
         }
 
         void OnDisable()
@@ -102,26 +73,8 @@ namespace ProjectHymn.UI
                 combat.PhraseTriggered -= OnPhrase;
                 combat.FinisherReady -= OnFinisherReady;
                 combat.FinisherFired -= OnFinisherFired;
-                combat.SpellCast -= OnSpell;
             }
             if (conductor != null) conductor.SectionChanged -= OnSection;
-            if (conductor != null) conductor.SectionChangeUpcoming -= OnSectionUpcoming;
-            if (combat != null) combat.Parried -= OnParried;
-            if (arena != null)
-            {
-                arena.WaveStarted -= OnWaveStarted;
-                arena.WaveCleared -= OnWaveCleared;
-                arena.PlayerDowned -= OnDowned;
-                arena.ArenaCleared -= OnArenaCleared;
-                arena.EnemyGuarded -= OnGuarded;
-                arena.EnemyGuardBroken -= OnGuardBroken;
-                arena.BossSpawned -= OnBossSpawned;
-                arena.BossDefeated -= OnBossDefeated;
-                arena.RoomEntered -= OnRoomEntered;
-                arena.DoorOpened -= OnDoorOpened;
-                arena.SwitchNeeded -= OnSwitchNeeded;
-            }
-            UnhookBoss();
         }
 
         void Update()
@@ -172,36 +125,6 @@ namespace ProjectHymn.UI
                     staminaFill.color = Color.Lerp(staminaLow, stamina, Mathf.Clamp01(st.Normalized * 2f));
                 }
                 if (scoreText != null) scoreText.text = combat.Score.Total.ToString("N0");
-            }
-
-            if (health != null && hpFill != null) hpFill.fillAmount = health.Hp / health.MaxHp;
-
-            var boss = arena != null ? arena.Boss : null;
-            bool showBoss = boss != null && boss.Enemy != null && !boss.Enemy.IsDead;
-            if (bossBar != null && bossBar.activeSelf != showBoss) bossBar.SetActive(showBoss);
-            if (showBoss)
-            {
-                if (bossFill != null) bossFill.fillAmount = boss.Enemy.Hp / boss.Enemy.MaxHp;
-                if (bossText != null)
-                    bossText.text = boss.TransitionPending ? $"{boss.Definition.displayName}  ·  the music is changing…" : boss.Definition.displayName;
-            }
-            if (arena != null && waveText != null)
-            {
-                if (arena.IsCleared) waveText.text = arena.IsStage ? "STAGE CLEAR" : "ARENA CLEAR";
-                else if (arena.IsRunning && arena.IsBossFight && arena.Boss != null)
-                {
-                    waveText.text = $"{arena.Boss.Definition.displayName.ToUpperInvariant()}  —  {arena.Boss.PhaseName}";
-                }
-                else if (arena.IsStage && arena.IsTravelling)
-                    waveText.text = $"ROOM {arena.RoomNumber}/{arena.RoomCount} CLEAR  —  ONWARD  >";
-                else if (arena.IsStage && arena.IsRunning)
-                    waveText.text = $"{arena.CurrentRoom.name.ToUpperInvariant()}  ·  ROOM {arena.RoomNumber}/{arena.RoomCount}";
-                else if (arena.IsRunning)
-                {
-                    int t = Mathf.CeilToInt(arena.TimeLeft);
-                    waveText.text = $"WAVE {arena.WaveNumber}   {t / 60}:{t % 60:00}";
-                }
-                else waveText.text = "GET READY";
             }
 
             Fade(judgementText, ref _judgeTimer, 0.5f);
@@ -257,66 +180,6 @@ namespace ProjectHymn.UI
         void OnFinisherReady(BeatInfo b) => ShowBanner("BAR COMPLETE");
         void OnFinisherFired(float dmg) => ShowBanner($"FINISHER  {dmg:0}");
         void OnSection(BeatInfo b) => ShowBanner($"{b.Signature} @ {b.Bpm:0}");
-
-        void OnParried(string enemy) => ShowBanner("PARRY!");
-        void OnWaveStarted(int n, string name) => ShowBanner(arena != null && arena.IsStage ? name.ToUpperInvariant() : $"WAVE {n}: {name.ToUpperInvariant()}");
-        void OnWaveCleared(int n) => ShowBanner("WAVE CLEAR");
-        void OnDowned() => ShowBanner("DOWN — RETRYING WAVE");
-        void OnArenaCleared(long score) => ShowBanner($"{(arena != null && arena.IsStage ? "STAGE" : "ARENA")} CLEAR  {score:N0}", 6f);
-        void OnRoomEntered(int index, string name) => ShowBanner(name.ToUpperInvariant(), 2f);
-        void OnDoorOpened(int index) => ShowBanner("THE WAY IS OPEN  >", 2f);
-        void OnSwitchNeeded(int index) => ShowBanner("RING THE BELL PLATE TO OPEN THE WAY", 4f);
-        void OnSpell(float damage, float seconds) => ShowBanner($"SPELL!  {damage:0}", 2f);
-        void OnGuardBroken(BeatEnemy e) => ShowBanner("GUARD BROKEN!");
-
-        void OnGuarded(BeatEnemy e)
-        {
-            if (phraseText == null) return;
-            phraseText.text = "GUARDED — try Syncopate (Strike, rest, Smash)";
-            _phraseTimer = 1.2f;
-        }
-
-        void OnSectionUpcoming(BeatInfo next) => ShowBanner($"{next.Signature} @ {next.Bpm:0} — NEXT BAR", 2f);
-
-        BossController _hookedBoss;
-
-        void OnBossSpawned(BossController b)
-        {
-            UnhookBoss();
-            _hookedBoss = b;
-            b.PhaseStarted += OnBossPhase;
-            b.FinisherNeeded += OnFinisherNeeded;
-            OnBossPhase(b.Phase, b.Definition.phases[Mathf.Max(0, b.Phase)]);
-        }
-
-        void UnhookBoss()
-        {
-            if (_hookedBoss == null) return;
-            _hookedBoss.PhaseStarted -= OnBossPhase;
-            _hookedBoss.FinisherNeeded -= OnFinisherNeeded;
-            _hookedBoss = null;
-        }
-
-        void OnBossPhase(int index, BossPhase phase)
-        {
-            ShowBanner(phase.name.ToUpperInvariant(), 2.5f);
-            if (!string.IsNullOrEmpty(phase.hint) && phraseText != null)
-            {
-                phraseText.text = phase.hint;
-                _phraseTimer = 4f;
-            }
-        }
-
-        void OnFinisherNeeded() => ShowBanner("FINISH IT — PLAY A FULL BAR ON THE BEAT", 4f);
-
-        void OnBossDefeated(BossController b) => ShowBanner($"{b.Definition.displayName.ToUpperInvariant()} DEFEATED", 6f);
-
-        void ShowBanner(string text, float seconds)
-        {
-            if (bannerText == null) return;
-            bannerText.text = text;
-            _bannerTimer = seconds;
-        }
 
         void ShowBanner(string text)
         {
