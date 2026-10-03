@@ -54,6 +54,8 @@ namespace ProjectHymn.Core
         public event Action<BeatInfo> BeatStarted;
         public event Action<BeatInfo> MeasureStarted;
         public event Action<BeatInfo> SectionChanged;   // fires when tempo or meter changes
+        /// <summary>A song (or a test tempo) was started. Beat indices and song time restart.</summary>
+        public event Action<SongData> SongStarted;
 
         public bool MetronomeEnabled { get => metronome; set => metronome = value; }
 
@@ -90,6 +92,10 @@ namespace ProjectHymn.Core
         {
             song = data;
             Map = song.BuildTempoMap();
+            _music.Stop();
+            foreach (var s in _clickSources) s.Stop();
+            // Scheduled playback needs the samples ready; clips imported without "Preload Audio Data" aren't.
+            if (song.clip != null && song.clip.loadState != AudioDataLoadState.Loaded) song.clip.LoadAudioData();
 
             double now = AudioSettings.dspTime;
             _dspSongStart = now + startDelay;
@@ -108,6 +114,7 @@ namespace ProjectHymn.Core
             _lastSection = -1;
             _nextClickBeat = (long)Math.Ceiling(Map.TimeToBeat(-song.firstBeatOffset - startDelay + 0.05));
             UpdateClock();
+            SongStarted?.Invoke(song);
         }
 
         public void Stop()

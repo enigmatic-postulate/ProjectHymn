@@ -6,17 +6,23 @@ using UnityEngine.InputSystem;
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// Reads movement and the four beat verbs from gamepad or keyboard. Works with either the
-    /// Input System package (default) or the legacy Input Manager.
+    /// Reads the M2 sword prototype controls from gamepad or keyboard (Input System package or legacy Input Manager):
+    /// move, note 1 (light: J / X), note 2 (heavy: K / Y), Step dash (Space / A), weapon swap (Tab / Select),
+    /// animation offset ([ and ] / D-pad left and right) and test tempos (F1 to F4).
     /// </summary>
     public class PlayerInputReader : MonoBehaviour
     {
         public Vector2 Move { get; private set; }
+        /// <summary>Note 1, the light button.</summary>
         public bool StrikePressed { get; private set; }
+        /// <summary>Note 2, the heavy button.</summary>
         public bool SmashPressed { get; private set; }
         public bool StepPressed { get; private set; }
-        public bool GuardPressed { get; private set; }
-        public bool GuardHeld { get; private set; }
+        public bool SwapWeaponPressed { get; private set; }
+        /// <summary>-1 / +1 when the animation offset keys are pressed this frame.</summary>
+        public int OffsetNudge { get; private set; }
+        /// <summary>0 = none, 1..4 = F1..F4 (song, 90, 130, 170 BPM).</summary>
+        public int TempoKey { get; private set; }
 
         void Update()
         {
@@ -35,15 +41,19 @@ namespace ProjectHymn.Gameplay
             StrikePressed = (kb?.jKey.wasPressedThisFrame ?? false) || (gp?.buttonWest.wasPressedThisFrame ?? false);
             SmashPressed = (kb?.kKey.wasPressedThisFrame ?? false) || (gp?.buttonNorth.wasPressedThisFrame ?? false);
             StepPressed = (kb?.spaceKey.wasPressedThisFrame ?? false) || (gp?.buttonSouth.wasPressedThisFrame ?? false);
-            GuardPressed = (kb?.lKey.wasPressedThisFrame ?? false) || (gp?.buttonEast.wasPressedThisFrame ?? false);
-            GuardHeld = (kb?.lKey.isPressed ?? false) || (gp?.buttonEast.isPressed ?? false);
+            SwapWeaponPressed = (kb?.tabKey.wasPressedThisFrame ?? false) || (gp?.selectButton.wasPressedThisFrame ?? false);
+            OffsetNudge = ((kb?.rightBracketKey.wasPressedThisFrame ?? false) || (gp?.dpad.right.wasPressedThisFrame ?? false) ? 1 : 0)
+                        - ((kb?.leftBracketKey.wasPressedThisFrame ?? false) || (gp?.dpad.left.wasPressedThisFrame ?? false) ? 1 : 0);
+            TempoKey = kb == null ? 0 : kb.f1Key.wasPressedThisFrame ? 1 : kb.f2Key.wasPressedThisFrame ? 2
+                     : kb.f3Key.wasPressedThisFrame ? 3 : kb.f4Key.wasPressedThisFrame ? 4 : 0;
 #else
             Move = Vector2.ClampMagnitude(new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")), 1f);
             StrikePressed = Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.JoystickButton2);
             SmashPressed = Input.GetKeyDown(KeyCode.K) || Input.GetKeyDown(KeyCode.JoystickButton3);
             StepPressed = Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0);
-            GuardPressed = Input.GetKeyDown(KeyCode.L) || Input.GetKeyDown(KeyCode.JoystickButton1);
-            GuardHeld = Input.GetKey(KeyCode.L) || Input.GetKey(KeyCode.JoystickButton1);
+            SwapWeaponPressed = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.JoystickButton6);
+            OffsetNudge = (Input.GetKeyDown(KeyCode.RightBracket) ? 1 : 0) - (Input.GetKeyDown(KeyCode.LeftBracket) ? 1 : 0);
+            TempoKey = Input.GetKeyDown(KeyCode.F1) ? 1 : Input.GetKeyDown(KeyCode.F2) ? 2 : Input.GetKeyDown(KeyCode.F3) ? 3 : Input.GetKeyDown(KeyCode.F4) ? 4 : 0;
 #endif
         }
     }

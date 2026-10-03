@@ -10,28 +10,38 @@ Rhythm-combat action RPG prototype for Unity 6. Attack on the beat of SNES-style
 4. Menu **Project Hymn → Build Prototype Scene**. This creates the starter Phrase and Song assets plus `Assets/_Project/Scenes/Prototype.unity`.
 5. Press **Play**. A metronome clicks; hit the pink training dummy on the beat.
 
-## Combat rules (M1)
+## Sword rhythm prototype (M2)
 
-- **On-beat** (Perfect ±45 ms, Great ±90 ms, Good ±135 ms): free, builds Groove, counts toward Phrases and Bar Finishers, recovers faster and opens a cancel window lined up with the next beat.
-- **Off-beat**: still a normal attack at normal damage, but costs stamina (Strike 15, Smash 25, Step 20 of 100) and breaks the chain. With too little stamina the move still comes out, but you are **Winded** (75% slower recovery).
-- Damage barely changes with accuracy (Perfect +15%); **score** is where accuracy shows (Groove multiplies score ×1 to ×3).
-- No beat ring: timing comes from the music, the player's bob and the background pulse. (The ring still exists as an optional cue: HUD → Show Beat Cue.)
-- Perfect hits get a 40 ms hit-stop and a chime pitched to the song's key; hit sounds snap to the 16th-note grid.
+Menu **Project Hymn → Build Prototype Scene**, then press **Play**. You fight a straw training dummy with a generated, skinned swordsman whose attacks are keyframes timed in beats.
+
+**Buttons:** 1 = light (J / X), 2 = heavy (K / Y). Press them on the beat.
+
+| Rhythm | Saber / Broadsword moves |
+| --- | --- |
+| **1-2-1** Crossing Cuts | diagonal cut, horizontal slash, rising diagonal |
+| **2-2** Powerslice | rising cut into an overhead vertical power slice (with a lunge) |
+| **1-1-1-2-1-1-1** Tempest | cut, slash, cut, quick left-hand punch, cut, slash, finishing rising cut |
+
+- **Damage needs rhythm.** A chain is notes on consecutive beats. The first note of a chain swings but deals nothing ("–" on the dummy); every following on-beat note hits. Off-beat notes swing slowly, deal nothing and break the chain. Finishing a sequence multiplies its last hit (×1.6 to ×2.5) with a burst and a chord.
+- **Animation follows the music.** Each move's keys are in beats around the hit (0 = contact), and the hit is placed on the judged beat, so swings land on the beat at any tempo. On fast songs the wind-up and follow-through swing less far, on slow songs further. While a rhythm is in progress the next move winds up half a beat early and holds just before the hit; pressing on the beat continues it with no seam. A late press catches up within a quarter beat.
+- **Calibrate:** C = audio latency (tap J on the clicks). **[ and ]** shift all animation against the music in 10 ms steps (saved). Each move's keyframes are editable in `Data/Sword/Moves` (times in beats, bone rotations in degrees); **Project Hymn → Reset Sword Moves to Defaults** restores them.
+- **Tempo test:** F1 = Battle Theme 1, F2/F3/F4 = metronome at 90/130/170 BPM.
+- **Stances:** Tab switches between the **saber** (one-handed, side-on fencing stance, quicker) and the **broadsword** (two-handed square guard, left hand kept on the hilt by IK, bigger turns and lunges, more damage).
+- **Effects:** sword tracers on the blade tip (move colour on the beat, grey off it), a ring at your feet on every on-beat note (gold Perfect, white Great, blue Good), sparks on contact, a flash on the blade, a burst and rings on completed sequences, floating damage numbers, a wobbling dummy.
+- **HUD:** a beat track (last four beats and the next three, your notes on them), the three sequences with the matched steps lit and the next note marked, the chain counter, judgement, score and Groove.
 
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |
 | --- | --- | --- |
 | Move | WASD | Left stick |
-| Strike | J | X / Square |
-| Smash | K | Y / Triangle |
-| Step (dash) | Space | A / Cross |
-| Guard | L | B / Circle |
+| Note 1 (light) | J | X / Square |
+| Note 2 (heavy) | K | Y / Triangle |
+| Dash | Space | A / Cross |
+| Saber / broadsword | Tab | Select / View |
+| Animation offset | [ and ] | D-pad left / right |
+| Test tempos | F1 – F4 | – |
 | Calibrate latency | C, then tap J on 16 clicks | – |
-
-Try the starter Phrases: **Triplet Cut** (Strike, Strike, Smash), **Syncopate** (Strike, rest, Smash), **Backbeat** (rest, Smash, rest, Smash), **Off-step** (Step, Strike). Play every beat of a bar without a miss to queue a **Bar Finisher** on the next downbeat.
-
-Switch the Conductor's Song to **BattleTheme2** to hear the meter change 4/4 → 3/4 → 7/8 (that's where the **Waltz** phrase, Strike ×3, works).
 
 ## Adding a real song
 

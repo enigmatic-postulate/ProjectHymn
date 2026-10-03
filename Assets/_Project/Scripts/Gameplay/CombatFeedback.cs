@@ -1,4 +1,3 @@
-using System.Collections;
 using ProjectHymn.Combat;
 using ProjectHymn.Core;
 using UnityEngine;
@@ -6,42 +5,31 @@ using UnityEngine;
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// Game feel for M1 (GDD): hit-stop on Perfect hits, hit sounds pitched to the song's key and
-    /// snapped to the 16th-note grid so even a Good hit sounds in time, a muted thud for off-beat
-    /// hits, and a short camera shake on Bar Finishers.
+    /// Sound for the M2 sword prototype: hit sounds pitched to the song's key and snapped to the 16th-note grid so even
+    /// a Good hit sounds in time, a soft tick for hits that deal no damage (single notes), a muted thud for off-beat
+    /// notes, a chord when a rhythm sequence completes, and a small camera shake on power hits.
+    /// (Hit-stop is gone: animation runs on the music's clock, so freezing time would not freeze the swing.)
     /// </summary>
     public class CombatFeedback : MonoBehaviour
     {
-        [SerializeField] BeatCombatController combat;
+        [SerializeField] SwordCombatController combat;
         [SerializeField] Conductor conductor;
-        [SerializeField] Transform cameraRig;
-
-        [Header("Hit-stop")]
-        [SerializeField] float perfectHitStop = 0.04f;
-        [SerializeField] float finisherHitStop = 0.08f;
+        [SerializeField] FollowCamera cameraRig;
 
         [Header("Hit sounds")]
         [SerializeField, Range(0f, 1f)] float sfxVolume = 0.7f;
         [Tooltip("Snap to the next 16th note if it is at most this far away; otherwise play immediately.")]
         [SerializeField, Range(0f, 0.12f)] float maxQuantizeDelay = 0.06f;
 
-        [Header("Finisher shake")]
-        [SerializeField] float shakeAmount = 0.18f;
-        [SerializeField] float shakeDuration = 0.15f;
-
         AudioSource[] _voices;
         int _nextVoice;
-        AudioClip _perfect, _great, _good, _thud, _finisher;
-        Coroutine _hitStop, _shake;
-        Vector3 _rigBase;
+        AudioClip _perfect, _great, _good, _thud, _finisher, _tick;
 
         void Awake()
         {
-            if (combat == null) combat = FindAnyObjectByType<BeatCombatController>();
+            if (combat == null) combat = FindAnyObjectByType<SwordCombatController>();
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
-            if (cameraRig == null && Camera.main != null) cameraRig = Camera.main.transform;
-            if (cameraRig != null) _rigBase = cameraRig.localPosition;
-
+            if (cameraRig == null) cameraRig = FindAnyObjectByType<FollowCamera>();
             _voices = new AudioSource[8];
             for (int i = 0; i < _voices.Length; i++)
             {
@@ -55,20 +43,29 @@ namespace ProjectHymn.Gameplay
 
         void OnEnable()
         {
-            if (combat == null) return;
-            combat.ActionJudged += OnJudged;
-            combat.FinisherFired += OnFinisher;
+            if (combat != null)
+            {
+                combat.NoteJudged += OnNote;
+                combat.Impacted += OnImpact;
+                combat.SequenceCompleted += OnSequence;
+            }
+            if (conductor != null) conductor.SongStarted += OnSong;
         }
 
         void OnDisable()
         {
-            if (combat == null) return;
-            combat.ActionJudged -= OnJudged;
-            combat.FinisherFired -= OnFinisher;
-            if (Time.timeScale == 0f) Time.timeScale = 1f;
+            if (combat != null)
+            {
+                combat.NoteJudged -= OnNote;
+                combat.Impacted -= OnImpact;
+                combat.SequenceCompleted -= OnSequence;
+            }
+            if (conductor != null) conductor.SongStarted -= OnSong;
         }
 
-        /// <summary>Synthesize the hit sounds in the current song's key. Call again after changing songs.</summary>
+        void OnSong(SongData s) => BuildSounds();
+
+        /// <summary>Synthesize the hit sounds in the current song's key.</summary>
         public void BuildSounds()
         {
             var song = conductor != null ? conductor.Song : null;
@@ -81,36 +78,30 @@ namespace ProjectHymn.Gameplay
             _great = Synth.Chord("HitGreat", new[] { tonic, tonic + 7 }, 0.18f, 22f, bright: false);
             _good = Synth.Chord("HitGood", new[] { tonic - 12 + third + 12 }, 0.12f, 30f, bright: false);
             _finisher = Synth.Chord("HitFinisher", new[] { tonic - 12, tonic - 5, tonic, tonic + third, tonic + 7 }, 0.6f, 6f, bright: true);
+            _tick = Synth.Chord("Tick", new[] { tonic + 24 }, 0.05f, 60f, bright: false);
             _thud = Synth.Thud("HitOffBeat");
         }
 
-        void OnJudged(BeatActionResult r)
+        void OnNote(NoteResult n)
         {
-            if (!r.IsAttack) return;
-            var j = r.Effective;
+            if (!n.OnBeat) PlayNow(_thud, 0.8f);
+        }
 
-            if (j == Judgement.OffBeat) { PlayNow(_thud, 0.8f); return; }
-
-            var clip = j switch
+        void OnImpact(ImpactInfo i)
+        {
+            if (!i.Note.OnBeat) return;
+            if (!i.DealtDamage) { PlayQuantized(_tick, 0.5f); return; }
+            var clip = i.Note.Effective switch
             {
                 Judgement.Perfect => _perfect,
                 Judgement.Great => _great,
                 _ => _good,
             };
             PlayQuantized(clip, 1f);
-            if (j == Judgement.Perfect) HitStop(perfectHitStop);
+            if (i.Note.Move != null && i.Note.Move.effect == "power" && cameraRig != null) cameraRig.Shake(0.1f, 0.15f);
         }
 
-        void OnFinisher(float damage)
-        {
-            PlayQuantized(_finisher, 1f);
-            HitStop(finisherHitStop);
-            if (cameraRig != null)
-            {
-                if (_shake != null) StopCoroutine(_shake);
-                _shake = StartCoroutine(Shake());
-            }
-        }
+        void OnSequence(SwordSequence s) => PlayQuantized(_finisher, 1f);
 
         void PlayQuantized(AudioClip clip, float volume)
         {
@@ -141,36 +132,6 @@ namespace ProjectHymn.Gameplay
             var v = _voices[_nextVoice];
             _nextVoice = (_nextVoice + 1) % _voices.Length;
             return v;
-        }
-
-        void HitStop(float seconds)
-        {
-            if (seconds <= 0f) return;
-            if (_hitStop != null) StopCoroutine(_hitStop);
-            _hitStop = StartCoroutine(HitStopRoutine(seconds));
-        }
-
-        IEnumerator HitStopRoutine(float seconds)
-        {
-            // Freezes physics and animation only. The Conductor runs on the audio clock, so the beat never slips.
-            Time.timeScale = 0f;
-            yield return new WaitForSecondsRealtime(seconds);
-            Time.timeScale = 1f;
-            _hitStop = null;
-        }
-
-        IEnumerator Shake()
-        {
-            float t = 0f;
-            while (t < shakeDuration)
-            {
-                float k = 1f - t / shakeDuration;
-                cameraRig.localPosition = _rigBase + (Vector3)(Random.insideUnitCircle * shakeAmount * k);
-                t += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            cameraRig.localPosition = _rigBase;
-            _shake = null;
         }
 
         /// <summary>Tiny procedural synth so the prototype needs no audio assets.</summary>
