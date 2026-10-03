@@ -21,5 +21,5 @@ MonoBehaviour:
   bonusStamina: 0
   staminaRegenMultiplier: 1
   moveSpeedMultiplier: 1
-  sprite: {fileID: 21300000, guid: 751798e82ff3bb14c9850d1f86579634, type: 3}
+  model: {fileID: 8653370360252921664, guid: e8ef08608b1c9c84298452c89cc70243, type: 3}
   color: {r: 1, g: 1, b: 1, a: 1}
