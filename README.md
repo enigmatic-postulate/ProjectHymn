@@ -49,6 +49,17 @@ Menu **Project Hymn → Build Boss Scene** creates `Scenes/Boss.unity` on Battle
 - **One-bar warning:** on the downbeat before any tempo or meter change, the HUD shows "3/4 @ 150 — NEXT BAR" and a cymbal-style swell rises into it.
 - Battle Theme 2 has no audio yet: it runs on its placeholder tempo map (4 bars 4/4 @150, 4 bars 3/4 @150, 4 bars 7/8 @165), one section per phase. With real music, set its sections and point each phase at its loop.
 
+## Lane & Leap (M6 Slice A)
+
+Run **Project Hymn → Build All Scenes** again after pulling. The Practice Hall is now a stage: three side-lane rooms, then the angled arena.
+
+- **Stages:** rooms are fought in order. When a room is clear its door sinks into the floor on the next downbeat; walking into the next room closes the door behind you, moves the camera (starting on the next beat) and brings the first wave in on the following downbeat. No time limit; the run ends when the last room is clear.
+- **Lane camera:** low (22°), close, follows you along the lane only. Arena rooms switch back to the angled M5 view.
+- **Jump** (Space / A): judged on the beat like every other action, one beat in the air, **always costs 20 stamina** and gives no invulnerability. Off the beat or when winded it's a lower hop. **Step** moved to Shift / RB.
+- **Air Phrases:** Rising Slash (Jump, Strike: staggers), Stomp (Jump, Smash: slam down, area hit, extra damage on a downbeat), Lunge (Jump, Step, Strike: air dash and thrust; 350 Notes at the Luthier). Smash in the air always slams down.
+- **Hurdles** across the lane can only be crossed in a jump; a **Note cache** waits in an alcove behind one (75 Notes, once per run). Everyone gets a dark **blob shadow**, so you can see where a jump or a flyer will land.
+- **Saves:** older saves learn Rising Slash and Stomp automatically (equipped if a slot is free). The playstyle log now records jumps and `jumpShare` (the M6 target is under a third of all inputs).
+
 ## 3D look (M5)
 
 The game is now cel-shaded low-poly 3D seen by an angled top-down camera. Run **Project Hymn → Build All Scenes** again after pulling: it generates the models and materials, then rebuilds all five scenes in 3D.
@@ -84,11 +95,12 @@ Run **Project Hymn → Build All Scenes** once. It generates the placeholder art
 | Move | WASD | Left stick |
 | Strike | J | X / Square |
 | Smash | K | Y / Triangle |
-| Step (dash) | Space | A / Cross |
+| Jump (M6) | Space | A / Cross |
+| Step (dash) | Shift | RB / R1 |
 | Guard | L | B / Circle |
 | Calibrate latency | C, then tap J on 16 clicks | – |
 
-Try the starter Phrases: **Triplet Cut** (Strike, Strike, Smash), **Syncopate** (Strike, rest, Smash), **Backbeat** (rest, Smash, rest, Smash), **Off-step** (Step, Strike). Play every beat of a bar without a miss to queue a **Bar Finisher** on the next downbeat.
+Try the starter Phrases: **Triplet Cut** (Strike, Strike, Smash), **Syncopate** (Strike, rest, Smash), **Backbeat** (rest, Smash, rest, Smash), **Off-step** (Step, Strike), and the air Phrases **Rising Slash** (Jump, Strike) and **Stomp** (Jump, Smash). Play every beat of a bar without a miss to queue a **Bar Finisher** on the next downbeat.
 
 Switch the Conductor's Song to **BattleTheme2** to hear the meter change 4/4 → 3/4 → 7/8 (that's where the **Waltz** phrase, Strike ×3, works).
 

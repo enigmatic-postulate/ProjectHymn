@@ -35,7 +35,12 @@ namespace ProjectHymn.Progression
                 if (File.Exists(FilePath))
                 {
                     var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(FilePath));
-                    if (data != null) return data;
+                    if (data != null)
+                    {
+                        if (SaveData.Migrate(data)) Debug.Log($"[SaveSystem] Save updated to version {SaveData.Version}.");
+                        if (data.settings == null) data.settings = new SettingsData();
+                        return data;
+                    }
                 }
             }
             catch (Exception e)

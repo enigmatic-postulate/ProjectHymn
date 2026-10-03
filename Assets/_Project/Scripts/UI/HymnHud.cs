@@ -72,6 +72,7 @@ namespace ProjectHymn.UI
                 combat.PhraseTriggered += OnPhrase;
                 combat.FinisherReady += OnFinisherReady;
                 combat.FinisherFired += OnFinisherFired;
+                combat.SpellCast += OnSpell;
             }
             if (conductor != null) conductor.SectionChanged += OnSection;
             if (conductor != null) conductor.SectionChangeUpcoming += OnSectionUpcoming;
@@ -86,6 +87,9 @@ namespace ProjectHymn.UI
                 arena.EnemyGuardBroken += OnGuardBroken;
                 arena.BossSpawned += OnBossSpawned;
                 arena.BossDefeated += OnBossDefeated;
+                arena.RoomEntered += OnRoomEntered;
+                arena.DoorOpened += OnDoorOpened;
+                arena.SwitchNeeded += OnSwitchNeeded;
             }
             if (bossBar != null) bossBar.SetActive(false);
         }
@@ -98,6 +102,7 @@ namespace ProjectHymn.UI
                 combat.PhraseTriggered -= OnPhrase;
                 combat.FinisherReady -= OnFinisherReady;
                 combat.FinisherFired -= OnFinisherFired;
+                combat.SpellCast -= OnSpell;
             }
             if (conductor != null) conductor.SectionChanged -= OnSection;
             if (conductor != null) conductor.SectionChangeUpcoming -= OnSectionUpcoming;
@@ -112,6 +117,9 @@ namespace ProjectHymn.UI
                 arena.EnemyGuardBroken -= OnGuardBroken;
                 arena.BossSpawned -= OnBossSpawned;
                 arena.BossDefeated -= OnBossDefeated;
+                arena.RoomEntered -= OnRoomEntered;
+                arena.DoorOpened -= OnDoorOpened;
+                arena.SwitchNeeded -= OnSwitchNeeded;
             }
             UnhookBoss();
         }
@@ -179,11 +187,15 @@ namespace ProjectHymn.UI
             }
             if (arena != null && waveText != null)
             {
-                if (arena.IsCleared) waveText.text = "ARENA CLEAR";
+                if (arena.IsCleared) waveText.text = arena.IsStage ? "STAGE CLEAR" : "ARENA CLEAR";
                 else if (arena.IsRunning && arena.IsBossFight && arena.Boss != null)
                 {
                     waveText.text = $"{arena.Boss.Definition.displayName.ToUpperInvariant()}  —  {arena.Boss.PhaseName}";
                 }
+                else if (arena.IsStage && arena.IsTravelling)
+                    waveText.text = $"ROOM {arena.RoomNumber}/{arena.RoomCount} CLEAR  —  ONWARD  >";
+                else if (arena.IsStage && arena.IsRunning)
+                    waveText.text = $"{arena.CurrentRoom.name.ToUpperInvariant()}  ·  ROOM {arena.RoomNumber}/{arena.RoomCount}";
                 else if (arena.IsRunning)
                 {
                     int t = Mathf.CeilToInt(arena.TimeLeft);
@@ -247,10 +259,14 @@ namespace ProjectHymn.UI
         void OnSection(BeatInfo b) => ShowBanner($"{b.Signature} @ {b.Bpm:0}");
 
         void OnParried(string enemy) => ShowBanner("PARRY!");
-        void OnWaveStarted(int n, string name) => ShowBanner($"WAVE {n}: {name.ToUpperInvariant()}");
+        void OnWaveStarted(int n, string name) => ShowBanner(arena != null && arena.IsStage ? name.ToUpperInvariant() : $"WAVE {n}: {name.ToUpperInvariant()}");
         void OnWaveCleared(int n) => ShowBanner("WAVE CLEAR");
         void OnDowned() => ShowBanner("DOWN — RETRYING WAVE");
-        void OnArenaCleared(long score) => ShowBanner($"ARENA CLEAR  {score:N0}", 6f);
+        void OnArenaCleared(long score) => ShowBanner($"{(arena != null && arena.IsStage ? "STAGE" : "ARENA")} CLEAR  {score:N0}", 6f);
+        void OnRoomEntered(int index, string name) => ShowBanner(name.ToUpperInvariant(), 2f);
+        void OnDoorOpened(int index) => ShowBanner("THE WAY IS OPEN  >", 2f);
+        void OnSwitchNeeded(int index) => ShowBanner("RING THE BELL PLATE TO OPEN THE WAY", 4f);
+        void OnSpell(float damage, float seconds) => ShowBanner($"SPELL!  {damage:0}", 2f);
         void OnGuardBroken(BeatEnemy e) => ShowBanner("GUARD BROKEN!");
 
         void OnGuarded(BeatEnemy e)

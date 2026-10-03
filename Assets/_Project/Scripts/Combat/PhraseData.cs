@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace ProjectHymn.Combat
 {
-    /// <summary>What the player did on one beat. Rest = deliberately nothing.</summary>
-    public enum BeatAction { Rest = 0, Strike = 1, Smash = 2, Step = 3, Guard = 4 }
+    /// <summary>What the player did on one beat. Rest = deliberately nothing. Jump (M6) is judged like the others.</summary>
+    public enum BeatAction { Rest = 0, Strike = 1, Smash = 2, Step = 3, Guard = 4, Jump = 5 }
 
     /// <summary>
     /// A combo: a pattern of actions on consecutive beats. Matched live by <see cref="ComboEngine"/>.

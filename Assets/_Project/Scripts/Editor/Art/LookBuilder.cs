@@ -100,6 +100,7 @@ namespace ProjectHymn.EditorTools
             so.FindProperty("distance").floatValue = distance;
             so.FindProperty("fieldOfView").floatValue = 30f;
             so.FindProperty("bounds").rectValue = bounds;
+            so.FindProperty("fixedPivot").vector2Value = pivot;
             so.ApplyModifiedPropertiesWithoutUndo();
             // Place the camera now so the scene view and first frame are right.
             var rot = Quaternion.Euler(pitch, 0f, 0f);
@@ -131,6 +132,45 @@ namespace ProjectHymn.EditorTools
                 if (!centred) bc.center = new Vector3(0f, 0.5f, 0f);
             }
             go.isStatic = true;
+            return go;
+        }
+
+        /// <summary>Set a rig's framing (pitch, distance, lens, follow axes, bounds) in the editor.</summary>
+        public static void SetShot(CameraRig rig, CameraShot shot)
+        {
+            var so = new SerializedObject(rig);
+            so.FindProperty("pitch").floatValue = shot.pitch;
+            so.FindProperty("distance").floatValue = shot.distance;
+            so.FindProperty("fieldOfView").floatValue = shot.fieldOfView;
+            so.FindProperty("followX").boolValue = shot.followX;
+            so.FindProperty("followZ").boolValue = shot.followZ;
+            so.FindProperty("fixedPivot").vector2Value = shot.fixedPivot;
+            so.FindProperty("bounds").rectValue = shot.bounds;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            var cam = rig.GetComponentInChildren<Camera>();
+            if (cam != null)
+            {
+                var rot = Quaternion.Euler(shot.pitch, 0f, 0f);
+                cam.transform.localPosition = rot * new Vector3(0f, 0f, -shot.distance);
+                cam.transform.localRotation = rot;
+                cam.fieldOfView = shot.fieldOfView;
+            }
+        }
+
+        /// <summary>Blob shadow disc under a character (M6).</summary>
+        public static GameObject Shadow(Transform parent, Transform heightOf, float diameter)
+        {
+            var go = new GameObject("Shadow", typeof(MeshFilter), typeof(MeshRenderer), typeof(BlobShadow));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<MeshFilter>().sharedMesh = ModelGenerator.LoadMesh("Block_Cylinder");
+            var mr = go.GetComponent<MeshRenderer>();
+            mr.sharedMaterial = ModelGenerator.ShadowMaterial();
+            mr.shadowCastingMode = ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            var so = new SerializedObject(go.GetComponent<BlobShadow>());
+            so.FindProperty("heightOf").objectReferenceValue = heightOf;
+            so.FindProperty("size").floatValue = diameter;
+            so.ApplyModifiedPropertiesWithoutUndo();
             return go;
         }
 

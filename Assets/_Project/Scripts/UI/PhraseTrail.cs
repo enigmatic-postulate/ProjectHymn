@@ -43,6 +43,7 @@ namespace ProjectHymn.UI
                 ProjectHymn.Combat.BeatAction.Smash => "X",
                 ProjectHymn.Combat.BeatAction.Step => ">",
                 ProjectHymn.Combat.BeatAction.Guard => "O",
+                ProjectHymn.Combat.BeatAction.Jump => "^",
                 _ => "·",
             };
             Color c = r.Effective switch

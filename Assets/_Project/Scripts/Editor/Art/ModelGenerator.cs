@@ -85,6 +85,35 @@ namespace ProjectHymn.EditorTools
             return mat;
         }
 
+        /// <summary>See-through dark material for blob shadows (URP Unlit, transparent).</summary>
+        public static Material ShadowMaterial()
+        {
+            const string name = "BlobShadow";
+            if (Cache.TryGetValue(name, out var cached) && cached != null) return cached;
+            Directory.CreateDirectory(MaterialDir);
+            string path = $"{MaterialDir}/{name}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.SetColor("_BaseColor", new Color(0.06f, 0.03f, 0.1f, 0.5f));
+            mat.SetFloat("_Surface", 1f);   // transparent
+            mat.SetFloat("_Blend", 0f);     // alpha
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            mat.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            mat.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+            mat.SetFloat("_ZWrite", 0f);
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.renderQueue = (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(mat);
+            Cache[name] = mat;
+            return mat;
+        }
+
         public static Color ToColor(uint rgb) => new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1f);
 
         // ---------------- Meshes and prefabs ----------------

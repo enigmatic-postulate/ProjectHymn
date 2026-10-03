@@ -44,6 +44,8 @@ namespace ProjectHymn.Gameplay
     /// breaks the chain → recovery lock whose length and cancel window depend on the judgement → damage.
     /// Presses during recovery are buffered briefly and run as soon as the lock allows, still judged
     /// at the moment they were pressed.
+    /// M6 adds Jump (always costs stamina, one beat in the air, no invulnerability) and the air Phrases:
+    /// Rising Slash (rising), Stomp (stomp: slam down, area hit, extra on a downbeat) and Lunge (lunge).
     /// </summary>
     public class BeatCombatController : MonoBehaviour
     {
@@ -56,6 +58,7 @@ namespace ProjectHymn.Gameplay
         [SerializeField] FrameData smashFrames = new FrameData(0.08f, 0.08f, 0.42f);
         [SerializeField] FrameData stepFrames = new FrameData(0.02f, 0.12f, 0.18f);
         [SerializeField] FrameData guardFrames = new FrameData(0.03f, 0.20f, 0.10f);
+        [SerializeField] FrameData jumpFrames = new FrameData(0.02f, 0.05f, 0.10f);
         [Tooltip("A press this close before the lock ends is remembered and runs when it ends.")]
         [SerializeField, Range(0f, 0.3f)] float inputBuffer = 0.15f;
 
@@ -65,12 +68,23 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float downbeatBonus = 1.25f;
         [SerializeField] float finisherDamage = 60f;
         [SerializeField] int parryPoints = 400;
+        [Tooltip("Stomp landed on a downbeat: extra damage on top of the usual downbeat bonus.")]
+        [SerializeField] float stompDownbeatBonus = 1.5f;
 
         [Header("Weapon")]
         [SerializeField] WeaponType weapon = WeaponType.Blade;
         [Tooltip("Lute Bow shot model (flies along the ground at hand height).")]
         [SerializeField] GameObject projectilePrefab;
         [SerializeField] float projectileSpeed = 12f;
+
+        [Header("Finisher spells (M6)")]
+        [Tooltip("A completed Phrase at least this long, at the top Groove tier, casts a screen-wide spell.")]
+        [SerializeField, Min(2)] int spellMinLength = 4;
+        [SerializeField] float spellDamage = 45f;
+        [SerializeField] float spellRadius = 16f;
+        [Tooltip("Spell visuals: a glowing mesh (gem) and its material. Optional.")]
+        [SerializeField] Mesh spellMesh;
+        [SerializeField] Material spellMaterial;
 
         [Header("Hit area")]
         [SerializeField] float attackRange = 1.1f;
@@ -137,6 +151,8 @@ namespace ProjectHymn.Gameplay
         public event Action<string> Parried;
         /// <summary>A press arrived too early in a recovery to be buffered and was dropped.</summary>
         public event Action<BeatAction> InputDropped;
+        /// <summary>A finisher spell was cast: damage, spell length in seconds (one measure).</summary>
+        public event Action<float, float> SpellCast;
 
         void Awake()
         {
@@ -166,6 +182,7 @@ namespace ProjectHymn.Gameplay
             if (_input.SmashPressed) Press(BeatAction.Smash, now);
             if (_input.StepPressed) Press(BeatAction.Step, now);
             if (_input.GuardPressed) Press(BeatAction.Guard, now);
+            if (_input.JumpPressed) Press(BeatAction.Jump, now);
 
             if (_hasBuffered && _lock.CanAct(now))
             {
@@ -202,8 +219,10 @@ namespace ProjectHymn.Gameplay
             bool onBeat = effective != Judgement.OffBeat;
 
             // On-beat is free; off-beat pays stamina, and comes out Winded when there isn't enough.
+            // Jump always pays (GDD M6), so it can't be the answer to everything.
             bool winded = false;
-            if (onBeat) Stamina.NotifyAction();
+            if (action == BeatAction.Jump) winded = !Stamina.Spend(action);
+            else if (onBeat) Stamina.NotifyAction();
             else winded = !Stamina.Spend(action);
 
             Groove.Add(effective);
@@ -223,7 +242,21 @@ namespace ProjectHymn.Gameplay
                 case BeatAction.Smash:
                     damage = ComputeDamage(action, effective, judge.Beat, phrase) * WeaponScale(action);
                     var effect = phrase?.Source is PhraseData pd ? pd.effectId : null;
-                    if (weapon == WeaponType.LuteBow && action == BeatAction.Strike && RadiusScale(effect) <= 1f)
+                    bool airborne = _motor != null && _motor.IsAirborne;
+                    if (effect == "stomp" || (action == BeatAction.Smash && airborne))
+                    {
+                        // Slam down; the full Stomp is an area hit, best on a downbeat.
+                        if (_motor != null) _motor.SlamDown();
+                        if (effect == "stomp" && onBeat && judge.Beat.IsDownbeat) damage *= stompDownbeatBonus;
+                        DealDamage(damage, effect, false, effect == "stomp" ? RadiusScale(effect) : 1.3f);
+                    }
+                    else if (effect == "lunge")
+                    {
+                        // Air-dash forward and thrust along the way.
+                        if (_motor != null) _motor.Dash(true, 1.4f);
+                        DealDamage(damage, effect, false, 1f, rangeScale: 1.8f);
+                    }
+                    else if (weapon == WeaponType.LuteBow && action == BeatAction.Strike && RadiusScale(effect) <= 1f)
                     {
                         FireProjectile(damage, effect);
                     }
@@ -237,6 +270,10 @@ namespace ProjectHymn.Gameplay
                 case BeatAction.Step:
                     if (_motor != null) _motor.Dash(onBeat);
                     break;
+                case BeatAction.Jump:
+                    // One beat in the air; a weaker hop off the beat or when winded.
+                    if (_motor != null) _motor.Jump((float)judge.Beat.SecondsPerBeat, onBeat && !winded);
+                    break;
                 case BeatAction.Guard:
                     // Enemies compare this press with their hit time (ParryJudge), so off-beat attacks can be parried too.
                     _lastGuardPress = pressTime;
@@ -244,6 +281,8 @@ namespace ProjectHymn.Gameplay
             }
 
             if (phrase.HasValue) PhraseTriggered?.Invoke(phrase.Value);
+            if (phrase.HasValue && phrase.Value.Pattern.Length >= spellMinLength && Groove.Tier >= GrooveMeter.TierThresholds.Length - 1)
+                CastSpell(judge.Beat);
             ActionJudged?.Invoke(new BeatActionResult(action, judge, outcome, phrase, damage, winded, _lock, points));
         }
 
@@ -295,6 +334,7 @@ namespace ProjectHymn.Gameplay
             BeatAction.Smash => smashFrames,
             BeatAction.Step => stepFrames,
             BeatAction.Guard => guardFrames,
+            BeatAction.Jump => jumpFrames,
             _ => strikeFrames,
         };
 
@@ -320,20 +360,62 @@ namespace ProjectHymn.Gameplay
             FinisherFired?.Invoke(dmg);
         }
 
-        /// <summary>Area phrases hit wider: Backbeat shockwave, Waltz spin.</summary>
+        /// <summary>Area phrases hit wider: Backbeat shockwave, Waltz spin, Stomp, Rising Slash.</summary>
         static float RadiusScale(string effect) => effect switch
         {
             "shockwave" => 2f,
             "spin" => 2.5f,
+            "stomp" => 2.2f,
+            "rising" => 1.4f,
             _ => 1f,
         };
 
-        void DealDamage(float damage, string effectId, bool finisher, float radiusScale)
+        /// <summary>
+        /// The music changed song (a stage moving into its boss room): beat indices and song time restart, so
+        /// recovery locks, buffered presses, Drum Hammer echoes and the combo history are dropped.
+        /// </summary>
+        public void ResetForNewSong()
+        {
+            _lock = ActionLock.None;
+            _hasBuffered = false;
+            _echoes.Clear();
+            _finisherQueued = false;
+            _lastGuardPress = double.NegativeInfinity;
+            Combo.Reset();
+        }
+
+        /// <summary>
+        /// GDD M6 finisher spell: a long Phrase at the top Groove tier hits every enemy on screen once and fills
+        /// the screen with glowing shapes for one measure.
+        /// </summary>
+        void CastSpell(BeatInfo beat)
+        {
+            float dmg = spellDamage * Groove.DamageMultiplier;
+            float seconds = (float)(beat.BeatsPerMeasure * beat.SecondsPerBeat);
+            int count = Physics.OverlapSphereNonAlloc(transform.position, spellRadius, _hits, hittable, QueryTriggerInteraction.Collide);
+            var done = new HashSet<IBeatDamageable>();
+            for (int i = 0; i < count; i++)
+            {
+                var c = _hits[i];
+                if (c.transform.IsChildOf(transform)) continue;
+                var target = c.GetComponentInParent<IBeatDamageable>();
+                if (target == null || !done.Add(target)) continue;
+                var dir = (Ground.ToPlane(c.transform.position) - Ground.ToPlane(transform.position)).normalized;
+                target.TakeHit(new HitData(dmg, dir, "spell", false));
+            }
+            Score.AddBonus(250, Groove.ScoreMultiplier);
+            var fx = new GameObject("Spell", typeof(SpellBurst)).GetComponent<SpellBurst>();
+            fx.transform.position = transform.position;
+            fx.Play(spellMesh, spellMaterial, seconds);
+            SpellCast?.Invoke(dmg, seconds);
+        }
+
+        void DealDamage(float damage, string effectId, bool finisher, float radiusScale, float rangeScale = 1f)
         {
             var facing = _motor != null ? _motor.Facing : Vector2.up;
             // Wide hits are centred on the player; normal hits in front of them.
             var plane = Ground.ToPlane(transform.position);
-            var center = Ground.ToWorld(radiusScale > 1f ? plane : plane + facing * attackRange, HitHeight);
+            var center = Ground.ToWorld(radiusScale > 1f ? plane : plane + facing * attackRange * rangeScale, HitHeight);
             float radius = attackRadius * radiusScale;
             int count = Physics.OverlapSphereNonAlloc(center, radius, _hits, hittable, QueryTriggerInteraction.Collide);
             var done = new HashSet<IBeatDamageable>();

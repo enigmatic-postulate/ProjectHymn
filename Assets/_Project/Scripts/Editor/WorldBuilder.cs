@@ -55,6 +55,7 @@ namespace ProjectHymn.EditorTools
             EnsurePhrase("OddTime", "Odd-Time", "Seven-beat combo, only in 7/8. Built for the Finale.", 7, 2.6f, "shockwave",
                 BeatAction.Strike, BeatAction.Strike, BeatAction.Smash, BeatAction.Strike, BeatAction.Strike, BeatAction.Strike, BeatAction.Smash);
             SetPrice("OddTime", 600);
+            SetPrice("Lunge", 350);
 
             // Enemy models: the first time a definition gets a model its 2D sizes are replaced by 3D ones.
             AssignModel("Enemies/MetronomeSlime", "MetronomeSlime", new Vector2(0.9f, 0.8f), 0f);
@@ -79,7 +80,7 @@ namespace ProjectHymn.EditorTools
                 catalog = ScriptableObject.CreateInstance<GameCatalog>();
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
-            catalog.phrases = new[] { "TripletCut", "Syncopate", "OffStep", "Backbeat", "Waltz", "OddTime" }
+            catalog.phrases = new[] { "TripletCut", "Syncopate", "OffStep", "RisingSlash", "Stomp", "Lunge", "Backbeat", "Waltz", "OddTime" }
                 .Select(n => AssetDatabase.LoadAssetAtPath<PhraseData>($"{PhraseDir}/{n}.asset")).Where(p => p != null).ToList();
             catalog.items = items;
             EditorUtility.SetDirty(catalog);
@@ -180,6 +181,7 @@ namespace ProjectHymn.EditorTools
             hand.localPosition = new Vector3(0.36f, 0.72f, 0.1f);
             hand.localRotation = Quaternion.Euler(55f, 20f, 0f);
             var blade = K.Model(hand, "Weapon_Blade", Vector3.zero);
+            K.Shadow(player.transform, visual, 0.95f); // M6: shows where a jump will land
 
             S.SetRef(player.GetComponent<PlayerMotor>(), "visual", visual);
             var applier = player.GetComponent<LoadoutApplier>();

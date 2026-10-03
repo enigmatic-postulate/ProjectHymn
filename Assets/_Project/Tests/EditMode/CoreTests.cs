@@ -624,7 +624,9 @@ namespace ProjectHymn.Tests
         public void NewGameHasStarterLoadout()
         {
             var d = SaveData.NewGame();
-            Assert.AreEqual(3, d.equippedPhrases.Count);
+            Assert.AreEqual(5, d.equippedPhrases.Count);
+            Assert.IsTrue(d.equippedPhrases.Contains("RisingSlash"));
+            Assert.IsTrue(d.equippedPhrases.Contains("Stomp"));
             Assert.AreEqual("Blade", d.weaponId);
             Assert.IsTrue(d.ownedItems.Contains("CantorRobe"));
         }
@@ -646,8 +648,12 @@ namespace ProjectHymn.Tests
         public void SixPhraseLimitAndAtLeastOne()
         {
             var r = new ProgressionRules(SaveData.NewGame());
-            foreach (var p in new[] { "Backbeat", "Waltz", "OddTime" }) r.UnlockPhrase(p); // 6 equipped
+            r.UnlockPhrase("Backbeat");                                                   // 5 starters + 1 = 6 equipped
             Assert.AreEqual(6, r.Data.equippedPhrases.Count);
+            r.UnlockPhrase("Waltz");
+            Assert.IsFalse(r.IsEquipped("Waltz"));
+            Assert.IsTrue(r.TogglePhrase("Backbeat"));                                    // unequip
+            Assert.IsTrue(r.TogglePhrase("Waltz"));                                       // 6 again
             r.UnlockPhrase("Extra");                                                      // learned, not equipped
             Assert.IsFalse(r.IsEquipped("Extra"));
             Assert.IsFalse(r.TogglePhrase("Extra"));                                      // full
@@ -675,6 +681,20 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
+        public void OldSavesLearnTheAirPhrases()
+        {
+            var old = new SaveData { version = 1 };
+            foreach (var p in new[] { "TripletCut", "Syncopate", "OffStep", "Backbeat", "Waltz" }) { old.unlockedPhrases.Add(p); old.equippedPhrases.Add(p); }
+            Assert.IsTrue(SaveData.Migrate(old));
+            Assert.AreEqual(SaveData.Version, old.version);
+            Assert.IsTrue(old.unlockedPhrases.Contains("RisingSlash") && old.unlockedPhrases.Contains("Stomp"));
+            Assert.AreEqual(6, old.equippedPhrases.Count);              // one slot was free
+            Assert.IsTrue(old.equippedPhrases.Contains("RisingSlash"));
+            Assert.IsFalse(SaveData.Migrate(old));                      // already current
+            Assert.IsFalse(SaveData.Migrate(SaveData.NewGame()));
+        }
+
+        [Test]
         public void LoreIsFoundOnce()
         {
             var r = new ProgressionRules(SaveData.NewGame());
@@ -694,6 +714,84 @@ namespace ProjectHymn.Tests
         public void RankFromAccuracyGrooveAndDowns(double acc, float peak, int downs, Rank expected)
         {
             Assert.AreEqual(expected, RankCalculator.Calculate(acc, peak, downs));
+        }
+    }
+
+    public class AirActionTests
+    {
+        const BeatAction S = BeatAction.Strike, H = BeatAction.Smash, D = BeatAction.Step, J = BeatAction.Jump;
+        readonly TempoMap _map = new TempoMap(new List<TempoSection> { new TempoSection(8, 120f, 4) }, false);
+
+        ComboEngine Engine()
+        {
+            var e = new ComboEngine();
+            e.SetPhrases(new[]
+            {
+                new PhrasePattern("Rising Slash", new[] { J, S }),
+                new PhrasePattern("Stomp", new[] { J, H }),
+                new PhrasePattern("Lunge", new[] { J, D, S }),
+                new PhrasePattern("Off-step", new[] { D, S }),
+            });
+            return e;
+        }
+
+        string Play(ComboEngine e, long beat, BeatAction a)
+        {
+            e.Register(_map.GetBeat(beat), a, out var p);
+            return p?.Name;
+        }
+
+        [Test]
+        public void AirPhrasesMatch()
+        {
+            var e = Engine();
+            Assert.IsNull(Play(e, 0, J));
+            Assert.AreEqual("Rising Slash", Play(e, 1, S));
+            Assert.IsNull(Play(e, 4, J));
+            Assert.AreEqual("Stomp", Play(e, 5, H));
+        }
+
+        [Test]
+        public void LongestAirPhraseWins()
+        {
+            var e = Engine();
+            Play(e, 0, J);
+            Play(e, 1, D);
+            Assert.AreEqual("Lunge", Play(e, 2, S)); // not Off-step
+        }
+
+        [Test]
+        public void JumpIsNotABrokenBeat()
+        {
+            // A jump is a real input: it neither breaks the bar nor reads as an off-beat mark.
+            var e = Engine();
+            bool bar = false;
+            e.BarCompleted += _ => bar = true;
+            Play(e, 0, J); Play(e, 1, S); Play(e, 2, J); Play(e, 3, H);
+            Assert.IsTrue(bar);
+        }
+
+        [Test]
+        public void JumpAlwaysCostsStamina()
+        {
+            var s = new StaminaMeter();
+            Assert.AreEqual(20f, s.CostOf(J));
+            Assert.IsTrue(s.Spend(J));
+            Assert.AreEqual(80f, s.Value, 1e-4);
+        }
+
+        [Test]
+        public void JumpShareIsTracked()
+        {
+            var m = new PlaystyleMetrics();
+            var b = _map.GetBeat(0);
+            m.RecordAction(J, Judgement.Perfect, b);
+            m.RecordAction(S, Judgement.Perfect, b);
+            m.RecordAction(S, Judgement.Great, b);
+            m.RecordAction(H, Judgement.OffBeat, b);
+            Assert.AreEqual(1, m.Jumps);
+            Assert.AreEqual(0.25, m.JumpShare, 1e-9);
+            StringAssert.Contains("\"jumpShare\": 0.25", m.ToJson("t", System.DateTime.UtcNow));
         }
     }
 }

@@ -25,13 +25,17 @@ namespace ProjectHymn.Progression
         public bool showBeatCue = false;   // accessibility, off by default (GDD)
         public bool easyTiming = false;    // widens timing windows by 50%
         public float calibrationMs = 0f;
+        /// <summary>M6: false = the Dragon Valor look (default), true = the M5 cel-shaded look.</summary>
+        public bool celLook = false;
     }
 
     /// <summary>Everything that persists between sessions. Plain data, saved as JSON.</summary>
     [Serializable]
     public class SaveData
     {
-        public const int Version = 1;
+        public const int Version = 2;
+        /// <summary>Air Phrases every Cantor knows from M6 on (Jump, then Strike / Smash).</summary>
+        public static readonly string[] AirStarters = { "RisingSlash", "Stomp" };
         public const int MaxEquippedPhrases = 6;
 
         public int version = Version;
@@ -45,11 +49,11 @@ namespace ProjectHymn.Progression
         public List<string> loreFound = new List<string>();
         public SettingsData settings = new SettingsData();
 
-        /// <summary>A fresh game: three starter Phrases equipped, the Blade and the Cantor Robe.</summary>
+        /// <summary>A fresh game: five starter Phrases equipped (two of them air Phrases), the Blade and the Cantor Robe.</summary>
         public static SaveData NewGame()
         {
             var s = new SaveData();
-            foreach (var p in new[] { "TripletCut", "Syncopate", "OffStep" })
+            foreach (var p in new[] { "TripletCut", "Syncopate", "OffStep", "RisingSlash", "Stomp" })
             {
                 s.unlockedPhrases.Add(p);
                 s.equippedPhrases.Add(p);
@@ -57,6 +61,26 @@ namespace ProjectHymn.Progression
             s.ownedItems.Add("Blade");
             s.ownedItems.Add("CantorRobe");
             return s;
+        }
+
+        /// <summary>
+        /// Bring an older save up to date. Version 1 → 2: learn the air starter Phrases, equipped while there is room.
+        /// Returns true if anything changed.
+        /// </summary>
+        public static bool Migrate(SaveData s)
+        {
+            if (s == null || s.version >= Version) return false;
+            if (s.version < 2)
+            {
+                foreach (var p in AirStarters)
+                {
+                    if (s.unlockedPhrases.Contains(p)) continue;
+                    s.unlockedPhrases.Add(p);
+                    if (s.equippedPhrases.Count < MaxEquippedPhrases) s.equippedPhrases.Add(p);
+                }
+            }
+            s.version = Version;
+            return true;
         }
     }
 

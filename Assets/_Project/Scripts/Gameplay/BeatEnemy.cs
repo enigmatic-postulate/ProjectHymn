@@ -357,7 +357,7 @@ namespace ProjectHymn.Gameplay
                 }
             }
 
-            if (hit.EffectId == "stagger") Stagger(1);
+            if (hit.EffectId == "stagger" || hit.EffectId == "rising") Stagger(1);
 
             Hp = hit.IsFinisher ? Hp - dmg : Mathf.Max(Hp - dmg, Mathf.Min(Hp, HpFloor));
             _knockback += hit.Direction * (hit.IsFinisher ? 7f : 2.5f);

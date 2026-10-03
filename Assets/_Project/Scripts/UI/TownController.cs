@@ -211,7 +211,7 @@ namespace ProjectHymn.UI
             UIFactory.Focus(UIFactory.Button(panel, "Close", () => { Close(); s.gameObject.SetActive(false); }));
         }
 
-        /// <summary>"/ / X" style pattern string: / Strike, X Smash, &gt; Step, O Guard, · rest.</summary>
+        /// <summary>"/ / X" style pattern string: / Strike, X Smash, &gt; Step, O Guard, ^ Jump, · rest.</summary>
         public static string Pattern(PhraseData p)
         {
             var sb = new StringBuilder();
@@ -224,6 +224,7 @@ namespace ProjectHymn.UI
                     BeatAction.Smash => "X",
                     BeatAction.Step => ">",
                     BeatAction.Guard => "O",
+                    BeatAction.Jump => "^",
                     _ => "·",
                 });
             }

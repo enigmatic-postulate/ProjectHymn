@@ -19,7 +19,7 @@ namespace ProjectHymn.Combat
         public double FightSeconds { get; private set; }
         public double SecondsNearEnemies { get; private set; }
 
-        public int Strikes, Smashes, Steps, Guards;
+        public int Strikes, Smashes, Steps, Guards, Jumps;
         public int OnBeatActions, OffBeatActions;
 
         public int EnemyAttacksFaced;   // attacks that would have connected (in range)
@@ -55,6 +55,7 @@ namespace ProjectHymn.Combat
                 case BeatAction.Smash: Smashes++; break;
                 case BeatAction.Step: Steps++; break;
                 case BeatAction.Guard: Guards++; break;
+                case BeatAction.Jump: Jumps++; break;
             }
 
             bool onBeat = j != Judgement.OffBeat;
@@ -117,6 +118,9 @@ namespace ProjectHymn.Combat
             }
         }
 
+        /// <summary>Share of all inputs that were jumps (GDD M6 exit: under a third).</summary>
+        public double JumpShare => Ratio(Jumps, TotalActions);
+
         /// <summary>Smash share of attacks: 0 = all Strikes, 1 = all Smashes.</summary>
         public double HeavyAttackShare => Ratio(Smashes, Attacks);
 
@@ -156,7 +160,7 @@ namespace ProjectHymn.Combat
             sb.Append($"    \"dodgeRate\": {N(DodgeRate)}\n");
             sb.Append("  },\n");
             sb.Append("  \"raw\": {\n");
-            sb.Append($"    \"strikes\": {Strikes}, \"smashes\": {Smashes}, \"steps\": {Steps}, \"guards\": {Guards},\n");
+            sb.Append($"    \"strikes\": {Strikes}, \"smashes\": {Smashes}, \"steps\": {Steps}, \"guards\": {Guards}, \"jumps\": {Jumps}, \"jumpShare\": {N(JumpShare)},\n");
             sb.Append($"    \"onBeatActions\": {OnBeatActions}, \"offBeatActions\": {OffBeatActions}, \"onBeatAccuracy\": {N(OnBeatAccuracy)},\n");
             sb.Append($"    \"enemyAttacksFaced\": {EnemyAttacksFaced}, \"parried\": {Parried}, \"dodgedWithStep\": {DodgedWithStep}, \"hitsTaken\": {HitsTaken}, \"avoidedByPosition\": {AttacksAvoidedByPosition},\n");
             sb.Append($"    \"attacksPerMinute\": {N(AttacksPerMinute)}, \"timeNearEnemiesRatio\": {N(TimeNearEnemiesRatio)},\n");

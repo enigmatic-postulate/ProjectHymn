@@ -50,6 +50,7 @@ namespace ProjectHymn.EditorTools
             AssetDatabase.Refresh();
 
             var phrases = CreatePhrases();
+            var phraseNames = phrases.ConvertAll(p => p != null ? p.name : "");
             var theme1 = CreateSong("BattleTheme1", "https://www.youtube.com/watch?v=Z3l0ehUm4lM",
                 new TempoSection(112, 130f, 4));
             var theme2 = CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
@@ -69,15 +70,16 @@ namespace ProjectHymn.EditorTools
             AssetDatabase.SaveAssets();
             theme1 = AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme1.asset");
             theme2 = AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme2.asset");
+            // Reload by name: the old references may already be gone after the scene switch.
             for (int i = 0; i < phrases.Count; i++)
-                phrases[i] = AssetDatabase.LoadAssetAtPath<PhraseData>(AssetDatabase.GetAssetPath(phrases[i]));
+                phrases[i] = AssetDatabase.LoadAssetAtPath<PhraseData>($"{PhraseDir}/{phraseNames[i]}.asset");
             var slime = LoadEnemy("MetronomeSlime");
             var imp = LoadEnemy("SnareImp");
             var knight = LoadEnemy("TubaKnight");
             var bat = LoadEnemy("PiccoloBat");
             var firstConductor = AssetDatabase.LoadAssetAtPath<BossDefinition>($"{BossDir}/FirstConductor.asset");
             EnsureBossThemePhases(theme2);
-            var level2Theme = level2 ? CreateLevel2Theme() : null;
+            var level2Theme = level2 ? CreateLevel2StageTheme() : null;
             var catalog = WorldBuilder.LoadCatalog();
 
             // Conductor
@@ -89,28 +91,53 @@ namespace ProjectHymn.EditorTools
             var square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
 
-            // 3D arena set, lighting, post-processing (M5 look)
-            var arenaRect = new Rect(-7.5f, -4f, 15f, 8f);
+            // Lighting and post-processing
             var style = bossFight ? WorldBuilder.ArenaStyle.Boss : level2 ? WorldBuilder.ArenaStyle.Garden : WorldBuilder.ArenaStyle.Practice;
             var keyLight = LookBuilder.KeyLight(style == WorldBuilder.ArenaStyle.Garden ? new Color(0.8f, 0.85f, 1f) : new Color(1f, 0.93f, 0.82f));
             LookBuilder.Ambient(style == WorldBuilder.ArenaStyle.Boss ? new Color(0.42f, 0.3f, 0.45f) : new Color(0.42f, 0.38f, 0.6f));
             LookBuilder.GlobalVolume();
-            var glowProps = WorldBuilder.BuildArenaSet(style, arenaRect);
+
+            // M6: the Practice Hall and the Moonlit Garden are stages of rooms on a side lane; the boss keeps its arena.
+            StageBuilder.Result stage = null;
+            List<Renderer> glowProps;
+            Vector2 playerStart;
+            if (bossFight)
+            {
+                glowProps = WorldBuilder.BuildArenaSet(style, new Rect(-7.5f, -4f, 15f, 8f));
+                playerStart = new Vector2(0f, -1.5f);
+            }
+            else
+            {
+                stage = level2
+                    ? StageBuilder.Build(StageBuilder.Theme.Garden, GardenRooms(slime, imp, knight, bat, theme2), -8f)
+                    : StageBuilder.Build(StageBuilder.Theme.Practice, PracticeRooms(slime, imp, knight, bat), -8f);
+                glowProps = stage.Glow;
+                playerStart = new Vector2(stage.Rooms[0].bounds.xMin + 2f, 0f);
+            }
             var pulse = new GameObject("Stage Lights", typeof(BeatLightPulse)).GetComponent<BeatLightPulse>();
             SetRef(pulse, "conductor", conductor);
             SetRef(pulse, "keyLight", keyLight);
             SetList(pulse, "glowRenderers", glowProps);
 
             // Player: low-poly Cantor, weapon in hand, loadout from the save
-            var player = WorldBuilder.MakePlayer(catalog, combatant: true, new Vector2(0f, -1.5f));
+            var player = WorldBuilder.MakePlayer(catalog, combatant: true, playerStart);
             var combat = player.GetComponent<BeatCombatController>();
             SetRef(combat, "projectilePrefab", ModelGenerator.LoadPrefab("NoteShot"));
+            SetRef(combat, "spellMesh", ModelGenerator.LoadMesh("Block_Gem"));
+            SetRef(combat, "spellMaterial", ModelGenerator.Toon(0xffd27a, glow: true));
             var health = player.GetComponent<PlayerHealth>();
             SetRef(combat, "conductor", conductor);
-            SetList(combat, "equippedPhrases", phrases);
+            SetList(combat, "equippedPhrases", phrases.FindAll(p => p != null && StarterPhrases.Contains(p.name)));
 
-            // Fixed angled camera framing the whole floor
-            var rig = LookBuilder.CameraRig(null, new Vector2(0f, -0.6f), 17.5f, 55f, default, WorldBuilder.Background(style));
+            // Camera: fixed angled view over the boss arena; stages start on the side lane following the player.
+            CameraRig rig;
+            if (stage == null) rig = LookBuilder.CameraRig(null, new Vector2(0f, -0.6f), 17.5f, 55f, default, WorldBuilder.Background(style));
+            else
+            {
+                rig = LookBuilder.CameraRig(player.transform, playerStart, 13f, 22f, default, WorldBuilder.Background(style));
+                LookBuilder.SetShot(rig, ArenaDirector.ShotFor(stage.Rooms[0]));
+                rig.transform.position = Ground.ToWorld(new Vector2(stage.Rooms[0].bounds.xMin + 5.5f, 0f));
+            }
 
             // Feedback: hit-stop, key-matched quantized hit sounds, finisher shake.
             var feedbackGo = new GameObject("CombatFeedback", typeof(CombatFeedback));
@@ -129,17 +156,11 @@ namespace ProjectHymn.EditorTools
             SetRef(arena, "fallbackMaterial", ModelGenerator.Toon(0xffffff));
             SetRef(arena, "hpBarBackMaterial", ModelGenerator.Unlit(0x1c1430));
             SetRef(arena, "hpBarFillMaterial", ModelGenerator.Unlit(0xff4a5a));
-            if (bossFight) SetRef(arena, "boss", firstConductor);
-            else SetWaves(arena, new (string, EnemyDefinition[])[]
-            {
-                ("Slimes", new[] { slime, slime }),
-                ("Backbeat", new[] { slime, imp }),
-                ("Snare Line", new[] { imp, imp }),
-                ("Wings", new[] { bat, slime }),
-                ("Brass", new[] { knight }),
-                ("Ensemble", new[] { knight, imp, bat }),
-                ("Full Band", new[] { slime, imp, bat, knight }),
-            });
+            SetRef(arena, "shadowMesh", ModelGenerator.LoadMesh("Block_Cylinder"));
+            SetRef(arena, "shadowMaterial", ModelGenerator.ShadowMaterial());
+            SetRef(arena, "cameraRig", rig);
+            if (bossFight || level2) SetRef(arena, "boss", firstConductor);
+            if (stage != null) StageBuilder.SetRooms(arena, stage.Rooms);
             var tracker = arenaGo.GetComponent<PlaystyleTracker>();
             SetRef(tracker, "conductor", conductor);
             SetRef(tracker, "combat", combat);
@@ -162,14 +183,49 @@ namespace ProjectHymn.EditorTools
             SetString(results, "arenaName", arenaName);
             SetString(results, "firstClearPhrase", reward);
 
+            if (!bossFight) Debug.Log(level2
+                ? "[Project Hymn] Moonlit Garden stage built: seven rooms on the Level 2 track, the First Conductor at the end."
+                : "[Project Hymn] Practice Hall stage built: three side-lane rooms, then the angled arena.");
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, scenePath);
             AddSceneToBuild(scenePath);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
             if (bossFight) Debug.Log("[Project Hymn] Boss scene built: The First Conductor on Battle Theme 2. Phase 2 (3/4): Waltz (Strike x3) breaks its guard. Phase 3 (7/8): only a Bar Finisher ends it.");
-            Debug.Log("[Project Hymn] Prototype scene built. Press Play: J/K/Space/L (or X/Y/A/B) on the beat, WASD to move, C to calibrate. Off-beat actions cost stamina; L parries enemy hits, on-beat Space dodges them.");
+            Debug.Log("[Project Hymn] Scene built. Press Play: J Strike, K Smash, Space Jump, Shift Step, L Guard (pad: X/Y/A/RB/B) on the beat, WASD to move, C to calibrate. Off-beat actions and every jump cost stamina; L parries enemy hits, on-beat Step dodges them.");
         }
+
+        /// <summary>Phrases equipped in a freshly built scene (the save's loadout replaces them at runtime).</summary>
+        static readonly HashSet<string> StarterPhrases = new HashSet<string> { "TripletCut", "Syncopate", "OffStep", "RisingSlash", "Stomp" };
+
+        /// <summary>Slice A: three side-lane rooms teaching the jump, then the angled arena (Battle Theme 1).</summary>
+        static List<StageBuilder.RoomSpec> PracticeRooms(EnemyDefinition slime, EnemyDefinition imp, EnemyDefinition knight, EnemyDefinition bat) => new List<StageBuilder.RoomSpec>
+        {
+            new StageBuilder.RoomSpec { Name = "Entry Hall", Length = 16f, Waves = new[] { ("Slimes", new[] { slime, slime }) } },
+            new StageBuilder.RoomSpec
+            {
+                Name = "Hurdle Run", Length = 18f, Hurdles = new[] { 6f, 12f }, CacheAt = 15.5f,
+                Waves = new[] { ("Backbeat", new[] { slime, imp }), ("Snare Line", new[] { imp, imp }) },
+            },
+            new StageBuilder.RoomSpec { Name = "Bell Gallery", Length = 16f, Waves = new[] { ("Wings", new[] { bat, slime }), ("Flutter", new[] { bat, imp }) } },
+            new StageBuilder.RoomSpec
+            {
+                Name = "The Practice Floor", Length = 15f, Arena = true,
+                Waves = new[] { ("Brass", new[] { knight }), ("Ensemble", new[] { knight, imp, bat }), ("Full Band", new[] { slime, imp, bat, knight }) },
+            },
+        };
+
+        /// <summary>Slice C: seven rooms on the Level 2 track (one 8-bar music phase each), the First Conductor at the end.</summary>
+        static List<StageBuilder.RoomSpec> GardenRooms(EnemyDefinition slime, EnemyDefinition imp, EnemyDefinition knight, EnemyDefinition bat, SongData bossSong) => new List<StageBuilder.RoomSpec>
+        {
+            new StageBuilder.RoomSpec { Name = "Garden Gate", Length = 14f, MusicPhase = 0, Waves = new[] { ("Slimes", new[] { slime, slime }) } },
+            new StageBuilder.RoomSpec { Name = "Hedge Walk", Length = 16f, MusicPhase = 1, Hurdles = new[] { 8f }, Waves = new[] { ("Skirmish", new[] { imp, bat }) } },
+            new StageBuilder.RoomSpec { Name = "Fountain Court", Length = 15f, Arena = true, MusicPhase = 2, SwitchAt = 12.5f, Waves = new[] { ("Court", new[] { slime, imp, imp }) } },
+            new StageBuilder.RoomSpec { Name = "Moon Bridge", Length = 16f, MusicPhase = 3, CacheAt = 8f, CacheNotes = 120, Waves = new[] { ("Brass", new[] { knight }) } },
+            new StageBuilder.RoomSpec { Name = "Thorn Row", Length = 16f, MusicPhase = 4, Hurdles = new[] { 5f, 11f }, Waves = new[] { ("Snare Line", new[] { imp, imp, bat }) } },
+            new StageBuilder.RoomSpec { Name = "Rose Terrace", Length = 16f, MusicPhase = 5, Waves = new[] { ("Ensemble", new[] { knight, slime, bat }) } },
+            new StageBuilder.RoomSpec { Name = "The Conductor's Garden", Length = 15f, Arena = true, Boss = true, Song = bossSong },
+        };
 
         static void BuildHud(Conductor conductor, BeatCombatController combat, PlayerHealth health, ArenaDirector arena, Sprite circle, Sprite square)
         {
@@ -291,9 +347,12 @@ namespace ProjectHymn.EditorTools
 
         static List<PhraseData> CreatePhrases()
         {
-            const BeatAction S = BeatAction.Strike, H = BeatAction.Smash, R = BeatAction.Rest, D = BeatAction.Step;
+            const BeatAction S = BeatAction.Strike, H = BeatAction.Smash, R = BeatAction.Rest, D = BeatAction.Step, J = BeatAction.Jump;
             return new List<PhraseData>
             {
+                CreatePhrase("RisingSlash", "Rising Slash", "Jump, then Strike: an upward cut that staggers.", 0, 1.6f, "rising", J, S),
+                CreatePhrase("Stomp", "Stomp", "Jump, then Smash: slam down for an area hit. Land it on a downbeat for extra.", 0, 1.8f, "stomp", J, H),
+                CreatePhrase("Lunge", "Lunge", "Jump, Step, Strike: dash through the air and thrust.", 0, 2.0f, "lunge", J, D, S),
                 CreatePhrase("TripletCut", "Triplet Cut", "Three-hit chain, last hit staggers.", 0, 1.6f, "stagger", S, S, H),
                 CreatePhrase("Syncopate", "Syncopate", "Delayed heavy that breaks guard.", 0, 1.8f, "guard_break", S, R, H),
                 CreatePhrase("Backbeat", "Backbeat", "Two shockwaves, area damage.", 0, 2.0f, "shockwave", R, H, R, H),
@@ -420,25 +479,6 @@ namespace ProjectHymn.EditorTools
 
         internal static EnemyDefinition LoadEnemy(string file) => AssetDatabase.LoadAssetAtPath<EnemyDefinition>($"{EnemyDir}/{file}.asset");
 
-        static void SetWaves(ArenaDirector arena, (string name, EnemyDefinition[] enemies)[] waves)
-        {
-            var so = new SerializedObject(arena);
-            var list = so.FindProperty("waves");
-            list.arraySize = waves.Length;
-            for (int i = 0; i < waves.Length; i++)
-            {
-                var w = list.GetArrayElementAtIndex(i);
-                w.FindPropertyRelative("name").stringValue = waves[i].name;
-                var arr = w.FindPropertyRelative("enemies");
-                arr.arraySize = waves[i].enemies.Length;
-                for (int j = 0; j < waves[i].enemies.Length; j++)
-                    arr.GetArrayElementAtIndex(j).objectReferenceValue = waves[i].enemies[j];
-            }
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-
-
         static PhraseData CreatePhrase(string file, string display, string desc, int meter, float mult, string effect, params BeatAction[] pattern)
         {
             string path = $"{PhraseDir}/{file}.asset";
@@ -456,12 +496,13 @@ namespace ProjectHymn.EditorTools
         }
 
         /// <summary>
-        /// Measured from the track: 150 BPM, 4/4, first downbeat 0.03 s, C minor, 96 bars in 8-bar
-        /// phrases (quiet 8-bar intro, 80-bar body, 8-bar outro). The arena loops the body.
+        /// The Level 2 track (measured: 150 BPM, 4/4, first downbeat 0.03 s, C minor, 96 bars in 8-bar phrases) cut for
+        /// the Moonlit Garden stage (M6): the 80-bar body as ten 8-bar sections, and one
+        /// adaptive phase per room that loops its 8 bars until the room is cleared.
         /// </summary>
-        static SongData CreateLevel2Theme()
+        static SongData CreateLevel2StageTheme()
         {
-            string path = $"{SongDir}/Level2Theme.asset";
+            string path = $"{SongDir}/Level2Stage.asset";
             var s = AssetDatabase.LoadAssetAtPath<SongData>(path);
             if (s == null)
             {
@@ -471,19 +512,18 @@ namespace ProjectHymn.EditorTools
                 s.loop = false;
                 s.keyRoot = 0;       // C
                 s.minorKey = true;
-                s.sections = new List<TempoSection>
-                {
-                    new TempoSection(8, 150f, 4),   // intro (quiet)
-                    new TempoSection(80, 150f, 4),  // body
-                    new TempoSection(8, 150f, 4),   // outro
-                };
-                s.phases = new List<SongPhase> { new SongPhase("Fight", 1, 1) }; // loop bars 9-88
+                s.sections = new List<TempoSection> { new TempoSection(8, 150f, 4) };      // intro (not played)
+                for (int i = 0; i < 10; i++) s.sections.Add(new TempoSection(8, 150f, 4));   // body, 8 bars each
+                s.sections.Add(new TempoSection(8, 150f, 4));                               // outro
+                s.phases = new List<SongPhase>();
+                string[] names = { "Garden Gate", "Hedge Walk", "Fountain Court", "Moon Bridge", "Thorn Row", "Rose Terrace" };
+                for (int i = 0; i < names.Length; i++) s.phases.Add(new SongPhase(names[i], 1 + i, 1));
                 AssetDatabase.CreateAsset(s, path);
             }
             if (s.clip == null)
             {
                 s.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(Level2Clip);
-                if (s.clip == null) Debug.LogWarning($"[Project Hymn] Level 2 track not found at {Level2Clip}; the arena will run on the metronome.");
+                if (s.clip == null) Debug.LogWarning($"[Project Hymn] Level 2 track not found at {Level2Clip}; the stage will run on the metronome.");
                 EditorUtility.SetDirty(s);
             }
             AssetDatabase.SaveAssets();
