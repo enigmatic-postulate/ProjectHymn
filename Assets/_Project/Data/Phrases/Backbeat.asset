@@ -18,3 +18,4 @@ MonoBehaviour:
   requiredBeatsPerMeasure: 0
   damageMultiplier: 2
   effectId: shockwave
+  price: 400

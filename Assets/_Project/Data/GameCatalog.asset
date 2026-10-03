@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c4aa067f215476d96e391b9624d14db, type: 3}
+  m_Name: GameCatalog
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.GameCatalog
+  phrases:
+  - {fileID: 11400000, guid: 7c94550ca8368cb45921fc6520695761, type: 2}
+  - {fileID: 11400000, guid: 4825b80f2ca5920449ec012814fd1d3a, type: 2}
+  - {fileID: 11400000, guid: 30ca11520b1d0654abd9f4928932ffb1, type: 2}
+  - {fileID: 11400000, guid: 56b96fafa8162964f8cf9d17f41d5a60, type: 2}
+  - {fileID: 11400000, guid: 1aec8731ab1eed249a7baecd580637cc, type: 2}
+  - {fileID: 11400000, guid: c3fe07256e5ad6e449d62d75f4327584, type: 2}
+  items:
+  - {fileID: 11400000, guid: d918a65c2dc2b2a4fa532afd20b589b2, type: 2}
+  - {fileID: 11400000, guid: d876be91c1118124a8586e5e295c0fd3, type: 2}
+  - {fileID: 11400000, guid: 82c93c00f19268a429ecf71e9d24e0e5, type: 2}
+  - {fileID: 11400000, guid: 479deb493d0dd914b8f9ba629d0a0fc8, type: 2}
+  - {fileID: 11400000, guid: 84ecea6ecfdacb94f88196ae56bcd0ca, type: 2}
+  - {fileID: 11400000, guid: a268c5938a735a04f8d2cd6b93ad1e50, type: 2}

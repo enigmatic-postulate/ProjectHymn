@@ -18,3 +18,4 @@ MonoBehaviour:
   requiredBeatsPerMeasure: 3
   damageMultiplier: 2.2
   effectId: spin
+  price: 300

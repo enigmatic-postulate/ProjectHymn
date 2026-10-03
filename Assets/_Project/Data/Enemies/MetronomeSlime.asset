@@ -28,6 +28,7 @@ MonoBehaviour:
   moveSpeed: 2.2
   preferredDistance: 0.9
   attackRange: 1.3
+  sprite: {fileID: 21300000, guid: 4be0b5d3ad9526a4eae628cb105e180b, type: 3}
   shape: 0
   color: {r: 0.4, g: 0.9, b: 0.45, a: 1}
-  size: {x: 0.9, y: 0.75}
+  size: {x: 0.9375, y: 0.75}
