@@ -60,7 +60,7 @@ namespace ProjectHymn.Gameplay
         void Update()
         {
             if (arena == null || !arena.IsRunning || combat == null) return;
-            bool near = arena.NearestEnemyDistance(combat.transform.position) <= nearEnemyDistance;
+            bool near = arena.NearestEnemyDistance(Ground.ToPlane(combat.transform.position)) <= nearEnemyDistance;
             Metrics.Tick(Time.deltaTime, near, weaponName);
         }
 

@@ -68,8 +68,8 @@ namespace ProjectHymn.Gameplay
 
         [Header("Weapon")]
         [SerializeField] WeaponType weapon = WeaponType.Blade;
-        [SerializeField] Sprite projectileSprite;
-        [SerializeField] Material projectileMaterial;
+        [Tooltip("Lute Bow shot model (flies along the ground at hand height).")]
+        [SerializeField] GameObject projectilePrefab;
         [SerializeField] float projectileSpeed = 12f;
 
         [Header("Hit area")]
@@ -85,7 +85,8 @@ namespace ProjectHymn.Gameplay
         BeatAction _bufferedAction;
         double _bufferedPressTime;
         double _lastGuardPress = double.NegativeInfinity;
-        readonly List<Collider2D> _hits = new List<Collider2D>();
+        readonly Collider[] _hits = new Collider[32];
+        const float HitHeight = 0.8f; // attacks are checked around the player's chest
         readonly List<(double time, float damage, string effect)> _echoes = new List<(double, float, string)>();
 
         public ComboEngine Combo { get; } = new ComboEngine();
@@ -280,14 +281,12 @@ namespace ProjectHymn.Gameplay
 
         void FireProjectile(float damage, string effect)
         {
-            var facing = _motor != null ? _motor.Facing : Vector2.right;
-            var go = new GameObject("Note Arrow");
-            go.transform.position = (Vector2)transform.position + facing * 0.6f;
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = projectileSprite;
-            if (projectileMaterial != null) sr.sharedMaterial = projectileMaterial;
-            sr.sortingOrder = 8;
-            var p = go.AddComponent<Projectile>();
+            var facing = _motor != null ? _motor.Facing : Vector2.up;
+            var pos = Ground.ToWorld(Ground.ToPlane(transform.position) + facing * 0.6f, HitHeight);
+            var go = projectilePrefab != null ? Instantiate(projectilePrefab, pos, Ground.Facing(facing)) : new GameObject("Note Arrow");
+            go.transform.position = pos;
+            var p = go.GetComponent<Projectile>();
+            if (p == null) p = go.AddComponent<Projectile>();
             p.Launch(facing * projectileSpeed, new HitData(damage, facing, effect, false), gameObject, hittable);
         }
 
@@ -331,25 +330,28 @@ namespace ProjectHymn.Gameplay
 
         void DealDamage(float damage, string effectId, bool finisher, float radiusScale)
         {
-            var facing = _motor != null ? _motor.Facing : Vector2.right;
+            var facing = _motor != null ? _motor.Facing : Vector2.up;
             // Wide hits are centred on the player; normal hits in front of them.
-            Vector2 center = radiusScale > 1f ? (Vector2)transform.position : (Vector2)transform.position + facing * attackRange;
+            var plane = Ground.ToPlane(transform.position);
+            var center = Ground.ToWorld(radiusScale > 1f ? plane : plane + facing * attackRange, HitHeight);
             float radius = attackRadius * radiusScale;
-            var filter = new ContactFilter2D { useLayerMask = true, layerMask = hittable, useTriggers = true };
-            int count = Physics2D.OverlapCircle(center, radius, filter, _hits);
+            int count = Physics.OverlapSphereNonAlloc(center, radius, _hits, hittable, QueryTriggerInteraction.Collide);
+            var done = new HashSet<IBeatDamageable>();
             for (int i = 0; i < count; i++)
             {
-                if (_hits[i].attachedRigidbody != null && _hits[i].attachedRigidbody.gameObject == gameObject) continue;
-                if (_hits[i].TryGetComponent<IBeatDamageable>(out var target))
+                var c = _hits[i];
+                if (c.transform.IsChildOf(transform)) continue;
+                var target = c.GetComponentInParent<IBeatDamageable>();
+                if (target != null && done.Add(target))
                     target.TakeHit(new HitData(damage, facing, effectId, finisher));
             }
         }
 
         void OnDrawGizmosSelected()
         {
-            var facing = Application.isPlaying && _motor != null ? _motor.Facing : Vector2.right;
+            var facing = Application.isPlaying && _motor != null ? _motor.Facing : Vector2.up;
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere((Vector2)transform.position + facing * attackRange, attackRadius);
+            Gizmos.DrawWireSphere(Ground.ToWorld(Ground.ToPlane(transform.position) + facing * attackRange, HitHeight), attackRadius);
         }
     }
 }

@@ -31,6 +31,7 @@ namespace ProjectHymn.Gameplay
         [SerializeField] List<ArenaWave> waves = new List<ArenaWave>();
         [Tooltip("Boss arena: when set, the boss is fought instead of the waves, with no time limit.")]
         [SerializeField] BossDefinition boss;
+        [Tooltip("Arena floor on the ground plane: x = world X, y = world Z.")]
         [SerializeField] Rect bounds = new Rect(-7.5f, -4f, 15f, 8f);
         [SerializeField] float fightLengthSeconds = 120f;
         [SerializeField, Min(0)] int countInMeasures = 2;
@@ -39,9 +40,11 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float minSpawnDistance = 4f;
 
         [Header("Look")]
-        [SerializeField] Sprite circleSprite;
-        [SerializeField] Sprite squareSprite;
-        [SerializeField] Material spriteMaterial;
+        [Tooltip("Toon material for enemies that have no model (coloured capsule).")]
+        [SerializeField] Material fallbackMaterial;
+        [Tooltip("Unlit materials for the floating HP bars.")]
+        [SerializeField] Material hpBarBackMaterial;
+        [SerializeField] Material hpBarFillMaterial;
 
         State _state = State.Waiting;
         long _actOnMeasure = long.MaxValue;
@@ -145,7 +148,7 @@ namespace ProjectHymn.Gameplay
         {
             var wave = waves[_waveIndex % waves.Count];
             float hpMult = 1f + _loop * hpGrowthPerLoop;
-            Vector2 playerPos = combat != null ? (Vector2)combat.transform.position : Vector2.zero;
+            Vector2 playerPos = combat != null ? Ground.ToPlane(combat.transform.position) : Vector2.zero;
 
             for (int i = 0; i < wave.enemies.Length; i++)
             {
@@ -161,7 +164,7 @@ namespace ProjectHymn.Gameplay
         void SpawnBoss()
         {
             if (boss.body == null) { Debug.LogError($"[ArenaDirector] Boss '{boss.name}' has no body EnemyDefinition.", this); return; }
-            var pos = new Vector2(bounds.center.x, bounds.yMax - 1.5f);
+            var pos = new Vector2(bounds.center.x, bounds.yMax - 1.8f);
             var e = Spawn(boss.body, pos, 1f);
             _bossCtl = e.gameObject.AddComponent<BossController>();
             _bossCtl.Init(boss, conductor, this);
@@ -174,7 +177,7 @@ namespace ProjectHymn.Gameplay
         public BeatEnemy SpawnAdd(EnemyDefinition def)
         {
             if (def == null) return null;
-            Vector2 playerPos = combat != null ? (Vector2)combat.transform.position : Vector2.zero;
+            Vector2 playerPos = combat != null ? Ground.ToPlane(combat.transform.position) : Vector2.zero;
             return Spawn(def, SpawnPoint(playerPos, UnityEngine.Random.Range(0, 4)), 1f);
         }
 
@@ -200,47 +203,72 @@ namespace ProjectHymn.Gameplay
         BeatEnemy Spawn(EnemyDefinition def, Vector2 position, float hpMult)
         {
             var go = new GameObject(def.displayName);
-            go.transform.position = position;
+            go.transform.position = Ground.ToWorld(position, def.hoverHeight);
 
-            var body = go.AddComponent<SpriteRenderer>();
-            body.sprite = def.sprite != null ? def.sprite : def.shape == EnemyShape.Circle ? circleSprite : squareSprite;
-            if (spriteMaterial != null) body.sharedMaterial = spriteMaterial;
-            body.color = def.sprite != null ? Color.white : def.color;
-            body.sortingOrder = 5;
-            var spriteSize = body.sprite != null ? (Vector2)body.sprite.bounds.size : Vector2.one;
-            go.transform.localScale = new Vector3(def.size.x / Mathf.Max(0.001f, spriteSize.x), def.size.y / Mathf.Max(0.001f, spriteSize.y), 1f);
+            // Model (faces +Z, feet at y = 0), or a coloured capsule placeholder.
+            GameObject model;
+            if (def.model != null)
+            {
+                model = Instantiate(def.model, go.transform, false);
+                model.transform.localScale = Vector3.one * def.modelScale;
+            }
+            else
+            {
+                model = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                Destroy(model.GetComponent<Collider>());
+                model.transform.SetParent(go.transform, false);
+                model.transform.localScale = new Vector3(def.size.x, def.size.y * 0.5f, def.size.x);
+                model.transform.localPosition = new Vector3(0f, def.size.y * 0.5f, 0f);
+                var mr = model.GetComponent<MeshRenderer>();
+                if (fallbackMaterial != null) mr.sharedMaterial = fallbackMaterial;
+                var mpb = new MaterialPropertyBlock();
+                mpb.SetColor("_BaseColor", def.color);
+                mr.SetPropertyBlock(mpb);
+            }
+            model.name = "Model";
+            foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
 
-            var rb = go.AddComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Kinematic;
-            rb.gravityScale = 0f;
-            var col = go.AddComponent<BoxCollider2D>();
+            var rb = go.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            var col = go.AddComponent<CapsuleCollider>();
             col.isTrigger = true;
-            col.size = spriteSize;
+            col.radius = Mathf.Max(0.2f, def.size.x * 0.5f);
+            col.height = Mathf.Max(col.radius * 2f, def.size.y);
+            col.center = new Vector3(0f, def.size.y * 0.5f, 0f);
 
-            // HP bar above the enemy, unscaled by the body.
-            var barRoot = new GameObject("HpBar");
+            // Floating HP bar above the head, always facing the camera.
+            var barRoot = new GameObject("HpBar", typeof(Billboard));
             barRoot.transform.SetParent(go.transform, false);
-            var inv = new Vector3(1f / go.transform.localScale.x, 1f / go.transform.localScale.y, 1f);
-            barRoot.transform.localScale = inv;
-            barRoot.transform.localPosition = new Vector3(0f, spriteSize.y * 0.5f + 0.25f * inv.y, 0f);
-            var bar = new GameObject("Fill");
-            bar.transform.SetParent(barRoot.transform, false);
-            var barSr = bar.AddComponent<SpriteRenderer>();
-            barSr.sprite = squareSprite;
-            if (spriteMaterial != null) barSr.sharedMaterial = spriteMaterial;
-            barSr.color = new Color(1f, 0.35f, 0.35f);
-            barSr.sortingOrder = 6;
-            var barSprite = squareSprite != null ? (Vector2)squareSprite.bounds.size : Vector2.one;
-            bar.transform.localScale = new Vector3(def.size.x / barSprite.x, 0.08f / barSprite.y, 1f);
+            barRoot.transform.localPosition = new Vector3(0f, def.size.y + 0.45f, 0f);
+            float barWidth = Mathf.Clamp(def.size.x * 1.2f, 0.7f, 2.2f);
+            MakeBarPart(barRoot.transform, "Back", hpBarBackMaterial, new Vector3(barWidth + 0.06f, 0.16f, 0.02f), 0.01f);
+            var fill = MakeBarPart(barRoot.transform, "Fill", hpBarFillMaterial, new Vector3(barWidth, 0.1f, 0.02f), -0.01f);
 
+            go.AddComponent<ToonTint>();
             var enemy = go.AddComponent<BeatEnemy>();
-            enemy.Init(def, conductor, combat != null ? combat.transform : null, combat, playerHealth, feedback, this, hpMult, body, bar.transform);
+            enemy.Init(def, conductor, combat != null ? combat.transform : null, combat, playerHealth, feedback, this, hpMult, model.transform, fill);
             enemy.Died += OnEnemyDied;
             enemy.AttackResolved += (e, r) => EnemyAttackResolved?.Invoke(e, r);
             enemy.GuardBlocked += e => EnemyGuarded?.Invoke(e);
             enemy.GuardBroken += e => EnemyGuardBroken?.Invoke(e);
             _enemies.Add(enemy);
             return enemy;
+        }
+
+        static Transform MakeBarPart(Transform parent, string name, Material mat, Vector3 size, float depth)
+        {
+            var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Destroy(part.GetComponent<Collider>());
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localScale = size;
+            part.transform.localPosition = new Vector3(0f, 0f, depth);
+            var mr = part.GetComponent<MeshRenderer>();
+            if (mat != null) mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            return part.transform;
         }
 
         void OnEnemyDied(BeatEnemy e)
@@ -287,7 +315,7 @@ namespace ProjectHymn.Gameplay
             foreach (var e in _enemies)
             {
                 if (e == null || e.IsDead) continue;
-                best = Mathf.Min(best, Vector2.Distance(from, e.transform.position));
+                best = Mathf.Min(best, Vector2.Distance(from, Ground.ToPlane(e.transform.position)));
             }
             return best;
         }
@@ -295,7 +323,7 @@ namespace ProjectHymn.Gameplay
         void OnDrawGizmos()
         {
             Gizmos.color = new Color(1f, 0.8f, 0.2f, 0.6f);
-            Gizmos.DrawWireCube(bounds.center, bounds.size);
+            Gizmos.DrawWireCube(Ground.ToWorld(bounds.center), new Vector3(bounds.width, 0.1f, bounds.height));
         }
     }
 }

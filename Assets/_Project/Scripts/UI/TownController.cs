@@ -48,7 +48,7 @@ namespace ProjectHymn.UI
             foreach (var s in _stations)
             {
                 if (s == null || !s.gameObject.activeInHierarchy) continue;
-                float d = Vector2.Distance(s.transform.position, input.transform.position);
+                float d = Ground.Distance(s.transform.position, input.transform.position);
                 if (d <= s.radius && d < best) { best = d; _near = s; }
             }
 

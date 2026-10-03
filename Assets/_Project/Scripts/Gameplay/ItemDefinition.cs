@@ -27,8 +27,8 @@ namespace ProjectHymn.Gameplay
         public float moveSpeedMultiplier = 1f;
 
         [Header("Look")]
-        [Tooltip("Weapon: its sprite in hand. Armor: the player sprite while wearing it.")]
-        public Sprite sprite;
+        [Tooltip("Weapon: the model held in hand (grip at origin, blade along +Y). Armor: the whole player model while wearing it (faces +Z, feet at y = 0).")]
+        public GameObject model;
         [Tooltip("Shop icon colour.")]
         public Color color = Color.white;
 

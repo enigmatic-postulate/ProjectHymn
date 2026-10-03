@@ -14,7 +14,8 @@ namespace ProjectHymn.Gameplay
     {
         [SerializeField] BeatCombatController combat;
         [SerializeField] Conductor conductor;
-        [SerializeField] Transform cameraRig;
+        [Tooltip("The angled camera rig; shakes go through it so they never fight the follow.")]
+        [SerializeField] CameraRig cameraRig;
 
         [Header("Hit-stop")]
         [SerializeField] float perfectHitStop = 0.04f;
@@ -33,15 +34,13 @@ namespace ProjectHymn.Gameplay
         int _nextVoice;
         AudioClip _perfect, _great, _good, _thud, _finisher;
         AudioClip _telegraph, _telegraphHeavy, _parry, _hurt;
-        Coroutine _hitStop, _shake;
-        Vector3 _rigBase;
+        Coroutine _hitStop;
 
         void Awake()
         {
             if (combat == null) combat = FindAnyObjectByType<BeatCombatController>();
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
-            if (cameraRig == null && Camera.main != null) cameraRig = Camera.main.transform;
-            if (cameraRig != null) _rigBase = cameraRig.localPosition;
+            if (cameraRig == null) cameraRig = FindAnyObjectByType<CameraRig>();
 
             _voices = new AudioSource[8];
             for (int i = 0; i < _voices.Length; i++)
@@ -117,11 +116,7 @@ namespace ProjectHymn.Gameplay
         {
             PlayQuantized(_finisher, 1f);
             HitStop(finisherHitStop);
-            if (cameraRig != null)
-            {
-                if (_shake != null) StopCoroutine(_shake);
-                _shake = StartCoroutine(Shake());
-            }
+            if (cameraRig != null) cameraRig.Shake(shakeAmount, shakeDuration);
         }
 
         /// <summary>GDD: a cymbal swell over the bar before a tempo or meter change.</summary>
@@ -144,11 +139,7 @@ namespace ProjectHymn.Gameplay
         public void PlayHurt()
         {
             PlayNow(_hurt, 1f);
-            if (cameraRig != null)
-            {
-                if (_shake != null) StopCoroutine(_shake);
-                _shake = StartCoroutine(Shake());
-            }
+            if (cameraRig != null) cameraRig.Shake(shakeAmount, shakeDuration);
         }
 
         void PlayQuantized(AudioClip clip, float volume)
@@ -198,20 +189,6 @@ namespace ProjectHymn.Gameplay
             yield return new WaitForSecondsRealtime(seconds);
             Time.timeScale = 1f;
             _hitStop = null;
-        }
-
-        IEnumerator Shake()
-        {
-            float t = 0f;
-            while (t < shakeDuration)
-            {
-                float k = 1f - t / shakeDuration;
-                cameraRig.localPosition = _rigBase + (Vector3)(Random.insideUnitCircle * shakeAmount * k);
-                t += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            cameraRig.localPosition = _rigBase;
-            _shake = null;
         }
 
         /// <summary>Tiny procedural synth so the prototype needs no audio assets.</summary>

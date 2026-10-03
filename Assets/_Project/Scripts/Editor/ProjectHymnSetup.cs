@@ -80,55 +80,44 @@ namespace ProjectHymn.EditorTools
             var level2Theme = level2 ? CreateLevel2Theme() : null;
             var catalog = WorldBuilder.LoadCatalog();
 
-            // Camera
-            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
-            camGo.tag = "MainCamera";
-            var cam = camGo.GetComponent<Camera>();
-            cam.orthographic = true;
-            cam.orthographicSize = 5f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.08f, 0.06f, 0.14f);
-            camGo.transform.position = new Vector3(0, 0, -10);
-            // Environment pulse replaces the beat ring (GDD).
-            var pulse = camGo.AddComponent<BackgroundPulse>();
-
             // Conductor
             var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
             var conductor = condGo.GetComponent<Conductor>();
             SetRef(conductor, "song", bossFight ? theme2 : level2 ? level2Theme : theme1);
 
+            // UI sprites for the HUD only (the world is 3D)
             var square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-            // URP projects: use the unlit sprite material so sprites render without 2D lights.
-            var spriteMat = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
 
-            // Backdrop (pre-rendered arena art), behind everything
-            WorldBuilder.Backdrop(bossFight ? "bg_arena_boss" : level2 ? "bg_arena_garden" : "bg_arena_practice", Vector2.zero, spriteMat);
+            // 3D arena set, lighting, post-processing (M5 look)
+            var arenaRect = new Rect(-7.5f, -4f, 15f, 8f);
+            var style = bossFight ? WorldBuilder.ArenaStyle.Boss : level2 ? WorldBuilder.ArenaStyle.Garden : WorldBuilder.ArenaStyle.Practice;
+            var keyLight = LookBuilder.KeyLight(style == WorldBuilder.ArenaStyle.Garden ? new Color(0.8f, 0.85f, 1f) : new Color(1f, 0.93f, 0.82f));
+            LookBuilder.Ambient(style == WorldBuilder.ArenaStyle.Boss ? new Color(0.42f, 0.3f, 0.45f) : new Color(0.42f, 0.38f, 0.6f));
+            LookBuilder.GlobalVolume();
+            var glowProps = WorldBuilder.BuildArenaSet(style, arenaRect);
+            var pulse = new GameObject("Stage Lights", typeof(BeatLightPulse)).GetComponent<BeatLightPulse>();
+            SetRef(pulse, "conductor", conductor);
+            SetRef(pulse, "keyLight", keyLight);
+            SetList(pulse, "glowRenderers", glowProps);
 
-            // Player: pixel-art Cantor, weapon in hand, loadout from the save
-            var player = new GameObject("Player", typeof(Rigidbody2D), typeof(CircleCollider2D),
-                typeof(PlayerInputReader), typeof(PlayerMotor), typeof(BeatCombatController), typeof(PlayerHealth), typeof(LoadoutApplier));
-            var psr = WorldBuilder.DecoratePlayer(player, spriteMat, catalog, out var playerArt);
+            // Player: low-poly Cantor, weapon in hand, loadout from the save
+            var player = WorldBuilder.MakePlayer(catalog, combatant: true, new Vector2(0f, -1.5f));
             var combat = player.GetComponent<BeatCombatController>();
-            SetRef(combat, "projectileSprite", ArtGenerator.Load("note_shot"));
-            if (spriteMat != null) SetRef(combat, "projectileMaterial", spriteMat);
+            SetRef(combat, "projectilePrefab", ModelGenerator.LoadPrefab("NoteShot"));
             var health = player.GetComponent<PlayerHealth>();
-            SetRef(health, "sprite", psr);
             SetRef(combat, "conductor", conductor);
             SetList(combat, "equippedPhrases", phrases);
 
-            // Arena: walls around a 15 x 8 floor (the training dummy is retired; TrainingDummy.cs stays for tests).
-            var arenaRect = new Rect(-7.5f, -4f, 15f, 8f);
-            BuildArenaWalls(arenaRect, square, spriteMat);
-
-            SetRef(pulse, "conductor", conductor);
+            // Fixed angled camera framing the whole floor
+            var rig = LookBuilder.CameraRig(null, new Vector2(0f, -0.6f), 17.5f, 55f, default, WorldBuilder.Background(style));
 
             // Feedback: hit-stop, key-matched quantized hit sounds, finisher shake.
             var feedbackGo = new GameObject("CombatFeedback", typeof(CombatFeedback));
             var feedback = feedbackGo.GetComponent<CombatFeedback>();
             SetRef(feedback, "combat", combat);
             SetRef(feedback, "conductor", conductor);
-            SetRef(feedback, "cameraRig", camGo.transform);
+            SetRef(feedback, "cameraRig", rig);
 
             // Arena director: the waves of the 2-minute fight.
             var arenaGo = new GameObject("ArenaDirector", typeof(ArenaDirector), typeof(PlaystyleTracker));
@@ -137,9 +126,9 @@ namespace ProjectHymn.EditorTools
             SetRef(arena, "combat", combat);
             SetRef(arena, "playerHealth", health);
             SetRef(arena, "feedback", feedback);
-            SetRef(arena, "circleSprite", circle);
-            SetRef(arena, "squareSprite", square);
-            if (spriteMat != null) SetRef(arena, "spriteMaterial", spriteMat);
+            SetRef(arena, "fallbackMaterial", ModelGenerator.Toon(0xffffff));
+            SetRef(arena, "hpBarBackMaterial", ModelGenerator.Unlit(0x1c1430));
+            SetRef(arena, "hpBarFillMaterial", ModelGenerator.Unlit(0xff4a5a));
             if (bossFight) SetRef(arena, "boss", firstConductor);
             else SetWaves(arena, new (string, EnemyDefinition[])[]
             {
@@ -448,28 +437,7 @@ namespace ProjectHymn.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        internal static void BuildArenaWalls(Rect r, Sprite square, Material mat)
-        {
-            var root = new GameObject("Arena");
-            const float t = 0.3f;
-            MakeWall(root.transform, "WallTop", new Vector2(r.center.x, r.yMax + t / 2), new Vector2(r.width + 2 * t, t), square, mat);
-            MakeWall(root.transform, "WallBottom", new Vector2(r.center.x, r.yMin - t / 2), new Vector2(r.width + 2 * t, t), square, mat);
-            MakeWall(root.transform, "WallLeft", new Vector2(r.xMin - t / 2, r.center.y), new Vector2(t, r.height), square, mat);
-            MakeWall(root.transform, "WallRight", new Vector2(r.xMax + t / 2, r.center.y), new Vector2(t, r.height), square, mat);
-        }
 
-        internal static void MakeWall(Transform parent, string name, Vector2 pos, Vector2 size, Sprite square, Material mat)
-        {
-            var go = new GameObject(name, typeof(SpriteRenderer), typeof(BoxCollider2D));
-            go.transform.SetParent(parent, false);
-            go.transform.position = pos;
-            var sr = go.GetComponent<SpriteRenderer>();
-            sr.sprite = square;
-            sr.color = new Color(0.35f, 0.3f, 0.5f);
-            if (mat != null) sr.sharedMaterial = mat;
-            FitToSize(go.transform, square, size);
-            go.GetComponent<BoxCollider2D>().size = square.bounds.size;
-        }
 
         static PhraseData CreatePhrase(string file, string display, string desc, int meter, float mult, string effect, params BeatAction[] pattern)
         {
@@ -544,12 +512,6 @@ namespace ProjectHymn.EditorTools
             return s;
         }
 
-        /// <summary>Scales a transform so its sprite covers the given world size.</summary>
-        internal static void FitToSize(Transform t, Sprite sprite, Vector2 worldSize)
-        {
-            var b = sprite != null ? (Vector2)sprite.bounds.size : Vector2.one;
-            t.localScale = new Vector3(worldSize.x / Mathf.Max(0.001f, b.x), worldSize.y / Mathf.Max(0.001f, b.y), 1f);
-        }
 
         internal static Image NewImage(string name, Transform parent, Sprite sprite, Vector2 anchor, Vector2 pos, Vector2 size)
         {

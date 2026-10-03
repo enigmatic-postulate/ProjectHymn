@@ -43,10 +43,15 @@ namespace ProjectHymn.Gameplay
         [Min(0f)] public float attackRange = 1.3f;
 
         [Header("Look")]
-        [Tooltip("Pixel sprite. When empty, the coloured Shape below is drawn instead.")]
-        public Sprite sprite;
+        [Tooltip("Low-poly model prefab (faces +Z, feet at y = 0). When empty, a coloured capsule is used.")]
+        public GameObject model;
+        [Min(0.1f)] public float modelScale = 1f;
         public EnemyShape shape = EnemyShape.Circle;
+        [Tooltip("Fallback capsule colour, and the base colour boss phases tint against.")]
         public Color color = Color.green;
+        [Tooltip("Body footprint: x = width, y = height (world units). Sets the hit capsule and HP bar height.")]
         public Vector2 size = new Vector2(0.8f, 0.8f);
+        [Tooltip("Flyers hover above the floor.")]
+        [Min(0f)] public float hoverHeight;
     }
 }

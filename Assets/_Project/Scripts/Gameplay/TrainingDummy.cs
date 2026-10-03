@@ -3,17 +3,16 @@ using UnityEngine;
 
 namespace ProjectHymn.Gameplay
 {
-    /// <summary>A target for testing timing and combos. Shows damage, flashes, refills when emptied.</summary>
+    /// <summary>A target for testing timing and combos. Flashes and punches on hits, refills when emptied.</summary>
     public class TrainingDummy : MonoBehaviour, IBeatDamageable
     {
         [SerializeField] float maxHp = 500f;
-        [SerializeField] SpriteRenderer sprite;
         [SerializeField] Color hitColor = Color.white;
         [SerializeField] Color finisherColor = new Color(1f, 0.85f, 0.2f);
 
         float _hp;
-        Color _baseColor;
         Vector3 _baseScale;
+        ToonTint _tint;
 
         public float Hp => _hp;
         public float MaxHp => maxHp;
@@ -23,9 +22,9 @@ namespace ProjectHymn.Gameplay
         void Awake()
         {
             _hp = maxHp;
-            if (sprite == null) sprite = GetComponentInChildren<SpriteRenderer>();
-            if (sprite != null) _baseColor = sprite.color;
             _baseScale = transform.localScale;
+            _tint = GetComponent<ToonTint>();
+            if (_tint == null) _tint = gameObject.AddComponent<ToonTint>();
         }
 
         public void TakeHit(HitData hit)
@@ -34,16 +33,15 @@ namespace ProjectHymn.Gameplay
             LastDamage = hit.Damage;
             LastEffect = hit.EffectId;
             if (_hp <= 0f) _hp = maxHp;
+            _tint.Flash(hit.IsFinisher ? finisherColor : hitColor, hit.IsFinisher ? 0.3f : 0.12f);
             StopAllCoroutines();
-            StartCoroutine(Flash(hit.IsFinisher ? finisherColor : hitColor, hit.IsFinisher ? 1.35f : 1.12f));
+            StartCoroutine(Punch(hit.IsFinisher ? 1.35f : 1.12f));
         }
 
-        IEnumerator Flash(Color c, float punch)
+        IEnumerator Punch(float punch)
         {
-            if (sprite != null) sprite.color = c;
             transform.localScale = _baseScale * punch;
-            yield return new WaitForSeconds(0.08f);
-            if (sprite != null) sprite.color = _baseColor;
+            yield return new WaitForSecondsRealtime(0.08f);
             transform.localScale = _baseScale;
         }
     }

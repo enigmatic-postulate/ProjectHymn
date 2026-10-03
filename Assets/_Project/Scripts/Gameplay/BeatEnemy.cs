@@ -24,8 +24,9 @@ namespace ProjectHymn.Gameplay
             public double ResolveAt;
         }
 
-        static readonly Color WarnColor = new Color(1f, 0.25f, 0.2f);
-        static readonly Color StaggerColor = new Color(0.55f, 0.55f, 0.6f);
+        static readonly Color WarnGlow = new Color(1f, 0.12f, 0.08f) * 2.2f;   // HDR: bloom picks it up
+        static readonly Color StaggerTint = new Color(0.55f, 0.55f, 0.62f);
+        static readonly Color GuardTint = new Color(0.72f, 0.72f, 0.82f);
 
         EnemyDefinition _def;
 
@@ -43,9 +44,10 @@ namespace ProjectHymn.Gameplay
         PlayerMotor _motor;
         CombatFeedback _fx;
         ArenaDirector _arena;
-        SpriteRenderer _body;
+        ToonTint _tint;
+        Transform _model;
         Transform _hpBar;
-        Vector3 _baseScale, _hpBarScale;
+        Vector3 _modelScale, _hpBarScale;
 
         readonly List<ScheduledAttack> _upcoming = new List<ScheduledAttack>();
         readonly List<Landed> _landed = new List<Landed>();
@@ -55,7 +57,6 @@ namespace ProjectHymn.Gameplay
         double _guardRestoreAt = double.NegativeInfinity;
         double _lungeUntil;
         bool _guardUp;
-        bool _flashing;
         Vector2 _knockback;
         float _orbitAngle;
 
@@ -77,12 +78,15 @@ namespace ProjectHymn.Gameplay
 
         public void Init(EnemyDefinition def, Conductor conductor, Transform player, BeatCombatController combat,
                          PlayerHealth health, CombatFeedback fx, ArenaDirector arena, float hpMultiplier,
-                         SpriteRenderer body, Transform hpBar)
+                         Transform model, Transform hpBar)
         {
             _def = def; _conductor = conductor; _player = player; _combat = combat; _health = health; _fx = fx; _arena = arena;
             _motor = player != null ? player.GetComponent<PlayerMotor>() : null;
-            _body = body; _hpBar = hpBar;
-            _baseScale = transform.localScale;
+            _model = model; _hpBar = hpBar;
+            _tint = GetComponent<ToonTint>();
+            if (_tint == null) _tint = gameObject.AddComponent<ToonTint>();
+            _tint.Refresh();
+            _modelScale = model != null ? model.localScale : Vector3.one;
             _hpBarScale = hpBar != null ? hpBar.localScale : Vector3.one;
             MaxHp = Hp = def.maxHp * hpMultiplier;
             _name = def.displayName;
@@ -165,7 +169,7 @@ namespace ProjectHymn.Gameplay
                 var a = _upcoming[0];
                 _upcoming.RemoveAt(0);
 
-                float dist = _player != null ? Vector2.Distance(transform.position, _player.position) : float.MaxValue;
+                float dist = _player != null ? Ground.Distance(transform.position, _player.position) : float.MaxValue;
                 bool stepIFrames = _motor != null && _motor.Invulnerable;
                 bool grace = _health != null && _health.Invulnerable && !stepIFrames;
                 _landed.Add(new Landed
@@ -223,8 +227,8 @@ namespace ProjectHymn.Gameplay
         void Move(double now, float dt)
         {
             if (_player == null) return;
-            Vector2 pos = transform.position;
-            Vector2 p = _player.position;
+            Vector2 pos = Ground.ToPlane(transform.position);
+            Vector2 p = Ground.ToPlane(_player.position);
             Vector2 to = p - pos;
             float dist = to.magnitude;
             Vector2 dir = dist > 1e-4f ? to / dist : Vector2.right;
@@ -277,7 +281,7 @@ namespace ProjectHymn.Gameplay
                 foreach (var other in _arena.Enemies)
                 {
                     if (other == null || other == this || other.IsDead) continue;
-                    Vector2 away = pos - (Vector2)other.transform.position;
+                    Vector2 away = pos - Ground.ToPlane(other.transform.position);
                     float d = away.magnitude;
                     if (d > 0.001f && d < 0.9f) move += away / d * (0.9f - d) * 4f;
                 }
@@ -291,28 +295,41 @@ namespace ProjectHymn.Gameplay
                 pos.x = Mathf.Clamp(pos.x, b.xMin + 0.3f, b.xMax - 0.3f);
                 pos.y = Mathf.Clamp(pos.y, b.yMin + 0.3f, b.yMax - 0.3f);
             }
-            transform.position = pos;
+            transform.position = Ground.ToWorld(pos, transform.position.y);
+            if (_model != null && dist > 0.05f) _model.rotation = Ground.TurnToward(_model.rotation, dir, 540f, dt);
         }
 
         // ---------- Visuals ----------
 
         void UpdateVisuals(double now)
         {
-            if (_body == null || _flashing) return;
+            if (_tint == null) return;
 
-            Color baseColor = _def.sprite != null ? Color.Lerp(Color.white, _color, 0.25f) : _color;
-            if (GuardUp) baseColor = Color.Lerp(baseColor, Color.black, 0.25f);
+            // Boss phases recolour by tinting the model; regular enemies keep their own colours.
+            Color tint = _color == _def.color ? Color.white : Color.Lerp(Color.white, _color, 0.45f);
+            if (GuardUp) tint *= GuardTint;
+            if (IsStaggered)
+            {
+                _tint.SetTint(StaggerTint);
+                _tint.SetGlow(Color.black);
+                if (_model != null) _model.localScale = _modelScale;
+                return;
+            }
+            _tint.SetTint(tint);
 
-            if (IsStaggered) { _body.color = StaggerColor; transform.localScale = _baseScale; return; }
-
+            // Telegraph: the enemy glows red more and more over the warning measure, blinking at the end.
             float prog = _upcoming.Count > 0 ? (float)_upcoming[0].Progress(now) : 0f;
-            var c = Color.Lerp(baseColor, WarnColor, prog * prog);
-            if (prog > 0.85f && Mathf.FloorToInt(Time.unscaledTime * 20f) % 2 == 0) c = Color.white; // last moment flash
-            _body.color = c;
+            var glow = WarnGlow * (prog * prog);
+            if (prog > 0.85f && Mathf.FloorToInt(Time.unscaledTime * 20f) % 2 == 0) glow = Color.white * 1.5f;
+            _tint.SetGlow(glow);
 
-            float swell = 1f + 0.15f * prog;
-            if (now < _lungeUntil) swell = 1.3f;
-            transform.localScale = _baseScale * swell;
+            if (_model != null)
+            {
+                float swell = 1f + 0.12f * prog;
+                if (now < _lungeUntil) swell = 1.25f;
+                // Squash and stretch: taller as it winds up.
+                _model.localScale = new Vector3(_modelScale.x * (2f - swell), _modelScale.y * swell, _modelScale.z * (2f - swell));
+            }
         }
 
         // ---------- Taking damage ----------
@@ -344,15 +361,19 @@ namespace ProjectHymn.Gameplay
 
             Hp = hit.IsFinisher ? Hp - dmg : Mathf.Max(Hp - dmg, Mathf.Min(Hp, HpFloor));
             _knockback += hit.Direction * (hit.IsFinisher ? 7f : 2.5f);
+            if (_tint != null) _tint.Flash(Color.white, 0.12f);
             if (_hpBar != null)
             {
+                float k = Mathf.Clamp01(Hp / MaxHp);
                 var s = _hpBarScale;
-                s.x *= Mathf.Clamp01(Hp / MaxHp);
+                s.x *= k;
                 _hpBar.localScale = s;
+                var lp = _hpBar.localPosition;
+                lp.x = -(1f - k) * _hpBarScale.x * 0.5f; // drain from the right
+                _hpBar.localPosition = lp;
             }
 
-            if (Hp <= 0f) { Die(); return; }
-            StartCoroutine(FlashRoutine());
+            if (Hp <= 0f) Die();
         }
 
         void Die()
@@ -360,30 +381,22 @@ namespace ProjectHymn.Gameplay
             IsDead = true;
             _upcoming.Clear();
             _landed.Clear();
-            foreach (var c in GetComponentsInChildren<Collider2D>()) c.enabled = false;
+            foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
             Died?.Invoke(this);
             StartCoroutine(DeathRoutine());
         }
 
-        IEnumerator FlashRoutine()
-        {
-            _flashing = true;
-            if (_body != null) _body.color = Color.white;
-            yield return new WaitForSecondsRealtime(0.06f);
-            _flashing = false;
-        }
-
         IEnumerator DeathRoutine()
         {
+            if (_tint != null) { _tint.SetGlow(Color.white * 2f); _tint.SetFlash(Color.white, 1f); }
+            if (_hpBar != null) _hpBar.parent.gameObject.SetActive(false);
             float t = 0f;
-            var start = transform.localScale;
-            var c = _body != null ? _body.color : Color.white;
+            var start = _model != null ? _model.localScale : Vector3.one;
             while (t < 0.25f)
             {
                 t += Time.unscaledDeltaTime;
                 float k = 1f - t / 0.25f;
-                transform.localScale = start * (1f + (1f - k) * 0.5f);
-                if (_body != null) { c.a = k; _body.color = c; }
+                if (_model != null) _model.localScale = new Vector3(start.x * (1f + (1f - k) * 0.6f), start.y * k, start.z * (1f + (1f - k) * 0.6f));
                 yield return null;
             }
             Destroy(gameObject);
