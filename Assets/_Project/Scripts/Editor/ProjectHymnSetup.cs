@@ -95,7 +95,7 @@ namespace ProjectHymn.EditorTools
             var style = bossFight ? WorldBuilder.ArenaStyle.Boss : level2 ? WorldBuilder.ArenaStyle.Garden : WorldBuilder.ArenaStyle.Practice;
             var keyLight = LookBuilder.KeyLight(style == WorldBuilder.ArenaStyle.Garden ? new Color(0.8f, 0.85f, 1f) : new Color(1f, 0.93f, 0.82f));
             LookBuilder.Ambient(style == WorldBuilder.ArenaStyle.Boss ? new Color(0.42f, 0.3f, 0.45f) : new Color(0.42f, 0.38f, 0.6f));
-            LookBuilder.GlobalVolume();
+            LookBuilder.GlobalVolume(WorldBuilder.Background(style));
 
             // M6: the Practice Hall and the Moonlit Garden are stages of rooms on a side lane; the boss keeps its arena.
             StageBuilder.Result stage = null;

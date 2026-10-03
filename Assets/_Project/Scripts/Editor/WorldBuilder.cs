@@ -327,7 +327,7 @@ namespace ProjectHymn.EditorTools
             var key = K.KeyLight(new Color(1f, 0.82f, 0.62f), 1.1f);
             key.transform.rotation = Quaternion.Euler(42f, -40f, 0f);
             K.Ambient(new Color(0.46f, 0.36f, 0.62f));
-            K.GlobalVolume();
+            K.GlobalVolume(new Color(0.2f, 0.1f, 0.28f));
             var lamps = BuildTownSet();
 
             var player = MakePlayer(catalog, combatant: false, new Vector2(0f, -1.2f));
@@ -523,7 +523,7 @@ namespace ProjectHymn.EditorTools
             var key = K.KeyLight(new Color(1f, 0.78f, 0.6f), 1.05f);
             key.transform.rotation = Quaternion.Euler(30f, -50f, 0f);
             K.Ambient(new Color(0.42f, 0.32f, 0.6f));
-            K.GlobalVolume();
+            K.GlobalVolume(new Color(0.22f, 0.1f, 0.3f));
             BuildTownSet();
             // Wide establishing shot of Cadence, with the Cantor on the stage
             K.CameraRig(null, new Vector2(0f, -1.5f), 24f, 32f, default, new Color(0.22f, 0.1f, 0.3f));

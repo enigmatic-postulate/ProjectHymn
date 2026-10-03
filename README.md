@@ -49,6 +49,17 @@ Menu **Project Hymn → Build Boss Scene** creates `Scenes/Boss.unity` on Battle
 - **One-bar warning:** on the downbeat before any tempo or meter change, the HUD shows "3/4 @ 150 — NEXT BAR" and a cymbal-style swell rises into it.
 - Battle Theme 2 has no audio yet: it runs on its placeholder tempo map (4 bars 4/4 @150, 4 bars 3/4 @150, 4 bars 7/8 @165), one section per phase. With real music, set its sections and point each phase at its loop.
 
+## Valor Look and Valor Stage (M6 Slices B and C)
+
+The default look is now modelled on Dragon Valor (PS1), at modern resolution. **Build All Scenes** regenerates every model with a painted texture the first time after pulling.
+
+- **Painted textures:** each generated model gets its own small texture (up to 256 px, sharp pixels) painted by `Editor/Art/PaintedAtlas.cs`: light painted in from above, cloth folds, metal sheen, wood grain, hair strands, soft mottling, warm lights and cool shadows, 15-bit colour steps. Faces are painted on (eyes, brows, blush) instead of modelled. Building blocks share a tiling painted-stone texture laid on in world space.
+- **Valor shading** (`Shaders/HymnToon.shader`, default): lighting per vertex as on PS1, softened toward smooth normals; no outlines; distance fog; the M5 saturation boost is gone (`Art/HymnLookValor.asset`). Bright colour and bloom are kept for beat feedback: telegraphs, hits, spells, lamps.
+- **Settings → Look:** Valor (default) or Cel (the M5 look: hard light bands, ink outlines, saturated). One global shader keyword switches every material; nothing is re-imported.
+- **Dragon Valor proportions:** slightly larger heads, chunky shoulder pads, oversized weapons (Blade 1.4×, Drum Hammer 1.3×, Lute Bow 1.25×). The First Conductor is rebuilt as the one high-budget model (about 1,800 triangles): tailcoat, cape and high collar, brass epaulettes, wild hair, painted stern face.
+- **Moonlit Garden stage** (Slice C): seven rooms on the Level 2 track. Each room loops its own 8-bar stretch of the music until it's cleared. Fountain Court has a **bell plate** that must be rung before its door opens; Moon Bridge hides a Note cache behind a hurdle; the last room switches to Battle Theme 2 and the angled camera for the First Conductor. Rank and Notes cover the whole stage.
+- **Finisher spells:** complete a Phrase of four or more steps at the top Groove tier (x3) and a screen-wide spell hits every enemy on screen once, with a measure of glowing shapes and a light flash.
+
 ## Lane & Leap (M6 Slice A)
 
 Run **Project Hymn → Build All Scenes** again after pulling. The Practice Hall is now a stage: three side-lane rooms, then the angled arena.

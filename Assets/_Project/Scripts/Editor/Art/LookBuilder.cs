@@ -7,13 +7,14 @@ using UnityEngine.Rendering.Universal;
 namespace ProjectHymn.EditorTools
 {
     /// <summary>
-    /// The shared M5 look: warm angled key light with soft shadows, flat violet ambient, a saturated post-process
-    /// profile (colour boost, bloom on glowing parts, light vignette), and the angled camera rig.
+    /// The shared look: warm angled key light with soft shadows, flat violet ambient, two post-process profiles
+    /// (M6 Valor: no colour boost, warm filter, bloom kept for beat feedback; M5 Cel: saturated), and the camera rig.
     /// Also a tiny "kit" for building environments out of the generated block meshes.
     /// </summary>
     public static class LookBuilder
     {
         const string ProfilePath = ModelGenerator.ArtDir + "/HymnLook.asset";
+        const string ValorProfilePath = ModelGenerator.ArtDir + "/HymnLookValor.asset";
 
         public static Light KeyLight(Color color, float intensity = 1.15f)
         {
@@ -65,12 +66,51 @@ namespace ProjectHymn.EditorTools
             return profile;
         }
 
-        public static Volume GlobalVolume()
+        /// <summary>
+        /// M6 Valor look: the M5 saturation boost rolled back, a slight warm filter for painted lights, bloom only
+        /// on bright things (spells, hits, telegraphs, lamps), a slightly stronger vignette.
+        /// </summary>
+        public static VolumeProfile ValorProfile()
         {
-            var go = new GameObject("Post Processing", typeof(Volume));
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ValorProfilePath);
+            if (profile != null) return profile;
+            System.IO.Directory.CreateDirectory(ModelGenerator.ArtDir);
+            profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, ValorProfilePath);
+
+            var color = profile.Add<ColorAdjustments>(true);
+            color.saturation.Override(0f);
+            color.contrast.Override(8f);
+            color.postExposure.Override(-0.05f);
+            color.colorFilter.Override(new Color(1f, 0.97f, 0.92f));
+            var bloom = profile.Add<Bloom>(true);
+            bloom.threshold.Override(1.1f);
+            bloom.intensity.Override(0.65f);
+            bloom.scatter.Override(0.55f);
+            var vignette = profile.Add<Vignette>(true);
+            vignette.intensity.Override(0.28f);
+            vignette.smoothness.Override(0.5f);
+            var tone = profile.Add<Tonemapping>(true);
+            tone.mode.Override(TonemappingMode.Neutral);
+
+            foreach (var c in profile.components) AssetDatabase.AddObjectToAsset(c, profile);
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
+            return profile;
+        }
+
+        /// <summary>The global post-processing volume with both looks (Valor by default) and the Valor fog colour.</summary>
+        public static Volume GlobalVolume(Color? fogColor = null)
+        {
+            var go = new GameObject("Post Processing", typeof(Volume), typeof(LookProfiles));
             var v = go.GetComponent<Volume>();
             v.isGlobal = true;
-            v.sharedProfile = Profile();
+            v.sharedProfile = ValorProfile();
+            var so = new SerializedObject(go.GetComponent<LookProfiles>());
+            so.FindProperty("valorProfile").objectReferenceValue = ValorProfile();
+            so.FindProperty("celProfile").objectReferenceValue = Profile();
+            if (fogColor.HasValue) so.FindProperty("fogColor").colorValue = fogColor.Value;
+            so.ApplyModifiedPropertiesWithoutUndo();
             return v;
         }
 

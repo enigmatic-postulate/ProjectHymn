@@ -14,6 +14,7 @@ namespace ProjectHymn.UI
         {
             var s = Data;
             AudioListener.volume = Mathf.Clamp01(s.masterVolume);
+            HymnLook.Apply(s.celLook);
 
             var conductor = Object.FindAnyObjectByType<Conductor>();
             if (conductor != null)
@@ -55,6 +56,7 @@ namespace ProjectHymn.UI
             ToggleRow(panel, "Metronome click", () => s.metronome, v => s.metronome = v);
             ToggleRow(panel, "Visual beat cue (accessibility)", () => s.showBeatCue, v => s.showBeatCue = v);
             ToggleRow(panel, "Easy timing (+50% windows)", () => s.easyTiming, v => s.easyTiming = v);
+            LookRow(panel, () => s.celLook, v => s.celLook = v);
             UIFactory.Label(panel, $"Audio latency: {s.calibrationMs:+0;-0;0} ms — press C in an arena to calibrate", 22, color: UIFactory.DimText);
             UIFactory.Button(panel, "Back", onBack);
             UIFactory.Focus(first);
@@ -74,6 +76,19 @@ namespace ProjectHymn.UI
                 GameSettings.SaveAndApply();
             }, 28, 56);
             return b;
+        }
+
+        /// <summary>M6: the Dragon Valor look (default) or the M5 cel look.</summary>
+        static void LookRow(Transform panel, System.Func<bool> getCel, System.Action<bool> setCel)
+        {
+            UnityEngine.UI.Button b = null;
+            string Label() => $"Look:  < {(getCel() ? "Cel (M5)" : "Valor")} >";
+            b = UIFactory.Button(panel, Label(), () =>
+            {
+                setCel(!getCel());
+                UIFactory.SetButtonLabel(b, Label());
+                GameSettings.SaveAndApply();
+            }, 28, 56);
         }
 
         static void ToggleRow(Transform panel, string name, System.Func<bool> get, System.Action<bool> set)

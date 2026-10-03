@@ -19,6 +19,26 @@ namespace ProjectHymn.EditorTools
         public static readonly V3 Zero = new V3(0, 0, 0), One = new V3(1, 1, 1);
     }
 
+    /// <summary>How a colour region is painted in the model's texture (M6 Valor look).</summary>
+    public enum PaintStyle { Plain, Cloth, Metal, Skin, Wood, Hair, Gem }
+
+    /// <summary>Face details painted into the texture instead of modelled (M6): eyes, brows, mouths, blush.</summary>
+    public enum DecalKind { Eye, Brow, Mouth, Blush }
+
+    public readonly struct Decal
+    {
+        public readonly DecalKind Kind;
+        public readonly uint Region;      // colour region it is painted on (front-facing faces)
+        public readonly float X, Y;       // centre in model space (front view)
+        public readonly float W, H;       // size in metres
+        public readonly float Angle;      // degrees, for brows and mouths
+        public readonly uint Color;
+        public Decal(DecalKind kind, uint region, float x, float y, float w, float h, float angle, uint color)
+        {
+            Kind = kind; Region = region; X = x; Y = y; W = w; H = h; Angle = angle; Color = color;
+        }
+    }
+
     /// <summary>
     /// Builds flat-shaded low-poly meshes from simple parts (boxes, prisms, cones, gem spheres). Triangles are grouped
     /// by colour into submeshes (one material each). Each vertex also gets a smoothed normal (averaged across faces
@@ -34,6 +54,11 @@ namespace ProjectHymn.EditorTools
         public readonly List<List<int>> SubmeshTriangles = new List<List<int>>();
         /// <summary>Colours that should glow (emission), e.g. visors, lamps, the note shot.</summary>
         public readonly HashSet<uint> Glowing = new HashSet<uint>();
+        /// <summary>Paint style per colour region (default Plain).</summary>
+        public readonly Dictionary<uint, PaintStyle> Styles = new Dictionary<uint, PaintStyle>();
+        public readonly List<Decal> Decals = new List<Decal>();
+        /// <summary>Texture coordinates into the painted atlas (filled by <see cref="PaintedAtlas.Paint"/>).</summary>
+        public readonly List<(float U, float V)> UVs = new List<(float, float)>();
 
         // ---------- transforms ----------
 
@@ -211,6 +236,21 @@ namespace ProjectHymn.EditorTools
 
         public LowPolyMesh Glow(uint color) { Glowing.Add(color); return this; }
 
+        public LowPolyMesh Style(PaintStyle style, params uint[] colors)
+        {
+            foreach (var c in colors) Styles[c] = style;
+            return this;
+        }
+
+        public PaintStyle StyleOf(uint color) => Styles.TryGetValue(color, out var s) ? s : PaintStyle.Plain;
+
+        /// <summary>Paint a face detail on the front of a colour region (front view coordinates, metres).</summary>
+        public LowPolyMesh Paint(DecalKind kind, uint region, float x, float y, float w, float h, float angle = 0f, uint color = 0x1c1426)
+        {
+            Decals.Add(new Decal(kind, region, x, y, w, h, angle, color));
+            return this;
+        }
+
         /// <summary>Average face normals per position (welded within 1 mm) for the outline pass. Call once when done.</summary>
         public LowPolyMesh Finish()
         {
@@ -223,6 +263,13 @@ namespace ProjectHymn.EditorTools
             }
             SmoothNormals.Clear();
             for (int i = 0; i < Positions.Count; i++) SmoothNormals.Add(sums[Key(Positions[i])].Normalized);
+            return this;
+        }
+
+        /// <summary>Scale every vertex about the origin (oversized Dragon Valor-style weapons). Call after Finish.</summary>
+        public LowPolyMesh Scaled(float k)
+        {
+            for (int i = 0; i < Positions.Count; i++) Positions[i] = Positions[i] * k;
             return this;
         }
 
