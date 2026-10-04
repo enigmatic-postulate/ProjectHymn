@@ -157,6 +157,9 @@ namespace ProjectHymn.EditorTools
                 entries.Add((cls.id, player));
             }
 
+            if (entries.Count == 0)
+                Debug.LogError("[Project Hymn] No player was built: the game database has no class with a weapon. " +
+                               "Check Resources/HymnDatabase and Data/Game/Classes, then build again.");
             var so = new SerializedObject(spawnerGo.GetComponent<PlayerSpawner>());
             var list = so.FindProperty("players");
             list.arraySize = entries.Count;
@@ -275,12 +278,13 @@ namespace ProjectHymn.EditorTools
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();
             bool art = ArtLibrary.HasKayKit, village = ArtLibrary.HasVillage;
+            // Open the new scene first: opening a scene unloads assets nothing references yet, which would turn the
+            // classes, weapons and moves loaded before it into null references (and leave the village with no player).
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var weapons = art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var db = EnsureDatabase(weapons);
             var additive = LoadAdditive();
             var locomotion = art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CliffsideBuilder.BuildLighting();
             var level = new GameObject("Village").transform;
 
@@ -431,10 +435,9 @@ namespace ProjectHymn.EditorTools
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();
             bool art = ArtLibrary.HasKayKit, village = ArtLibrary.HasVillage;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var weapons = art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             EnsureDatabase(weapons);
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CliffsideBuilder.BuildLighting();
             var set = new GameObject("Set").transform;
             Slab(set, "Ground", new Vector3(-20f, -6f, -6f), new Vector3(20f, 0f, 30f), village, ground: true);

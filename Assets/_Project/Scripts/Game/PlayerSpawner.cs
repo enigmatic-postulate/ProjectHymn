@@ -28,7 +28,11 @@ namespace ProjectHymn.Gameplay
             var session = GameSession.Instance;
             string cls = session.Data.classId;
             ClassPlayer chosen = players.Find(p => p.player != null && p.classId == cls) ?? players.Find(p => p.player != null);
-            if (chosen == null) return;
+            if (chosen == null)
+            {
+                Debug.LogError("[Project Hymn] This scene has no player for any class. Rebuild it (Project Hymn ▸ Build Hub & Loop).");
+                return;
+            }
             foreach (var p in players) if (p.player != null && p != chosen) p.player.SetActive(false);
 
             // Place the player before it wakes (an inactive class player wakes on SetActive), so its first respawn
