@@ -18,7 +18,7 @@ namespace ProjectHymn.Gameplay
         [SerializeField] SwordCombatController combat;
         [SerializeField] Material additive;
         [SerializeField] Transform player;
-        [SerializeField] FollowCamera cameraRig;
+        [SerializeField] CameraRig cameraRig;
 
         ParticleSystem _sparks, _burst, _dust;
         Light _bladeLight;
@@ -31,7 +31,7 @@ namespace ProjectHymn.Gameplay
         {
             if (combat == null) combat = FindAnyObjectByType<SwordCombatController>();
             if (player == null && combat != null) player = combat.transform;
-            if (cameraRig == null) cameraRig = FindAnyObjectByType<FollowCamera>();
+            if (cameraRig == null) cameraRig = FindAnyObjectByType<CameraRig>();
             _sparks = MakeSystem("Sparks", 0.35f, new Vector2(3f, 8f), new Vector2(0.03f, 0.08f), 0.8f, stretch: true);
             _burst = MakeSystem("Burst", 0.7f, new Vector2(2f, 6f), new Vector2(0.08f, 0.18f), -0.1f, stretch: false);
             _dust = MakeSystem("Dust", 0.5f, new Vector2(0.3f, 1.2f), new Vector2(0.1f, 0.25f), -0.05f, stretch: false);

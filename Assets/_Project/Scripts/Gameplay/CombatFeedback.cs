@@ -14,7 +14,7 @@ namespace ProjectHymn.Gameplay
     {
         [SerializeField] SwordCombatController combat;
         [SerializeField] Conductor conductor;
-        [SerializeField] FollowCamera cameraRig;
+        [SerializeField] CameraRig cameraRig;
 
         [Header("Hit sounds")]
         [SerializeField, Range(0f, 1f)] float sfxVolume = 0.7f;
@@ -29,7 +29,7 @@ namespace ProjectHymn.Gameplay
         {
             if (combat == null) combat = FindAnyObjectByType<SwordCombatController>();
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
-            if (cameraRig == null) cameraRig = FindAnyObjectByType<FollowCamera>();
+            if (cameraRig == null) cameraRig = FindAnyObjectByType<CameraRig>();
             _voices = new AudioSource[8];
             for (int i = 0; i < _voices.Length; i++)
             {

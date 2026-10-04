@@ -59,7 +59,7 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float autoFaceRange = 3.5f;
 
         PlayerInputReader _input;
-        PlayerMotor _motor;
+        ICombatBody _motor;
         int _weaponIndex;
         bool _lightToggle;
         readonly RhythmChain _chain = new RhythmChain();
@@ -81,7 +81,7 @@ namespace ProjectHymn.Gameplay
         void Awake()
         {
             _input = GetComponent<PlayerInputReader>();
-            _motor = GetComponent<PlayerMotor>();
+            _motor = GetComponent<ICombatBody>();
             if (conductor == null) conductor = FindAnyObjectByType<Conductor>();
             if (animator == null) animator = GetComponentInChildren<RhythmAnimator>();
         }
@@ -126,6 +126,7 @@ namespace ProjectHymn.Gameplay
             if (_motor != null && animator != null) _motor.Attacking = animator.IsAttacking;
             if (_input.SwapWeaponPressed) SelectWeapon(_weaponIndex + 1);
             if (_input.OffsetNudge != 0 && animator != null) animator.AnimationOffsetMs += 10f * _input.OffsetNudge;
+            if (_motor != null && !_motor.CanAttack) return;
             if (_input.StrikePressed) Press(NoteButton.One, conductor.InputSongTime);
             if (_input.SmashPressed) Press(NoteButton.Two, conductor.InputSongTime);
         }
@@ -151,6 +152,7 @@ namespace ProjectHymn.Gameplay
             double spb = judge.Beat.SecondsPerBeat;
             int id = animator.Play(move, judge.Beat.Time, spb, note.OnBeat);
             if (id != 0) _pending[id] = note;
+            _motor?.AttackStarted(note.OnBeat);
 
             // Wind up the rhythm's next move so it lands on the next beat without a seam.
             if (note.OnBeat && _chain.Predict(out int ps, out int pstep, out _))

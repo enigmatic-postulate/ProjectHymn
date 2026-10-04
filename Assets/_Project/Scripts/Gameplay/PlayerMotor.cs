@@ -8,7 +8,7 @@ namespace ProjectHymn.Gameplay
     /// ("visual") turns toward the move direction, or snaps toward the target when an attack starts.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public class PlayerMotor : MonoBehaviour
+    public class PlayerMotor : MonoBehaviour, ICombatBody
     {
         [SerializeField] float moveSpeed = 4.5f;
         [SerializeField] float stepDistance = 2.2f;
@@ -25,6 +25,8 @@ namespace ProjectHymn.Gameplay
         /// <summary>Facing on the ground (x = world X, y = world Z).</summary>
         public Vector2 Facing { get; private set; } = new Vector2(0f, 1f);
         public bool Attacking { get; set; }
+        public bool CanAttack => true;
+        public void AttackStarted(bool onBeat) { }
 
         void Awake()
         {

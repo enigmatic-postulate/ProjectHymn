@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectHymn.Core;
+using ProjectHymn.Movement;
 using UnityEngine;
 
 namespace ProjectHymn.Gameplay
@@ -18,6 +19,9 @@ namespace ProjectHymn.Gameplay
     /// - Off-beat presses play the move unsynced and a little sluggish.
     /// - Calibration: <see cref="AnimationOffsetMs"/> shifts all animation against the audio (saved per machine).
     /// - Two-handed weapons keep the left hand on the hilt with two-bone IK.
+    /// - Locomotion (vertical slice 1): with an <see cref="ILocomotionSource"/> and a <see cref="LocomotionSet"/>, the
+    ///   body runs, jumps, flips, hangs and climbs; the run cycle's footfalls follow the beat. A sword move then owns
+    ///   the upper body (spine up and both arms) while the legs and hips keep moving; standing still it owns everything.
     /// Raises <see cref="Impact"/> when a move reaches its hit key; combat applies damage then.
     /// </summary>
     [DefaultExecutionOrder(50)]
@@ -51,6 +55,22 @@ namespace ProjectHymn.Gameplay
         [Header("Idle")]
         [SerializeField] float idleBob = 0.025f;
 
+        [Header("Locomotion")]
+        [SerializeField] LocomotionSet locomotion;
+        [SerializeField] float locoBlendSeconds = 0.12f;
+        [Tooltip("How fast the legs switch between the sword move and the locomotion pose.")]
+        [SerializeField] float lowerBodyBlend = 0.12f;
+
+        /// <summary>Bones a sword move keeps while the player is moving; the rest follow the locomotion pose.</summary>
+        static readonly string[] UpperBody = { "Spine", "Chest", "Neck", "Head", "UpperArm.R", "LowerArm.R", "Hand.R", "UpperArm.L", "LowerArm.L", "Hand.L" };
+        static readonly object[] LocoKeys = BuildLocoKeys();
+        static object[] BuildLocoKeys()
+        {
+            var keys = new object[Enum.GetValues(typeof(LocoState)).Length];
+            for (int i = 0; i < keys.Length; i++) keys[i] = new object();
+            return keys;
+        }
+
         class Track
         {
             public SwordMove Move;
@@ -71,6 +91,13 @@ namespace ProjectHymn.Gameplay
         Transform _offHand, _tip;
         TrailRenderer _trail;
         bool _trailOn;
+        ILocomotionSource _loco;
+        Quaternion[] _locoPose;
+        Vector3 _locoRoot;
+        bool[] _upper;
+        string[] _names;
+        float _lowerWeight, _blendDuration;
+        int _hips = -1, _spine = -1;
 
         /// <summary>A move reached its hit key. Arg: the id returned by <see cref="Play"/>.</summary>
         public event Action<int> Impact;
@@ -85,6 +112,7 @@ namespace ProjectHymn.Gameplay
         }
         /// <summary>The current move's time in beats around its hit (NaN when idle). For the HUD and debugging.</summary>
         public float CurrentBeatPosition { get; private set; } = float.NaN;
+        public LocomotionSet Locomotion { get => locomotion; set => locomotion = value; }
 
         void Awake()
         {
@@ -94,6 +122,17 @@ namespace ProjectHymn.Gameplay
             _display = new Quaternion[bones.Length];
             _target = new Quaternion[bones.Length];
             _from = new Quaternion[bones.Length];
+            _locoPose = new Quaternion[bones.Length];
+            _upper = new bool[bones.Length];
+            _names = new string[bones.Length];
+            for (int i = 0; i < bones.Length; i++)
+            {
+                _names[i] = bones[i] != null ? bones[i].name : "";
+                _upper[i] = Array.IndexOf(UpperBody, _names[i]) >= 0;
+            }
+            if (!_index.TryGetValue("Hips", out _hips)) _hips = -1;
+            if (!_index.TryGetValue("Spine", out _spine)) _spine = -1;
+            _loco = GetComponentInParent<ILocomotionSource>();
             if (modelRoot != null) _modelBase = modelRoot.localPosition;
             SetWeapon(weapon);
             Evaluate(null, 0f, 1f);
@@ -219,6 +258,8 @@ namespace ProjectHymn.Gameplay
             object source = null;
             float tau = float.NaN;
             bool active = false;
+            bool moving = EvaluateLocomotion(now, out var locoState);
+            _lowerWeight = Mathf.MoveTowards(_lowerWeight, moving ? 1f : 0f, Time.unscaledDeltaTime / Mathf.Max(0.01f, lowerBodyBlend));
 
             if (_current != null)
             {
@@ -234,6 +275,7 @@ namespace ProjectHymn.Gameplay
                     source = _current;
                     active = tau >= _current.Move.activeStart && tau <= _current.Move.activeEnd;
                     Evaluate(_current.Move, tau, _current.Amplitude);
+                    MixLowerBody();
                 }
             }
 
@@ -246,12 +288,19 @@ namespace ProjectHymn.Gameplay
                     source = _anticipate;
                     tau = Mathf.Min(t, anticipationHoldBeat);
                     Evaluate(_anticipate.Move, tau, _anticipate.Amplitude);
+                    MixLowerBody();
                 }
             }
 
             if (source == null)
             {
-                Evaluate(null, 0f, 1f);
+                if (moving)
+                {
+                    Array.Copy(_locoPose, _target, _target.Length);
+                    _rootTarget = _locoRoot;
+                    source = LocoKeys[(int)locoState];
+                }
+                else Evaluate(null, 0f, 1f);
                 tau = float.NaN;
             }
             if (!ReferenceEquals(source, _source)) StartBlend(source);
@@ -265,6 +314,7 @@ namespace ProjectHymn.Gameplay
         void StartBlend(object source)
         {
             _source = source;
+            _blendDuration = source == null || source is Track ? blendSeconds : locoBlendSeconds;
             if (_display == null) return;
             Array.Copy(_display, _from, _display.Length);
             _rootFrom = _rootDisplay;
@@ -274,7 +324,7 @@ namespace ProjectHymn.Gameplay
         void ApplyPose()
         {
             float dt = Time.unscaledDeltaTime;
-            _blend = Mathf.Min(1f, _blend + (blendSeconds > 0f ? dt / blendSeconds : 1f));
+            _blend = Mathf.Min(1f, _blend + (_blendDuration > 0f ? dt / _blendDuration : 1f));
             float w = _blend * _blend * (3f - 2f * _blend);
             for (int i = 0; i < bones.Length; i++)
             {
@@ -341,12 +391,147 @@ namespace ProjectHymn.Gameplay
             return Quaternion.SlerpUnclamped(KeyRot(keys[hit], bone), q, amplitude);
         }
 
+        // ---------------- Locomotion layer ----------------
+
+        /// <summary>
+        /// Fill <see cref="_locoPose"/> from the movement state. Returns false when the body is standing still on the
+        /// ground (the stance and the sword moves own the whole body then).
+        /// </summary>
+        bool EvaluateLocomotion(double now, out LocoState state)
+        {
+            state = LocoState.Idle;
+            if (_loco == null || locomotion == null) return false;
+            state = _loco.State;
+            var L = locomotion;
+            switch (state)
+            {
+                case LocoState.Run:
+                {
+                    float speed = _loco.Speed01;
+                    if (speed < 0.05f || L.run.Count == 0) { state = LocoState.Idle; return false; }
+                    double spb, beatPos;
+                    if (conductor != null && conductor.IsPlaying && conductor.Map != null)
+                    {
+                        spb = conductor.CurrentBeat.SecondsPerBeat;
+                        beatPos = conductor.Map.TimeToBeat(now);
+                    }
+                    else
+                    {
+                        spb = 60.0 / referenceBpm;
+                        beatPos = Time.timeAsDouble / spb;
+                    }
+                    float phase = StrideClock.Phase(beatPos, StrideClock.StepsPerBeat(spb, L.cadence));
+                    SampleCycle(L.run, phase, Mathf.Lerp(L.minStride, 1f, speed));
+                    return true;
+                }
+                case LocoState.Jump: PoseLerp(L.jump, L.jump, 0f); return true;
+                case LocoState.Fall: PoseLerp(L.fall, L.fall, 0f); return true;
+                case LocoState.Land: PoseLerp(L.land, L.land, 0f); return true;
+                case LocoState.Hang: PoseLerp(L.hang, L.hang, 0f); return true;
+                case LocoState.AirJump:
+                {
+                    PoseLerp(L.airJump, L.airJump, 0f);
+                    float k = _loco.StateTime / Mathf.Max(0.05f, L.flipSeconds);
+                    if (k < 1f && _current == null && _hips >= 0)
+                    {
+                        // One forward flip around the hips; eased so it snaps through the middle.
+                        float e = k * k * (3f - 2f * k);
+                        _locoPose[_hips] = Quaternion.AngleAxis(360f * e, Vector3.right) * _locoPose[_hips];
+                    }
+                    else if (k < 1f) PoseLerp(L.fall, L.fall, 0f);
+                    return true;
+                }
+                case LocoState.Climb:
+                {
+                    float k = _loco.ClimbProgress;
+                    if (k < 0.5f) PoseLerp(L.hang, L.climbPull, Smooth(k / 0.5f));
+                    else PoseLerp(L.climbPull, L.climbOver, Smooth((k - 0.5f) / 0.5f));
+                    return true;
+                }
+                default:
+                    return false;
+            }
+        }
+
+        static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+        /// <summary>A locomotion key's rotation for a bone: replaces the stance, adds to it, or (unlisted) is the stance.</summary>
+        Quaternion LocoRot(MoveKey k, int i, out bool listed)
+        {
+            string n = _names[i];
+            listed = false;
+            if (k == null || !k.TryGet(n, out var e)) return StanceRot(n);
+            listed = true;
+            return locomotion.IsAdditive(n) ? StanceRot(n) * Quaternion.Euler(e) : Quaternion.Euler(e);
+        }
+
+        Vector3 StanceRoot => weapon != null ? weapon.stance.rootOffset : Vector3.zero;
+
+        void PoseLerp(MoveKey a, MoveKey b, float u)
+        {
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i] == null) continue;
+                var qa = LocoRot(a, i, out _);
+                _locoPose[i] = u <= 0f ? qa : Quaternion.Slerp(qa, LocoRot(b, i, out _), u);
+            }
+            var ra = a != null ? a.rootOffset : Vector3.zero;
+            var rb = b != null ? b.rootOffset : Vector3.zero;
+            _locoRoot = StanceRoot + Vector3.Lerp(ra, rb, u);
+        }
+
+        /// <summary>Sample a looping cycle at <paramref name="phase"/>; <paramref name="amount"/> scales the swing.</summary>
+        void SampleCycle(List<MoveKey> keys, float phase, float amount)
+        {
+            int a = keys.Count - 1;
+            for (int i = 0; i < keys.Count; i++) if (keys[i].beat <= phase) a = i;
+            int b = (a + 1) % keys.Count;
+            float ta = keys[a].beat, tb = keys[b].beat;
+            if (ta > phase) ta -= 1f;              // phase is before the first key: wrap from the last
+            if (tb <= ta) tb += 1f;
+            float u = Mathf.Clamp01((phase - ta) / Mathf.Max(1e-4f, tb - ta));
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i] == null) continue;
+                var qa = LocoRot(keys[a], i, out bool la);
+                var qb = LocoRot(keys[b], i, out bool lb);
+                var q = Quaternion.Slerp(qa, qb, u);
+                if (amount < 0.999f)
+                {
+                    // Shrink the swing toward a neutral pose: straight limbs for listed bones, the stance otherwise.
+                    var neutral = (la || lb) && !locomotion.IsAdditive(_names[i]) ? Quaternion.identity : StanceRot(_names[i]);
+                    q = Quaternion.SlerpUnclamped(neutral, q, amount);
+                }
+                _locoPose[i] = q;
+            }
+            _locoRoot = StanceRoot + Vector3.Lerp(keys[a].rootOffset, keys[b].rootOffset, u) * amount;
+        }
+
+        /// <summary>
+        /// While moving, a sword move keeps the upper body and the legs follow the locomotion pose. The move's hip turn
+        /// is carried into the spine so the swing still faces where it was authored.
+        /// </summary>
+        void MixLowerBody()
+        {
+            float w = _lowerWeight;
+            if (w <= 0f) return;
+            if (_hips >= 0 && _spine >= 0)
+            {
+                var carried = Quaternion.Inverse(StanceRot("Hips")) * _target[_hips] * _target[_spine];
+                _target[_spine] = Quaternion.Slerp(_target[_spine], carried, w);
+            }
+            for (int i = 0; i < bones.Length; i++)
+                if (!_upper[i] && bones[i] != null) _target[i] = Quaternion.Slerp(_target[i], _locoPose[i], w);
+            _rootTarget = Vector3.Lerp(_rootTarget, _locoRoot, w);
+        }
+
         // ---------------- Two-handed grip ----------------
 
         void SolveOffHand()
         {
             if (weapon == null || !weapon.twoHanded || _offHand == null) return;
             if (_current != null && _current.Move.offHandFree) return;
+            if (_loco != null && (_loco.State == LocoState.Hang || _loco.State == LocoState.Climb)) return;   // hands on the ledge
             if (!_index.TryGetValue("UpperArm.L", out int ua) || !_index.TryGetValue("LowerArm.L", out int la) || !_index.TryGetValue("Hand.L", out int ha)) return;
             TwoBoneIk(bones[ua], bones[la], bones[ha], _offHand.position);
             bones[ha].rotation = _offHand.rotation * Quaternion.Euler(-90f, 0f, 0f);

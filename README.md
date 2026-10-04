@@ -30,14 +30,28 @@ Menu **Project Hymn → Build Prototype Scene**, then press **Play**. You fight 
 - **Effects:** sword tracers on the blade tip (move colour on the beat, grey off it), a ring at your feet on every on-beat note (gold Perfect, white Great, blue Good), sparks on contact, a flash on the blade, a burst and rings on completed sequences, floating damage numbers, a wobbling dummy.
 - **HUD:** a beat track (last four beats and the next three, your notes on them), the three sequences with the matched steps lit and the next note marked, the chain counter, judgement, score and Groove.
 
+## Cliffside slice (vertical slice 1: movement)
+
+Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Scenes/Cliffside.unity`). A greybox side-scrolling climb in the style of Dragon Valor's side views: a beach, three cliff tiers, a 5 m gap, two stone pillars and a summit with a goal arch, about 115 m of lane. The goal is to climb it all and swing the sword anywhere along the way.
+
+- **Movement is free** (never judged against the beat): run, jump, jump again in the air for a double jump with a flip, hold jump for full height. Coyote time and a jump buffer make the timing forgiving.
+- **Ledges:** jump at a cliff whose lip is between 1.1 and 2.05 m above your feet and you grab it. Up, Space or pushing toward the wall climbs; Down lets go; Space while pushing away kicks off the wall. Grabbing refills the double jump.
+- **Combat anywhere:** the M2 sword rhythms work on the ground and in the air. While moving, the sword move owns the upper body and the legs keep running or tucking. An on-beat note in the air stops your fall briefly (up to three per jump), so you can play a rhythm on the dummy hovering over the gap.
+- **Running is on the beat:** footfalls land on beats (one step per beat at 130 BPM, two at 90).
+- **Checkpoints:** crystal posts light up as you pass; falling into the sea returns you to the last one. **R** restarts. The run time and falls show at the top of the screen.
+- **Tuning:** movement numbers are on the Player's *Platformer Controller*; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
+
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |
 | --- | --- | --- |
-| Move | WASD | Left stick |
+| Move / run | WASD (A / D in the Cliffside slice) | Left stick |
+| Jump, double jump (Cliffside) | Space | A / Cross |
+| Climb / let go of a ledge (Cliffside) | W or Space / S | Stick up / down |
 | Note 1 (light) | J | X / Square |
 | Note 2 (heavy) | K | Y / Triangle |
-| Dash | Space | A / Cross |
+| Dash | Left Shift | RB / R1 |
+| Restart the slice (Cliffside) | R | – |
 | Saber / broadsword | Tab | Select / View |
 | Animation offset | [ and ] | D-pad left / right |
 | Test tempos | F1 – F4 | – |
@@ -61,11 +75,14 @@ Battle Theme 1 and 2 are pre-wired to the two reference tracks (links stored on 
 Assets/_Project/
   Scripts/
     Core/       Conductor (DSP clock, beat events, metronome), TempoMap, BeatJudge, SongData
-    Combat/     ComboEngine, PhraseData, GrooveMeter            (pure C#, unit-tested)
-    Gameplay/   BeatCombatController, PlayerMotor, PlayerInputReader, TrainingDummy, BeatPulse
-    UI/         HymnHud, CalibrationPanel
-    Editor/     ProjectHymnSetup (the one-click scene builder)
-  Tests/EditMode/   24 tests: tempo maps, meter changes, judging, combos, bars, groove
+    Combat/     RhythmChain, ComboEngine, PhraseData, GrooveMeter   (pure C#, unit-tested)
+    Movement/   JumpRules, JumpArc, StrideClock, CliffsideLayout     (pure C#, unit-tested)
+    Gameplay/   PlayerMotor, PlayerInputReader, TrainingDummy, cameras
+      Sword/       RhythmAnimator, SwordCombatController, moves, LocomotionSet, effects
+      Platformer/  PlatformerController, SideScrollCamera, CameraZone, Checkpoint, SliceGoal
+    UI/         SwordHud, CalibrationPanel
+    Editor/     ProjectHymnSetup (prototype scene), CliffsideBuilder (slice scene), Sword/ (rig, moves, poses)
+  Tests/EditMode/   tempo maps, judging, combos, rhythm chains, jump rules, stride clock, level reachability
   Data/ Scenes/ Audio/ Art/ Prefabs/   (created by the setup menu)
 ```
 

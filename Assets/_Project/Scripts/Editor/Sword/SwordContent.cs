@@ -19,8 +19,9 @@ namespace ProjectHymn.EditorTools.Sword
         [MenuItem("Project Hymn/Reset Sword Moves to Defaults", priority = 20)]
         public static void ResetToDefaults()
         {
-            if (!EditorUtility.DisplayDialog("Reset sword moves", "Overwrite every SwordMove, SwordSequence and WeaponSet with the generated defaults? Keyframe tuning will be lost.", "Reset", "Cancel")) return;
+            if (!EditorUtility.DisplayDialog("Reset sword moves", "Overwrite every SwordMove, SwordSequence, WeaponSet and the Locomotion poses with the generated defaults? Keyframe tuning will be lost.", "Reset", "Cancel")) return;
             Ensure(overwrite: true);
+            EnsureLocomotion(overwrite: true);
             Debug.Log("[Project Hymn] Sword moves reset to defaults.");
         }
 
@@ -32,6 +33,31 @@ namespace ProjectHymn.EditorTools.Sword
                 list.Add(BuildWeapon(spec, overwrite));
             AssetDatabase.SaveAssets();
             return list;
+        }
+
+        /// <summary>Create the swordsman's movement poses (vertical slice 1). Kept if it exists unless overwriting.</summary>
+        public static LocomotionSet EnsureLocomotion(bool overwrite = false)
+        {
+            Directory.CreateDirectory(DataDir);
+            string path = $"{DataDir}/Locomotion.asset";
+            var a = AssetDatabase.LoadAssetAtPath<LocomotionSet>(path);
+            if (a != null && !overwrite) return a;
+            bool fresh = a == null;
+            if (fresh) a = ScriptableObject.CreateInstance<LocomotionSet>();
+            var spec = LocomotionSpecs.Build();
+            a.run = new List<MoveKey>();
+            foreach (var k in spec.Run) a.run.Add(ToKey(k));
+            a.run.Sort((x, y) => x.beat.CompareTo(y.beat));
+            a.jump = ToKey(spec.Jump);
+            a.airJump = ToKey(spec.AirJump);
+            a.fall = ToKey(spec.Fall);
+            a.land = ToKey(spec.Land);
+            a.hang = ToKey(spec.Hang);
+            a.climbPull = ToKey(spec.ClimbPull);
+            a.climbOver = ToKey(spec.ClimbOver);
+            if (fresh) AssetDatabase.CreateAsset(a, path); else EditorUtility.SetDirty(a);
+            AssetDatabase.SaveAssets();
+            return a;
         }
 
         static WeaponSet BuildWeapon(WeaponSpec spec, bool overwrite)

@@ -24,35 +24,19 @@ namespace ProjectHymn.EditorTools
         const string Root = "Assets/_Project";
         const string PhraseDir = Root + "/Data/Phrases";
         const string SongDir = Root + "/Data/Songs";
-        const string SceneDir = Root + "/Scenes";
+        internal const string SceneDir = Root + "/Scenes";
         const string ScenePath = SceneDir + "/Prototype.unity";
 
         [MenuItem("Project Hymn/Build Prototype Scene", priority = 0)]
         public static void BuildPrototypeScene()
         {
-            foreach (var dir in new[] { SongDir, SceneDir, Root + "/Audio/Music", Root + "/Art" })
-                Directory.CreateDirectory(dir);
-            AssetDatabase.Refresh();
-
-            CreateSong("BattleTheme1", "https://www.youtube.com/watch?v=Z3l0ehUm4lM", new TempoSection(112, 130f, 4));
-            CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
-                new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8));
-            Sword.SwordContent.Ensure();
-            Sword.SwordsmanBuilder.BuildSwordsman();
-            var additive = Sword.SwordsmanBuilder.Additive();
-            AssetDatabase.SaveAssets();
-
+            PrepareContent();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // Re-load assets after the scene switch (references held across NewScene can come back empty).
-            var theme1 = AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme1.asset");
-            var weapons = new List<WeaponSet>
-            {
-                AssetDatabase.LoadAssetAtPath<WeaponSet>($"{Root}/Data/Sword/Saber.asset"),
-                AssetDatabase.LoadAssetAtPath<WeaponSet>($"{Root}/Data/Sword/Broadsword.asset"),
-            };
-            var swordsman = AssetDatabase.LoadAssetAtPath<GameObject>($"{Sword.SwordsmanBuilder.Dir}/Swordsman.prefab");
-            additive = AssetDatabase.LoadAssetAtPath<Material>($"{Sword.SwordsmanBuilder.Dir}/Materials/FX_Additive.mat");
+            var theme1 = LoadTheme();
+            var weapons = LoadWeapons();
+            var additive = LoadAdditive();
 
             // Light and yard
             var sun = new GameObject("Sun", typeof(Light));
@@ -62,12 +46,10 @@ namespace ProjectHymn.EditorTools
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.36f, 0.34f, 0.46f);
             RenderSettings.skybox = null;
+            RenderSettings.fog = false;
             BuildYard();
 
-            // Conductor
-            var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
-            var conductor = condGo.GetComponent<Conductor>();
-            SetRef(conductor, "song", theme1);
+            var conductor = BuildConductor(theme1);
 
             // Player: skinned swordsman under a physics root
             var player = new GameObject("Player", typeof(Rigidbody), typeof(CapsuleCollider), typeof(PlayerInputReader),
@@ -76,21 +58,8 @@ namespace ProjectHymn.EditorTools
             cap.radius = 0.3f; cap.height = 1.75f; cap.center = new Vector3(0f, 0.88f, 0f);
             var visual = new GameObject("Visual").transform;
             visual.SetParent(player.transform, false);
-            var body = (GameObject)PrefabUtility.InstantiatePrefab(swordsman, visual);
-            var model = body.transform.Find("Model");
-            var smr = body.GetComponentInChildren<SkinnedMeshRenderer>();
-            var grip = body.GetComponentsInChildren<Transform>(true).First(t => t.name == "Grip");
             SetRef(player.GetComponent<PlayerMotor>(), "visual", visual);
-            var anim = player.GetComponent<RhythmAnimator>();
-            SetRef(anim, "conductor", conductor);
-            SetRef(anim, "modelRoot", model);
-            SetRef(anim, "grip", grip);
-            SetRef(anim, "weapon", weapons[0]);
-            SetArray(anim, "bones", smr.bones);
-            var combat = player.GetComponent<SwordCombatController>();
-            SetRef(combat, "conductor", conductor);
-            SetRef(combat, "animator", anim);
-            SetList(combat, "weapons", weapons);
+            var combat = RigSwordsman(player, visual, conductor, weapons, null);
 
             // Dummy, facing the player
             var dummy = Sword.SwordsmanBuilder.BuildDummy();
@@ -109,28 +78,94 @@ namespace ProjectHymn.EditorTools
             SetRef(camGo.GetComponent<FollowCamera>(), "target", player.transform);
             SetRef(camGo.GetComponent<BackgroundPulse>(), "conductor", conductor);
 
-            // Effects, sounds, popups, tempo tester
-            var fxGo = new GameObject("Sword FX", typeof(SwordFx), typeof(CombatFeedback), typeof(DamagePopups), typeof(TempoTester));
-            SetRef(fxGo.GetComponent<SwordFx>(), "combat", combat);
-            SetRef(fxGo.GetComponent<SwordFx>(), "additive", additive);
-            SetRef(fxGo.GetComponent<SwordFx>(), "player", player.transform);
-            SetRef(fxGo.GetComponent<SwordFx>(), "cameraRig", camGo.GetComponent<FollowCamera>());
-            SetRef(fxGo.GetComponent<CombatFeedback>(), "combat", combat);
-            SetRef(fxGo.GetComponent<CombatFeedback>(), "conductor", conductor);
-            SetRef(fxGo.GetComponent<CombatFeedback>(), "cameraRig", camGo.GetComponent<FollowCamera>());
-            SetRef(fxGo.GetComponent<DamagePopups>(), "font", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
-            SetRef(fxGo.GetComponent<TempoTester>(), "conductor", conductor);
-            SetRef(fxGo.GetComponent<TempoTester>(), "input", player.GetComponent<PlayerInputReader>());
-
+            BuildFx(conductor, combat, player, camGo.GetComponent<FollowCamera>(), additive);
             BuildHud(conductor, combat);
 
             if (theme1 == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuild(ScenePath);
+            AddSceneToBuild(ScenePath, first: true);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             Debug.Log("[Project Hymn] M2 sword prototype built. Press Play: J = note 1, K = note 2 on the beat (pad X / Y). Try 1-2-1, 2-2 and 1-1-1-2-1-1-1. " +
-                      "WASD move, Space dash, Tab saber/broadsword, [ ] animation offset, F1-F4 tempos, C calibrate.");
+                      "WASD move, Shift dash, Tab saber/broadsword, [ ] animation offset, F1-F4 tempos, C calibrate.");
+        }
+
+        // ---------------- Shared by the prototype and the Cliffside slice ----------------
+
+        /// <summary>Songs, sword moves, locomotion poses, the swordsman prefab and FX material.</summary>
+        internal static void PrepareContent()
+        {
+            foreach (var dir in new[] { SongDir, SceneDir, Root + "/Audio/Music", Root + "/Art" })
+                Directory.CreateDirectory(dir);
+            AssetDatabase.Refresh();
+            CreateSong("BattleTheme1", "https://www.youtube.com/watch?v=Z3l0ehUm4lM", new TempoSection(112, 130f, 4));
+            CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
+                new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8));
+            Sword.SwordContent.Ensure();
+            Sword.SwordContent.EnsureLocomotion();
+            Sword.SwordsmanBuilder.BuildSwordsman();
+            Sword.SwordsmanBuilder.Additive();
+            AssetDatabase.SaveAssets();
+        }
+
+        internal static SongData LoadTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme1.asset");
+
+        internal static List<WeaponSet> LoadWeapons() => new List<WeaponSet>
+        {
+            AssetDatabase.LoadAssetAtPath<WeaponSet>($"{Root}/Data/Sword/Saber.asset"),
+            AssetDatabase.LoadAssetAtPath<WeaponSet>($"{Root}/Data/Sword/Broadsword.asset"),
+        };
+
+        internal static Material LoadAdditive() => AssetDatabase.LoadAssetAtPath<Material>($"{Sword.SwordsmanBuilder.Dir}/Materials/FX_Additive.mat");
+
+        internal static Conductor BuildConductor(SongData song)
+        {
+            var condGo = new GameObject("Conductor", typeof(AudioSource), typeof(Conductor));
+            var conductor = condGo.GetComponent<Conductor>();
+            SetRef(conductor, "song", song);
+            return conductor;
+        }
+
+        /// <summary>
+        /// Put the skinned swordsman under <paramref name="visual"/> and wire the player's RhythmAnimator and
+        /// SwordCombatController (both must already be on <paramref name="player"/>). Returns the combat controller.
+        /// </summary>
+        internal static SwordCombatController RigSwordsman(GameObject player, Transform visual, Conductor conductor, List<WeaponSet> weapons, LocomotionSet locomotion)
+        {
+            var swordsman = AssetDatabase.LoadAssetAtPath<GameObject>($"{Sword.SwordsmanBuilder.Dir}/Swordsman.prefab");
+            var body = (GameObject)PrefabUtility.InstantiatePrefab(swordsman, visual);
+            var model = body.transform.Find("Model");
+            var smr = body.GetComponentInChildren<SkinnedMeshRenderer>();
+            var grip = body.GetComponentsInChildren<Transform>(true).First(t => t.name == "Grip");
+            var anim = player.GetComponent<RhythmAnimator>();
+            SetRef(anim, "conductor", conductor);
+            SetRef(anim, "modelRoot", model);
+            SetRef(anim, "grip", grip);
+            SetRef(anim, "weapon", weapons[0]);
+            if (locomotion != null) SetRef(anim, "locomotion", locomotion);
+            SetArray(anim, "bones", smr.bones);
+            var combat = player.GetComponent<SwordCombatController>();
+            SetRef(combat, "conductor", conductor);
+            SetRef(combat, "animator", anim);
+            SetList(combat, "weapons", weapons);
+            return combat;
+        }
+
+        /// <summary>Effects, sounds, damage popups and the tempo tester.</summary>
+        internal static GameObject BuildFx(Conductor conductor, SwordCombatController combat, GameObject player, CameraRig cameraRig, Material additive)
+        {
+            var fxGo = new GameObject("Sword FX", typeof(SwordFx), typeof(CombatFeedback), typeof(DamagePopups), typeof(TempoTester));
+            SetRef(fxGo.GetComponent<SwordFx>(), "combat", combat);
+            SetRef(fxGo.GetComponent<SwordFx>(), "additive", additive);
+            SetRef(fxGo.GetComponent<SwordFx>(), "player", player.transform);
+            SetRef(fxGo.GetComponent<SwordFx>(), "cameraRig", cameraRig);
+            SetRef(fxGo.GetComponent<CombatFeedback>(), "combat", combat);
+            SetRef(fxGo.GetComponent<CombatFeedback>(), "conductor", conductor);
+            SetRef(fxGo.GetComponent<CombatFeedback>(), "cameraRig", cameraRig);
+            SetRef(fxGo.GetComponent<DamagePopups>(), "font", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+            SetRef(fxGo.GetComponent<TempoTester>(), "conductor", conductor);
+            SetRef(fxGo.GetComponent<TempoTester>(), "input", player.GetComponent<PlayerInputReader>());
+            return fxGo;
         }
 
         /// <summary>A small stone yard: floor tiles, a low wall and a few posts for depth.</summary>
@@ -169,7 +204,7 @@ namespace ProjectHymn.EditorTools
             }
         }
 
-        static void BuildHud(Conductor conductor, SwordCombatController combat)
+        internal static Canvas BuildHud(Conductor conductor, SwordCombatController combat)
         {
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var canvasGo = new GameObject("HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(SwordHud), typeof(CalibrationPanel));
@@ -222,6 +257,7 @@ namespace ProjectHymn.EditorTools
             var cal = canvasGo.GetComponent<CalibrationPanel>();
             SetRef(cal, "conductor", conductor);
             SetRef(cal, "label", calib);
+            return canvasGo.GetComponent<Canvas>();
         }
 
         static SongData CreateSong(string file, string url, params TempoSection[] sections)
@@ -256,7 +292,7 @@ namespace ProjectHymn.EditorTools
             return img;
         }
 
-        static Text NewText(string name, Transform parent, Font font, int size, Vector2 anchor, Vector2 pos, Vector2 box)
+        internal static Text NewText(string name, Transform parent, Font font, int size, Vector2 anchor, Vector2 pos, Vector2 box)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
@@ -298,11 +334,12 @@ namespace ProjectHymn.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void AddSceneToBuild(string path)
+        internal static void AddSceneToBuild(string path, bool first)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             if (scenes.Exists(s => s.path == path)) return;
-            scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            if (first) scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            else scenes.Add(new EditorBuildSettingsScene(path, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
     }
