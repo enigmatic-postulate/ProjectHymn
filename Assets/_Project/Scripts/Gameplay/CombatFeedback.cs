@@ -135,7 +135,7 @@ namespace ProjectHymn.Gameplay
         }
 
         /// <summary>Tiny procedural synth so the prototype needs no audio assets.</summary>
-        static class Synth
+        internal static class Synth
         {
             const int Rate = 48000;
 

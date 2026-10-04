@@ -142,6 +142,9 @@ namespace ProjectHymn.UI
                     glyph = $"<color={c}>{(int)h.button}</color>";
                 }
                 else glyph = b < now.Index ? "<color=#4a4458>·</color>" : b == now.Index ? "<color=#8a84a0>·</color>" : "<color=#5a5468>○</color>";
+                // Enemy hits counting in (slice 2): guard on these beats.
+                int threat = b >= now.Index ? EnemyThreats.At(b) : 0;
+                if (threat > 0) glyph = threat >= 2 ? "<color=#ff3a2a>!!</color>" : "<color=#ff6a3a>!</color>";
                 if (b == now.Index)
                 {
                     int size = Mathf.RoundToInt(44 + 18 * pulse);

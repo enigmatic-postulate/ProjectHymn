@@ -39,7 +39,12 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Combat anywhere:** the M2 sword rhythms work on the ground and in the air. While moving, the sword move owns the upper body and the legs keep running or tucking. An on-beat note in the air stops your fall briefly (up to three per jump), so you can play a rhythm on the dummy hovering over the gap.
 - **Running is on the beat:** footfalls land on beats (one step per beat at 130 BPM, two at 90).
 - **Checkpoints:** crystal posts light up as you pass; falling into the sea returns you to the last one. **R** restarts. The run time and falls show at the top of the screen.
-- **Tuning:** movement numbers are on the Player's *Platformer Controller*; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
+- **Enemies (slice 2):** a **shield knight** guards the first tier and a **wisp** hovers over the gap. Both attack on the beat: each attack is telegraphed for a full bar (the enemy glows up, a 3-2-1 count hangs over its head, and `!` / `!!` marks the hit beats on the HUD beat track) and lands on a downbeat.
+  - **Guard** with **L** (LB / L1) on the hit beat. Perfect or Great timing **parries**: the enemy is staggered for two beats, its remaining hits are cancelled and your on-beat hits deal ×1.5. Good timing **blocks**. Otherwise the hit lands. One press answers one hit, so the knight's two-beat flurry needs two.
+  - The knight's shield soaks hits from the front (they only chip it) unless it is staggered or recovering after a swing; jump over it and hit its back for extra damage. It turns around only between attacks, a beat late. It alternates a heavy cut (2 damage) and the flurry (1 per hit).
+  - The wisp drifts on the beat, pulls back over a bar, then dives at where you were on the downbeat. Blades pass through it except right after a dive or when it is staggered.
+- **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
+- **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
 ## Controls (prototype)
 
@@ -50,6 +55,7 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 | Climb / let go of a ledge (Cliffside) | W or Space / S | Stick up / down |
 | Note 1 (light) | J | X / Square |
 | Note 2 (heavy) | K | Y / Triangle |
+| Guard / parry (Cliffside) | L | LB / L1 |
 | Dash | Left Shift | RB / R1 |
 | Restart the slice (Cliffside) | R | – |
 | Saber / broadsword | Tab | Select / View |
@@ -77,12 +83,14 @@ Assets/_Project/
     Core/       Conductor (DSP clock, beat events, metronome), TempoMap, BeatJudge, SongData
     Combat/     RhythmChain, ComboEngine, PhraseData, GrooveMeter   (pure C#, unit-tested)
     Movement/   JumpRules, JumpArc, StrideClock, CliffsideLayout     (pure C#, unit-tested)
+                (Combat/EnemyAttacks: enemy attack scheduling, ParryJudge, Vitality — pure C#, unit-tested)
     Gameplay/   PlayerMotor, PlayerInputReader, TrainingDummy, cameras
       Sword/       RhythmAnimator, SwordCombatController, moves, LocomotionSet, effects
       Platformer/  PlatformerController, SideScrollCamera, CameraZone, Checkpoint, SliceGoal
+      Enemies/     BeatEnemy, ShieldKnight, Wisp, PlayerGuard, PlayerHealth, DefenseFeedback
     UI/         SwordHud, CalibrationPanel
     Editor/     ProjectHymnSetup (prototype scene), CliffsideBuilder (slice scene), Sword/ (rig, moves, poses)
-  Tests/EditMode/   tempo maps, judging, combos, rhythm chains, jump rules, stride clock, level reachability
+  Tests/EditMode/   tempo maps, judging, combos, rhythm chains, jump rules, stride clock, level reachability, enemy scheduling, parry judging
   Data/ Scenes/ Audio/ Art/ Prefabs/   (created by the setup menu)
 ```
 

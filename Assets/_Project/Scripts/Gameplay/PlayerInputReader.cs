@@ -7,7 +7,7 @@ namespace ProjectHymn.Gameplay
 {
     /// <summary>
     /// Reads the M2 sword prototype controls from gamepad or keyboard (Input System package or legacy Input Manager):
-    /// move, note 1 (light: J / X), note 2 (heavy: K / Y), jump (Space / A), Step dash (Shift / RB), weapon swap (Tab / Select),
+    /// move, note 1 (light: J / X), note 2 (heavy: K / Y), jump (Space / A), guard (L / LB), Step dash (Shift / RB), weapon swap (Tab / Select),
     /// animation offset ([ and ] / D-pad left and right) and test tempos (F1 to F4).
     /// </summary>
     public class PlayerInputReader : MonoBehaviour
@@ -20,6 +20,8 @@ namespace ProjectHymn.Gameplay
         public bool StepPressed { get; private set; }
         public bool JumpPressed { get; private set; }
         public bool JumpHeld { get; private set; }
+        /// <summary>Guard: parry an enemy hit by pressing on its beat (L / LB).</summary>
+        public bool GuardPressed { get; private set; }
         public bool SwapWeaponPressed { get; private set; }
         /// <summary>-1 / +1 when the animation offset keys are pressed this frame.</summary>
         public int OffsetNudge { get; private set; }
@@ -45,6 +47,7 @@ namespace ProjectHymn.Gameplay
             StepPressed = (kb?.leftShiftKey.wasPressedThisFrame ?? false) || (gp?.rightShoulder.wasPressedThisFrame ?? false);
             JumpPressed = (kb?.spaceKey.wasPressedThisFrame ?? false) || (gp?.buttonSouth.wasPressedThisFrame ?? false);
             JumpHeld = (kb?.spaceKey.isPressed ?? false) || (gp?.buttonSouth.isPressed ?? false);
+            GuardPressed = (kb?.lKey.wasPressedThisFrame ?? false) || (gp?.leftShoulder.wasPressedThisFrame ?? false);
             SwapWeaponPressed = (kb?.tabKey.wasPressedThisFrame ?? false) || (gp?.selectButton.wasPressedThisFrame ?? false);
             OffsetNudge = ((kb?.rightBracketKey.wasPressedThisFrame ?? false) || (gp?.dpad.right.wasPressedThisFrame ?? false) ? 1 : 0)
                         - ((kb?.leftBracketKey.wasPressedThisFrame ?? false) || (gp?.dpad.left.wasPressedThisFrame ?? false) ? 1 : 0);
@@ -57,6 +60,7 @@ namespace ProjectHymn.Gameplay
             StepPressed = Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.JoystickButton5);
             JumpPressed = Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton0);
             JumpHeld = Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.JoystickButton0);
+            GuardPressed = Input.GetKeyDown(KeyCode.L) || Input.GetKeyDown(KeyCode.JoystickButton4);
             SwapWeaponPressed = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.JoystickButton6);
             OffsetNudge = (Input.GetKeyDown(KeyCode.RightBracket) ? 1 : 0) - (Input.GetKeyDown(KeyCode.LeftBracket) ? 1 : 0);
             TempoKey = Input.GetKeyDown(KeyCode.F1) ? 1 : Input.GetKeyDown(KeyCode.F2) ? 2 : Input.GetKeyDown(KeyCode.F3) ? 3 : Input.GetKeyDown(KeyCode.F4) ? 4 : 0;

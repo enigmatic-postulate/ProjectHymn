@@ -13,9 +13,11 @@ namespace ProjectHymn.Gameplay
         [SerializeField] SliceGoal goal;
         [SerializeField] Text status;
         [SerializeField] Text toast;
+        [SerializeField] Text hearts;
+        [SerializeField] PlayerHealth health;
 
         float _time, _toastTime;
-        int _falls;
+        int _falls, _foes, _defeated;
         bool _done;
         Vector3 _start;
 
@@ -24,6 +26,18 @@ namespace ProjectHymn.Gameplay
             if (player == null) player = FindAnyObjectByType<PlatformerController>();
             if (goal == null) goal = FindAnyObjectByType<SliceGoal>();
             if (player != null) _start = player.transform.position;
+            if (health == null && player != null) health = player.GetComponent<PlayerHealth>();
+        }
+
+        void Start()
+        {
+            foreach (var e in BeatEnemy.All) { _foes++; e.Died += OnFoeDown; }
+        }
+
+        void OnFoeDown(BeatEnemy e)
+        {
+            _defeated++;
+            Toast($"{e.DisplayName} defeated");
         }
 
         void OnEnable()
@@ -53,7 +67,7 @@ namespace ProjectHymn.Gameplay
         void OnGoal()
         {
             _done = true;
-            Toast($"Summit reached   {Clock(_time)}   falls {_falls}", 6f);
+            Toast($"Summit reached   {Clock(_time)}   falls {_falls}   foes {_defeated}/{_foes}", 6f);
         }
 
         void Toast(string text, float seconds = 1.6f)
@@ -66,7 +80,13 @@ namespace ProjectHymn.Gameplay
         void Update()
         {
             if (!_done) _time += Time.deltaTime;
-            if (status != null) status.text = $"{Clock(_time)}   falls {_falls}";
+            if (status != null) status.text = _foes > 0 ? $"{Clock(_time)}   falls {_falls}   foes {_defeated}/{_foes}" : $"{Clock(_time)}   falls {_falls}";
+            if (hearts != null && health != null)
+            {
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < health.MaxHp; i++) sb.Append(i < health.Hp ? "<color=#ff5a4a>♥</color>" : "<color=#4a4050>♥</color>");
+                hearts.text = sb.ToString();
+            }
             if (toast != null)
             {
                 _toastTime -= Time.deltaTime;

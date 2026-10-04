@@ -13,9 +13,9 @@ namespace ProjectHymn.EditorTools
     /// <summary>
     /// Vertical slice 1 ("Movement"): builds Scenes/Cliffside.unity from <see cref="CliffsideLayout"/>. A greybox
     /// side-scrolling climb from a beach up three cliff tiers, over a gap and up stone pillars to a summit, with
-    /// checkpoints, two training dummies (one on a ledge, one hovering over the gap) and camera zones. The player is
+    /// checkpoints, two enemies (a shield knight on the first tier, a wisp over the gap) and camera zones. The player is
     /// the M2 swordsman on the platformer controller: run, jump, double jump, grab ledges, and play sword rhythms
-    /// anywhere. Menu: Project Hymn ▸ Build Cliffside Slice. Safe to re-run.
+    /// anywhere, and guards (parries) enemy hits on the beat. Menu: Project Hymn ▸ Build Cliffside Slice. Safe to re-run.
     /// </summary>
     public static class CliffsideBuilder
     {
@@ -50,7 +50,7 @@ namespace ProjectHymn.EditorTools
             // Player: swordsman on the platformer controller
             var spawn = Marker(CliffsideLayout.MarkerKind.Spawn);
             var player = new GameObject("Player", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
-                typeof(RhythmAnimator), typeof(SwordCombatController));
+                typeof(RhythmAnimator), typeof(SwordCombatController), typeof(PlayerGuard), typeof(PlayerHealth));
             player.transform.position = new Vector3(spawn.X, spawn.Y + 0.05f, 0f);
             var cc = player.GetComponent<CharacterController>();
             cc.radius = 0.35f; cc.height = 1.8f; cc.center = new Vector3(0f, 0.9f, 0f);
@@ -59,6 +59,8 @@ namespace ProjectHymn.EditorTools
             visual.SetParent(player.transform, false);
             SetRef(player.GetComponent<PlatformerController>(), "visual", visual);
             var combat = RigSwordsman(player, visual, conductor, weapons, locomotion);
+            SetRef(player.GetComponent<PlayerGuard>(), "conductor", conductor);
+            SetRef(player.GetComponent<PlayerGuard>(), "animator", player.GetComponent<RhythmAnimator>());
 
             // Checkpoints, targets, goal, camera zones
             Checkpoint first = null;
@@ -70,8 +72,8 @@ namespace ProjectHymn.EditorTools
                         var cp = BuildCheckpoint(level, m);
                         if (first == null) { first = cp; SetBool(cp, "startsLit", true); }
                         break;
-                    case CliffsideLayout.MarkerKind.Target: BuildTarget(level, m, floating: false, conductor); break;
-                    case CliffsideLayout.MarkerKind.FloatingTarget: BuildTarget(level, m, floating: true, conductor); break;
+                    case CliffsideLayout.MarkerKind.Target: BuildKnight(level, m, conductor); break;
+                    case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(level, new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
                     case CliffsideLayout.MarkerKind.Goal: BuildGoal(level, m); break;
                     case CliffsideLayout.MarkerKind.CameraZone: BuildCameraZone(level, m); break;
                 }
@@ -89,7 +91,8 @@ namespace ProjectHymn.EditorTools
             camGo.transform.position = player.transform.position + new Vector3(0f, 2.3f, -11f);
             SetRef(camGo.GetComponent<SideScrollCamera>(), "target", player.transform);
 
-            BuildFx(conductor, combat, player, camGo.GetComponent<SideScrollCamera>(), additive);
+            var fx = BuildFx(conductor, combat, player, camGo.GetComponent<SideScrollCamera>(), additive);
+            fx.AddComponent<DefenseFeedback>();
             var hud = BuildHud(conductor, combat);
             BuildRunStatus(hud, player.GetComponent<PlatformerController>());
 
@@ -100,6 +103,7 @@ namespace ProjectHymn.EditorTools
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             Debug.Log("[Project Hymn] Cliffside slice built. A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
+                      "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
                       "Shift dash, Tab weapon, R restart, F1-F4 tempos.");
         }
 
@@ -264,27 +268,13 @@ namespace ProjectHymn.EditorTools
             return cp;
         }
 
-        static void BuildTarget(Transform level, CliffsideLayout.Marker m, bool floating, Conductor conductor)
+        /// <summary>The shield knight guards the ledge it stands on (it never walks off it).</summary>
+        static void BuildKnight(Transform level, CliffsideLayout.Marker m, Conductor conductor)
         {
-            var dummy = Sword.SwordsmanBuilder.BuildDummy();
-            dummy.name = m.Name;
-            dummy.transform.SetParent(level, true);
-            dummy.transform.position = new Vector3(m.X, m.Y, 0f);
-            dummy.transform.rotation = Quaternion.Euler(0f, -70f, 0f);   // faces the player coming from the left, turned to the camera
-            if (!floating) return;
-
-            // Over the gap: let the player pass through it (hits still land) and keep it bobbing to the music.
-            dummy.GetComponent<CapsuleCollider>().isTrigger = true;
-            var hover = dummy.AddComponent<BeatHover>();
-            SetRef(hover, "conductor", conductor);
-            // Ropes up to nothing would look odd; a small additive halo ring marks it as magic instead.
-            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Object.DestroyImmediate(ring.GetComponent<Collider>());
-            ring.name = "Halo";
-            ring.transform.SetParent(dummy.transform, false);
-            ring.transform.localPosition = new Vector3(0f, -0.05f, 0f);
-            ring.transform.localScale = new Vector3(1.1f, 0.01f, 1.1f);
-            ring.GetComponent<MeshRenderer>().sharedMaterial = LoadAdditive();
+            var ledge = default(CliffsideLayout.Block);
+            foreach (var b in CliffsideLayout.Route) if (m.X > b.XMin && m.X < b.XMax) ledge = b;
+            var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
+            EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
         }
 
         static void BuildGoal(Transform level, CliffsideLayout.Marker m)
@@ -335,7 +325,12 @@ namespace ProjectHymn.EditorTools
             status.color = new Color(0.92f, 0.94f, 1f);
             var toast = NewText("Toast", hud.transform, font, 48, new Vector2(0.5f, 0.5f), new Vector2(0, 140), new Vector2(1400, 64));
             toast.color = new Color(1f, 0.9f, 0.55f, 0f);
+            var hearts = NewText("Hearts", hud.transform, font, 40, new Vector2(0f, 1f), new Vector2(230, -130), new Vector2(400, 50));
+            hearts.alignment = TextAnchor.MiddleLeft;
+            hearts.supportRichText = true;
             var run = hud.gameObject.AddComponent<SliceRun>();
+            SetRef(run, "hearts", hearts);
+            SetRef(run, "health", player.GetComponent<PlayerHealth>());
             SetRef(run, "player", player);
             SetRef(run, "status", status);
             SetRef(run, "toast", toast);

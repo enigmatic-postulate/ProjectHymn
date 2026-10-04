@@ -291,6 +291,15 @@ namespace ProjectHymn.Gameplay
             _airHang = airHangSeconds;
         }
 
+        /// <summary>Knocked back by a hit: lets go of ledges and flies a little up and away.</summary>
+        public void Knockback(float directionX, float speed = 6f, float lift = 5f)
+        {
+            if (_state == LocoState.Hang || _state == LocoState.Climb) LeaveHang();
+            _vel = new Vector3(Mathf.Sign(directionX) * speed, lift, 0f);
+            _airHang = 0f;
+            SetState(LocoState.Fall);
+        }
+
         // ---------------- Checkpoints and respawn ----------------
 
         void OnTriggerEnter(Collider other)

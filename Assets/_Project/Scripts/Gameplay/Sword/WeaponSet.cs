@@ -21,6 +21,8 @@ namespace ProjectHymn.Gameplay
         public SwordMove lightA, lightB;
         [Tooltip("A heavy note outside a sequence.")]
         public SwordMove heavy;
+        [Tooltip("Played when the player guards (keys in beats; 0 = the guard is up).")]
+        public SwordMove guard;
         [Tooltip("Damage scale for this weapon.")]
         public float damageScale = 1f;
     }

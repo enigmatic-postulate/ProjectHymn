@@ -65,8 +65,8 @@ namespace ProjectHymn.Movement
             new Marker("Checkpoint 3", MarkerKind.Checkpoint, 47f,  8.4f),
             new Marker("Checkpoint 4", MarkerKind.Checkpoint, 64f,  8.4f),
             new Marker("Checkpoint 5", MarkerKind.Checkpoint, 88f, 14.5f),
-            new Marker("Sentry Dummy", MarkerKind.Target,     29f,  2.0f),
-            new Marker("Sky Dummy",    MarkerKind.FloatingTarget, 58.5f, 9.4f),
+            new Marker("Shield Knight", MarkerKind.Target,    29f,  2.0f),
+            new Marker("Gap Wisp",     MarkerKind.FloatingTarget, 58.5f, 9.4f),
             new Marker("Goal",         MarkerKind.Goal,       97f, 14.5f),
             // Camera zones: x centre, look height, width
             new Marker("Climb View",   MarkerKind.CameraZone, 45f,  0f, 24f),

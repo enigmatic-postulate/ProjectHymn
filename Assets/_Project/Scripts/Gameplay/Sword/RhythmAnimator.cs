@@ -216,6 +216,26 @@ namespace ProjectHymn.Gameplay
             return tr.Id;
         }
 
+        /// <summary>
+        /// Play a move from its first key right now at the music's tempo (the guard: it reacts to the press rather than
+        /// landing on a beat). Cancels any move in progress. Returns 0: its key 0 raises no impact anyone waits for.
+        /// </summary>
+        public int PlayNow(SwordMove move, double secondsPerBeat)
+        {
+            if (move == null || move.keys.Count == 0) return 0;
+            double spb = Math.Max(0.05, secondsPerBeat);
+            double now = Now();
+            var tr = new Track
+            {
+                Move = move, Spb = spb, OnBeat = true, Id = _nextId++, Amplitude = 1f,
+                BeatTime = now - move.FirstBeat * spb, Start = now, StartT = move.FirstBeat,
+            };
+            _anticipate = null;
+            _current = tr;
+            StartBlend(tr);
+            return 0;
+        }
+
         /// <summary>The next note will probably be this move on this beat: start its wind-up in time.</summary>
         public void Anticipate(SwordMove move, double beatTime, double secondsPerBeat)
         {

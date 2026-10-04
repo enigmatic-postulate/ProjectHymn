@@ -60,7 +60,7 @@ namespace ProjectHymn.EditorTools.Sword
         public KeySpec Stance;
         public List<MoveSpec> Moves = new List<MoveSpec>();
         public List<SequenceSpec> Sequences = new List<SequenceSpec>();
-        public string LightFallbackA, LightFallbackB, HeavyFallback;
+        public string LightFallbackA, LightFallbackB, HeavyFallback, Guard;
         public float BladeLength;
     }
 
@@ -168,6 +168,15 @@ namespace ProjectHymn.EditorTools.Sword
             finish.Key(0.25f).ArmR(A("TempestFinish@0.25")).Torso(H(20f), -18f, H(36f)).Move(0, 0.04f, H(0.18f));
             finish.Key(0.6f);
             w.Moves.Add(finish);
+
+            // ---- Guard (vertical slice 2): blade raised flat overhead, knees bent, for parrying enemy hits ----
+            var guard = new MoveSpec { Id = P("Guard"), Name = "Guard", Damage = 0f, ActiveStart = 1f, ActiveEnd = 0f, Effect = "guard" };
+            guard.Key(-0.12f);
+            guard.Key(0f).ArmR(A("RisingGuard@0.3")).Torso(0f, -8f, 0f).Move(0, -0.08f, -0.04f).Legs(-26f, 34f, 20f, 30f);
+            guard.Key(0.45f).ArmR(A("RisingGuard@0.3")).Torso(0f, -8f, 0f).Move(0, -0.08f, -0.04f).Legs(-26f, 34f, 20f, 30f);
+            guard.Key(0.75f);
+            w.Moves.Add(guard);
+            w.Guard = guard.Id;
 
             w.LightFallbackA = diagDown.Id;
             w.LightFallbackB = diagUp.Id;

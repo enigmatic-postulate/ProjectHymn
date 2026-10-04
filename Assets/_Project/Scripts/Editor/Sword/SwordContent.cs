@@ -65,7 +65,16 @@ namespace ProjectHymn.EditorTools.Sword
             foreach (var d in new[] { DataDir, DataDir + "/Moves", DataDir + "/Sequences" }) Directory.CreateDirectory(d);
             string wpath = $"{DataDir}/{spec.Id}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<WeaponSet>(wpath);
-            if (existing != null && !overwrite) return existing;
+            if (existing != null && !overwrite)
+            {
+                // Added in vertical slice 2: give weapon sets made earlier their guard move without touching tuning.
+                if (existing.guard == null && spec.Guard != null)
+                {
+                    existing.guard = BuildMove(spec.Moves.Find(m => m.Id == spec.Guard));
+                    EditorUtility.SetDirty(existing);
+                }
+                return existing;
+            }
 
             var moves = new Dictionary<string, SwordMove>();
             foreach (var m in spec.Moves) moves[m.Id] = BuildMove(m);
@@ -78,6 +87,7 @@ namespace ProjectHymn.EditorTools.Sword
             w.lightA = moves[spec.LightFallbackA];
             w.lightB = moves[spec.LightFallbackB];
             w.heavy = moves[spec.HeavyFallback];
+            w.guard = spec.Guard != null ? moves[spec.Guard] : null;
             w.damageScale = 1f;
             w.sequences = new List<SwordSequence>();
             foreach (var s in spec.Sequences)
