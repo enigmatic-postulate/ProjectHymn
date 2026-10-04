@@ -29,6 +29,29 @@ namespace ProjectHymn.Gameplay
         public bool IsDead => _vit != null && _vit.IsDead;
 
         public event Action<int> Hurt;        // damage taken
+        public event Action Healed;
+
+        /// <summary>Class hearts (before or after Awake).</summary>
+        public void SetMaxHearts(int hearts)
+        {
+            maxHp = Mathf.Max(1, hearts);
+            if (_vit != null) { _vit = new Vitality(maxHp) { GraceSeconds = graceSeconds }; Healed?.Invoke(); }
+        }
+
+        public bool Heal(int hearts)
+        {
+            if (_vit == null || _vit.IsDead || _vit.Hp >= maxHp || hearts <= 0) return false;
+            _vit.Heal(hearts);
+            Healed?.Invoke();
+            return true;
+        }
+
+        public void HealFull()
+        {
+            if (_vit == null) return;
+            _vit.Refill();
+            Healed?.Invoke();
+        }
         public event Action Died;
         public event Action Revived;
 

@@ -38,6 +38,8 @@ namespace ProjectHymn.Core
         public SongData Song => song;
         public TempoMap Map { get; private set; }
         public bool IsPlaying { get; private set; }
+        /// <summary>Paused by a menu: song time holds still and the music is stopped until <see cref="Resume"/>.</summary>
+        public bool IsPaused { get; private set; }
 
         /// <summary>Seconds since beat 0 as heard. Negative during the count-in.</summary>
         public double SongTime { get; private set; }
@@ -117,8 +119,48 @@ namespace ProjectHymn.Core
             SongStarted?.Invoke(song);
         }
 
+        /// <summary>Hold the music and song time (pause menu). Safe to call twice.</summary>
+        public void Pause()
+        {
+            if (!IsPlaying || IsPaused) return;
+            IsPaused = true;
+            _music.Stop();
+            foreach (var s in _clickSources) s.Stop();
+        }
+
+        /// <summary>Carry on from where <see cref="Pause"/> held, rescheduled on the DSP clock so the grid stays exact.</summary>
+        public void Resume()
+        {
+            if (!IsPaused) return;
+            IsPaused = false;
+            const double lead = 0.12;
+            double resumeAt = AudioSettings.dspTime + lead;
+            double clipPos = SongTime + song.firstBeatOffset;          // where in the clip we stopped
+            _dspSongStart = resumeAt - clipPos;
+            _lastDsp = _smoothedDsp = AudioSettings.dspTime;
+            if (song.clip != null)
+            {
+                if (clipPos >= 0)
+                {
+                    double len = song.clip.length;
+                    if (len <= 0 || (!song.loop && clipPos >= len)) { UpdateClock(); return; }
+                    double pos = song.loop && len > 0 ? clipPos % len : clipPos;
+                    _music.timeSamples = Mathf.Clamp((int)(pos * song.clip.frequency), 0, Mathf.Max(0, song.clip.samples - 1));
+                    _music.PlayScheduled(resumeAt);
+                }
+                else
+                {
+                    _music.timeSamples = 0;
+                    _music.PlayScheduled(_dspSongStart);
+                }
+            }
+            _nextClickBeat = CurrentBeat.Index + 1;
+            UpdateClock();
+        }
+
         public void Stop()
         {
+            IsPaused = false;
             IsPlaying = false;
             _music.Stop();
             foreach (var s in _clickSources) s.Stop();
@@ -133,7 +175,7 @@ namespace ProjectHymn.Core
 
         void Update()
         {
-            if (!IsPlaying) return;
+            if (!IsPlaying || IsPaused) return;
             UpdateClock();
             ScheduleClicks();
             FireBeatEvents();

@@ -43,7 +43,8 @@ namespace ProjectHymn.UI
                 label.text = $"CALIBRATING: tap J / X on every click  {_taps}/{tapsNeeded}   (C to cancel)";
         }
 
-        void Begin()
+        /// <summary>Start the 16-tap test (also from the Settings menu).</summary>
+        public void Begin()
         {
             _active = true; _taps = 0; _sum = 0;
             if (conductor != null) conductor.MetronomeEnabled = true;

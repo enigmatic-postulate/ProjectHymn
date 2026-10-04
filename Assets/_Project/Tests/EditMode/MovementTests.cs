@@ -193,8 +193,47 @@ namespace ProjectHymn.Tests
                 bool on = false;
                 foreach (var b in CliffsideLayout.Route)
                     if (m.X > b.XMin + 0.5f && m.X < b.XMax - 0.5f && System.Math.Abs(m.Y - b.Top) < 0.01f) on = true;
+                if (m.Kind == CliffsideLayout.MarkerKind.Pickup)
+                    foreach (var b in CliffsideLayout.Secrets)
+                        if (m.X > b.XMin + 0.3f && m.X < b.XMax - 0.3f && System.Math.Abs(m.Y - b.Top) < 0.01f) on = true;
                 Assert.IsTrue(on, $"{m.Name} is not standing on a cliff top");
             }
+        }
+
+        [Test]
+        public void SecretLedgesAreReachableAndWalkableUnder()
+        {
+            foreach (var s in CliffsideLayout.Secrets)
+            {
+                // Stands over a route block: double jump up from it and land on top; walk under it without bumping.
+                CliffsideLayout.Block below = default;
+                foreach (var b in CliffsideLayout.Route) if (s.XMin >= b.XMin && s.XMax <= b.XMax) below = b;
+                Assert.IsNotNull(below.Name, $"{s.Name} is not over a cliff");
+                float rise = s.Top - below.Top;
+                Assert.GreaterOrEqual(Arc.MaxHeight(V1, V2), rise + 0.25f, $"{s.Name}: {rise} m is out of reach");
+                float headroom = rise - CliffsideLayout.LedgeThickness;
+                Assert.GreaterOrEqual(headroom, 1.95f, $"{s.Name}: the player bumps into its underside");
+                // Out of a plain jump's reach, so it reads as a secret.
+                Assert.Greater(rise, Arc.MaxHeight(V1) + 0.25f);
+            }
+        }
+
+        [Test]
+        public void VillageLedgeIsADoubleJumpUp()
+        {
+            float rise = VillageLayout.LedgeTop - VillageLayout.GroundTop;
+            Assert.GreaterOrEqual(Arc.MaxHeight(V1, V2), rise + 0.25f);
+            Assert.Greater(rise, Arc.MaxHeight(V1) + 0.25f);
+            Assert.GreaterOrEqual(rise - VillageLayout.LedgeThickness, 1.95f);
+            foreach (var sp in VillageLayout.Spawns)
+                Assert.IsTrue(sp.X > VillageLayout.XMin + 1f && sp.X < VillageLayout.XMax - 1f, sp.Name);
+        }
+
+        [Test]
+        public void PickupNamesSayWhatTheyAre()
+        {
+            foreach (var m in CliffsideLayout.MarkersOf(CliffsideLayout.MarkerKind.Pickup))
+                Assert.IsTrue(m.Name.StartsWith("Notes ") || m.Name.StartsWith("Scroll ") || m.Name.StartsWith("Lore ") || m.Name.StartsWith("Item "), m.Name);
         }
 
         [Test]

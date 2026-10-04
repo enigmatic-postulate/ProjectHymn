@@ -22,6 +22,16 @@ namespace ProjectHymn.Gameplay
         public bool JumpHeld { get; private set; }
         /// <summary>Guard: parry an enemy hit by pressing on its beat (L / LB).</summary>
         public bool GuardPressed { get; private set; }
+        /// <summary>Talk / use a door: up (W, Up arrow, stick up).</summary>
+        public bool InteractPressed { get; private set; }
+        /// <summary>Use the quick-slot item (E / B).</summary>
+        public bool UseItemPressed { get; private set; }
+        /// <summary>Next item in the quick slot (Q / D-pad down).</summary>
+        public bool CycleItemPressed { get; private set; }
+        /// <summary>Open or close the pause menu (Esc / Start). Reported even while a menu blocks play.</summary>
+        public bool PausePressed { get; private set; }
+
+        float _lastMoveY;
         public bool SwapWeaponPressed { get; private set; }
         /// <summary>-1 / +1 when the animation offset keys are pressed this frame.</summary>
         public int OffsetNudge { get; private set; }
@@ -53,6 +63,10 @@ namespace ProjectHymn.Gameplay
                         - ((kb?.leftBracketKey.wasPressedThisFrame ?? false) || (gp?.dpad.left.wasPressedThisFrame ?? false) ? 1 : 0);
             TempoKey = kb == null ? 0 : kb.f1Key.wasPressedThisFrame ? 1 : kb.f2Key.wasPressedThisFrame ? 2
                      : kb.f3Key.wasPressedThisFrame ? 3 : kb.f4Key.wasPressedThisFrame ? 4 : 0;
+            bool upKey = (kb?.wKey.wasPressedThisFrame ?? false) || (kb?.upArrowKey.wasPressedThisFrame ?? false);
+            UseItemPressed = (kb?.eKey.wasPressedThisFrame ?? false) || (gp?.buttonEast.wasPressedThisFrame ?? false);
+            CycleItemPressed = (kb?.qKey.wasPressedThisFrame ?? false) || (gp?.dpad.down.wasPressedThisFrame ?? false);
+            PausePressed = (kb?.escapeKey.wasPressedThisFrame ?? false) || (gp?.startButton.wasPressedThisFrame ?? false);
 #else
             Move = Vector2.ClampMagnitude(new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")), 1f);
             StrikePressed = Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.JoystickButton2);
@@ -64,7 +78,24 @@ namespace ProjectHymn.Gameplay
             SwapWeaponPressed = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.JoystickButton6);
             OffsetNudge = (Input.GetKeyDown(KeyCode.RightBracket) ? 1 : 0) - (Input.GetKeyDown(KeyCode.LeftBracket) ? 1 : 0);
             TempoKey = Input.GetKeyDown(KeyCode.F1) ? 1 : Input.GetKeyDown(KeyCode.F2) ? 2 : Input.GetKeyDown(KeyCode.F3) ? 3 : Input.GetKeyDown(KeyCode.F4) ? 4 : 0;
+            bool upKey = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
+            UseItemPressed = Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton1);
+            CycleItemPressed = Input.GetKeyDown(KeyCode.Q);
+            PausePressed = Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton7);
 #endif
+            // Up on the stick counts once as it crosses the threshold.
+            InteractPressed = upKey || (Move.y > 0.6f && _lastMoveY <= 0.6f && !upKey && Mathf.Abs(Move.x) < 0.5f);
+            _lastMoveY = Move.y;
+
+            if (UiState.Blocking)
+            {
+                // A menu or dialogue is open: the player stands still and nothing reaches combat.
+                Move = Vector2.zero;
+                StrikePressed = SmashPressed = StepPressed = JumpPressed = JumpHeld = GuardPressed = false;
+                SwapWeaponPressed = InteractPressed = UseItemPressed = CycleItemPressed = false;
+                OffsetNudge = 0;
+                TempoKey = 0;
+            }
         }
     }
 }

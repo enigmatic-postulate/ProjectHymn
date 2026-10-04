@@ -30,7 +30,7 @@ namespace ProjectHymn.Gameplay
 
         void Awake()
         {
-            if (target != null) _player = target.GetComponent<PlatformerController>();
+            FindTarget();
             _distance = distance; _height = height; _lookHeight = lookHeight; _lookAhead = lookAhead;
         }
 
@@ -38,6 +38,20 @@ namespace ProjectHymn.Gameplay
         void OnDisable() { if (_player != null) _player.Respawned -= Snap; }
 
         void Start() => Snap();
+
+        /// <summary>
+        /// Follow the assigned target, or (when it is missing or switched off: each scene holds one player per class)
+        /// whichever player is active.
+        /// </summary>
+        void FindTarget()
+        {
+            if (target == null || !target.gameObject.activeInHierarchy)
+            {
+                var pc = FindAnyObjectByType<PlatformerController>();
+                target = pc != null ? pc.transform : null;
+            }
+            _player = target != null ? target.GetComponent<PlatformerController>() : null;
+        }
 
         public void Snap()
         {
@@ -50,6 +64,12 @@ namespace ProjectHymn.Gameplay
 
         void LateUpdate()
         {
+            if (target == null || !target.gameObject.activeInHierarchy)
+            {
+                if (_player != null) _player.Respawned -= Snap;
+                FindTarget();
+                if (_player != null) { _player.Respawned += Snap; Snap(); }
+            }
             if (target == null) return;
             float dt = Time.unscaledDeltaTime;
             var p = target.position;

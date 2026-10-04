@@ -76,6 +76,13 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
+        public void ShieldClassParriesOnGood()
+        {
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 10.12, 10.0, W, goodParries: true));
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, 10.2, 10.0, W, goodParries: true));
+        }
+
+        [Test]
         public void OutOfRangeWins()
         {
             Assert.AreEqual(DefenseResult.OutOfRange, ParryJudge.Resolve(false, 10.0, 10.0, W));
@@ -98,6 +105,18 @@ namespace ProjectHymn.Tests
             Assert.IsFalse(v.Damage(1, 1.5));
             Assert.IsTrue(v.Damage(1, 2.0));
             Assert.AreEqual(2, v.Hp);
+        }
+
+        [Test]
+        public void HealsUpToMaxButNotTheDead()
+        {
+            var v = new Vitality(5);
+            v.Damage(3, 0);
+            Assert.AreEqual(2, v.Heal(2));
+            Assert.AreEqual(4, v.Hp);
+            Assert.AreEqual(1, v.Heal(5));
+            v.Damage(9, 10);
+            Assert.AreEqual(0, v.Heal(2));
         }
 
         [Test]

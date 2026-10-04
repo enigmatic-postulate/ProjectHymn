@@ -232,7 +232,7 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         /// <summary>A small 4 x 4 m two-storey house behind the lane (stone ground floor, timber-framed upper floor, tiled roof).</summary>
-        static void House(Transform parent, Vector3 c)
+        public static void House(Transform parent, Vector3 c)
         {
             var root = new GameObject("House").transform;
             root.SetParent(parent, false);

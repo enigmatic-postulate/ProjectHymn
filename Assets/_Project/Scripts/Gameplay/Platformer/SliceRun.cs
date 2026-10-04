@@ -72,7 +72,7 @@ namespace ProjectHymn.Gameplay
 
         void Toast(string text, float seconds = 1.6f)
         {
-            if (toast == null) return;
+            if (toast == null) { ProjectHymn.UI.GameHud.Toast(text, seconds + 0.6f); return; }
             toast.text = text;
             _toastTime = seconds;
         }

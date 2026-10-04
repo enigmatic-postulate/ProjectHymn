@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectHymn.Core;
 using ProjectHymn.Gameplay;
 using ProjectHymn.Movement;
+using ProjectHymn.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -52,32 +53,17 @@ namespace ProjectHymn.EditorTools
             if (_village) EnvironmentArt.Dress(level, FrontZ);
             EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
 
+            foreach (var b in CliffsideLayout.Secrets) BuildBlock(level, b);
             var conductor = BuildConductor(theme);
 
-            // Player: swordsman on the platformer controller
+            // Players: one per class on the platformer controller (the session's class is kept at run time).
+            var db = HubBuilder.EnsureDatabase(weapons);
             var spawn = Marker(CliffsideLayout.MarkerKind.Spawn);
-            var player = new GameObject("Player", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
-                typeof(RhythmAnimator), typeof(SwordCombatController), typeof(PlayerGuard), typeof(PlayerHealth));
-            player.transform.position = new Vector3(spawn.X, spawn.Y + 0.05f, 0f);
-            var cc = player.GetComponent<CharacterController>();
-            cc.radius = 0.35f; cc.height = 1.8f; cc.center = new Vector3(0f, 0.9f, 0f);
-            cc.skinWidth = 0.04f; cc.stepOffset = 0.3f; cc.slopeLimit = 50f;
-            var visual = new GameObject("Visual").transform;
-            visual.SetParent(player.transform, false);
-            SetRef(player.GetComponent<PlatformerController>(), "visual", visual);
-            SwordCombatController combat;
-            if (_art)
-            {
-                combat = KayKitBuilder.RigHero(player, visual, conductor, weapons, locomotion, additive, out float hangDrop);
-                var pso = new SerializedObject(player.GetComponent<PlatformerController>());
-                pso.FindProperty("hangDrop").floatValue = hangDrop;
-                pso.ApplyModifiedPropertiesWithoutUndo();
-            }
-            else combat = RigSwordsman(player, visual, conductor, weapons, locomotion);
-            SetRef(player.GetComponent<PlayerGuard>(), "conductor", conductor);
-            SetRef(player.GetComponent<PlayerGuard>(), "animator", player.GetComponent<RhythmAnimator>());
+            var spawns = new GameObject("Spawns").transform;
+            HubBuilder.Spawn(spawns, "Start", new Vector3(spawn.X, spawn.Y, 0f));
+            var player = HubBuilder.BuildPlayers(new Vector3(spawn.X, spawn.Y, 0f), conductor, db, locomotion, additive, _art);
 
-            // Checkpoints, targets, goal, camera zones
+            // Checkpoints, targets, pickups, goal, camera zones
             Checkpoint first = null;
             foreach (var m in CliffsideLayout.Markers)
             {
@@ -91,25 +77,33 @@ namespace ProjectHymn.EditorTools
                     case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(level, new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
                     case CliffsideLayout.MarkerKind.Goal: BuildGoal(level, m); break;
                     case CliffsideLayout.MarkerKind.CameraZone: BuildCameraZone(level, m); break;
+                    case CliffsideLayout.MarkerKind.Pickup:
+                        HubBuilder.BuildPickup(level, m.Name, new Vector3(m.X, m.Y, 0f), "Cliffside", m.X < 20f ? 40 : m.X < 40f ? 60 : 80);
+                        break;
                 }
             }
 
-            // Camera
-            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener), typeof(SideScrollCamera));
-            camGo.tag = "MainCamera";
-            var cam = camGo.GetComponent<Camera>();
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.58f, 0.68f, 0.86f);
-            cam.fieldOfView = 38f;
-            cam.nearClipPlane = 0.3f;
-            cam.farClipPlane = 400f;
-            camGo.transform.position = player.transform.position + new Vector3(0f, 2.3f, -11f);
-            SetRef(camGo.GetComponent<SideScrollCamera>(), "target", player.transform);
+            // The path home, at the west end of the beach.
+            var homeGo = new GameObject("Path to the Village", typeof(SceneDoor));
+            homeGo.transform.SetParent(level, false);
+            homeGo.transform.position = new Vector3(-8.6f, 0f, 0f);
+            var home = homeGo.GetComponent<SceneDoor>();
+            home.scene = "Village"; home.spawn = "FromCliffside"; home.saveOnArrival = true; home.prompt = "Back to the village"; home.range = 1.2f;
+            if (_village) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
 
-            var fx = BuildFx(conductor, combat, player, camGo.GetComponent<SideScrollCamera>(), additive);
+            // Camera, effects, HUD (the minimal HUD builds itself; the old one is the debug HUD)
+            var cam = HubBuilder.BuildCamera(player.transform.position);
+            var fx = BuildFx(conductor, null, null, cam, additive);
             fx.AddComponent<DefenseFeedback>();
-            var hud = BuildHud(conductor, combat);
-            BuildRunStatus(hud, player.GetComponent<PlatformerController>());
+            var hud = BuildHud(conductor, null);
+            BuildRunStatus(hud);
+            var debugParts = new List<GameObject>();
+            foreach (Transform t in hud.transform)
+                if (t.name != "Calibration" && t.name != "Judgement" && t.name != "Chain") debugParts.Add(t.gameObject);
+            var dbg = hud.gameObject.AddComponent<DebugHud>();
+            SetList(dbg, "parts", debugParts);
+            HubBuilder.BuildGameUi(hub: false);
+            new GameObject("Stage Director", typeof(StageDirector));
 
             if (theme == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
@@ -119,7 +113,7 @@ namespace ProjectHymn.EditorTools
             Debug.Log("[Project Hymn] Cliffside slice built. A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
                       "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
-                      "Shift dash, Tab weapon, R restart, F1-F4 tempos.");
+                      "W / Up uses doors, E drinks the quick item, Q changes it, Esc pauses. Shift dash, R restart, F1-F4 tempos, F9 debug HUD.");
         }
 
         static bool _art, _village;
@@ -132,7 +126,7 @@ namespace ProjectHymn.EditorTools
 
         // ---------------- Lighting ----------------
 
-        static void BuildLighting()
+        internal static void BuildLighting()
         {
             // Late-afternoon sun from over the camera's shoulder so the cliff faces read; soft sky fill; distance haze.
             var sun = new GameObject("Sun", typeof(Light));
@@ -154,7 +148,7 @@ namespace ProjectHymn.EditorTools
 
         // ---------------- Geometry ----------------
 
-        static GameObject Box(Transform parent, string name, Vector3 min, Vector3 max, uint color, bool collider, float smoothness = 0.1f)
+        internal static GameObject Box(Transform parent, string name, Vector3 min, Vector3 max, uint color, bool collider, float smoothness = 0.1f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -174,7 +168,9 @@ namespace ProjectHymn.EditorTools
             bool ground = b.Kind == CliffsideLayout.Kind.Ground;
             bool wall = b.Kind == CliffsideLayout.Kind.Wall;
             bool pillar = b.Kind == CliffsideLayout.Kind.Pillar;
-            float front = pillar ? -1.4f : FrontZ, back = pillar ? 1.4f : BackZ;
+            bool ledge = b.Kind == CliffsideLayout.Kind.Ledge;
+            float front = pillar || ledge ? -1.4f : FrontZ, back = pillar || ledge ? 1.4f : BackZ;
+            float bottom = ledge ? b.Top - CliffsideLayout.LedgeThickness : Bottom;
             uint body = wall ? StoneDark : pillar ? StoneWarm : Stone;
 
             if (_village)
@@ -182,8 +178,8 @@ namespace ProjectHymn.EditorTools
                 // Art pass: kit stone with world-space UVs, grass (sand on the beach) on top.
                 var sides = wall ? EnvironmentArt.DarkStone : pillar ? EnvironmentArt.Pillar : EnvironmentArt.Stone;
                 var top = ground ? EnvironmentArt.Sand : EnvironmentArt.Grass;
-                EnvironmentArt.Block(root, $"Rock {b.Name}", new Vector3(b.XMin, Bottom, front), new Vector3(b.XMax, b.Top, back), sides, top, 3.2f, 5f, collider: true);
-                if (!ground && !wall)
+                EnvironmentArt.Block(root, $"Rock {b.Name}", new Vector3(b.XMin, bottom, front), new Vector3(b.XMax, b.Top, back), sides, top, 3.2f, 5f, collider: true);
+                if (!ground && !wall && !ledge)
                 {
                     float o = 0.12f;
                     EnvironmentArt.Block(root, $"Lip {b.Name}", new Vector3(b.XMin - o, b.Top - 0.4f, front - o), new Vector3(b.XMax + o, b.Top + 0.02f, front + 0.6f),
@@ -193,8 +189,8 @@ namespace ProjectHymn.EditorTools
             }
 
             // The solid block the player walks on and climbs.
-            Box(root, "Rock", new Vector3(b.XMin, Bottom, front), new Vector3(b.XMax, b.Top, back), body, collider: true);
-            if (wall) return;
+            Box(root, "Rock", new Vector3(b.XMin, bottom, front), new Vector3(b.XMax, b.Top, back), body, collider: true);
+            if (wall || ledge) return;
 
             // Cap: grass (sand on the beach) overhanging the lip a little; visual only, flush with the walkable top.
             float lip = 0.12f;
@@ -357,22 +353,13 @@ namespace ProjectHymn.EditorTools
             }
         }
 
-        static void BuildRunStatus(Canvas hud, PlatformerController player)
+        static void BuildRunStatus(Canvas hud)
         {
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var status = NewText("Run Status", hud.transform, font, 26, new Vector2(0.5f, 1f), new Vector2(0, -40), new Vector2(600, 36));
             status.color = new Color(0.92f, 0.94f, 1f);
-            var toast = NewText("Toast", hud.transform, font, 48, new Vector2(0.5f, 0.5f), new Vector2(0, 140), new Vector2(1400, 64));
-            toast.color = new Color(1f, 0.9f, 0.55f, 0f);
-            var hearts = NewText("Hearts", hud.transform, font, 40, new Vector2(0f, 1f), new Vector2(230, -130), new Vector2(400, 50));
-            hearts.alignment = TextAnchor.MiddleLeft;
-            hearts.supportRichText = true;
             var run = hud.gameObject.AddComponent<SliceRun>();
-            SetRef(run, "hearts", hearts);
-            SetRef(run, "health", player.GetComponent<PlayerHealth>());
-            SetRef(run, "player", player);
-            SetRef(run, "status", status);
-            SetRef(run, "toast", toast);
+            SetRef(run, "status", status);          // toasts go to the game HUD; the player is found at run time
         }
 
         static void SetBool(Object target, string field, bool value)

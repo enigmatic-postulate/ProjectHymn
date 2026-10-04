@@ -157,14 +157,15 @@ namespace ProjectHymn.EditorTools
             var fxGo = new GameObject("Sword FX", typeof(SwordFx), typeof(CombatFeedback), typeof(DamagePopups), typeof(TempoTester));
             SetRef(fxGo.GetComponent<SwordFx>(), "combat", combat);
             SetRef(fxGo.GetComponent<SwordFx>(), "additive", additive);
-            SetRef(fxGo.GetComponent<SwordFx>(), "player", player.transform);
+            if (player != null) SetRef(fxGo.GetComponent<SwordFx>(), "player", player.transform);
             SetRef(fxGo.GetComponent<SwordFx>(), "cameraRig", cameraRig);
             SetRef(fxGo.GetComponent<CombatFeedback>(), "combat", combat);
             SetRef(fxGo.GetComponent<CombatFeedback>(), "conductor", conductor);
             SetRef(fxGo.GetComponent<CombatFeedback>(), "cameraRig", cameraRig);
             SetRef(fxGo.GetComponent<DamagePopups>(), "font", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
             SetRef(fxGo.GetComponent<TempoTester>(), "conductor", conductor);
-            SetRef(fxGo.GetComponent<TempoTester>(), "input", player.GetComponent<PlayerInputReader>());
+            // Scenes with one player per class leave these empty: each finds the active player when it wakes.
+            if (player != null) SetRef(fxGo.GetComponent<TempoTester>(), "input", player.GetComponent<PlayerInputReader>());
             return fxGo;
         }
 

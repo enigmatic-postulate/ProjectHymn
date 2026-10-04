@@ -15,6 +15,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] Conductor conductor;
         [SerializeField] RhythmAnimator animator;
         [SerializeField] TimingWindows windows = TimingWindows.Default;
+        [Tooltip("A Good-timed guard parries too (the Knight's shield).")]
+        [SerializeField] bool goodParries;
 
         PlayerInputReader _input;
         ICombatBody _body;
@@ -22,7 +24,8 @@ namespace ProjectHymn.Gameplay
 
         /// <summary>Calibrated song time of the latest unanswered guard press (NaN = none).</summary>
         public double LastPressTime { get; private set; } = double.NaN;
-        public TimingWindows Windows => windows;
+        public TimingWindows Windows { get { var w = windows; w.scale = GameSettings.WindowScale; return w; } }
+        public bool GoodParries { get => goodParries; set => goodParries = value; }
 
         /// <summary>An enemy hit was resolved against the guard. Args: result, where the hit came from.</summary>
         public event Action<DefenseResult, Vector3> Defended;
@@ -50,7 +53,7 @@ namespace ProjectHymn.Gameplay
         /// <summary>Called by an enemy once a hit's parry window has closed.</summary>
         public DefenseResult Defend(bool inRange, double hitTime, Vector3 from)
         {
-            var r = ParryJudge.Resolve(inRange, LastPressTime, hitTime, windows);
+            var r = ParryJudge.Resolve(inRange, LastPressTime, hitTime, Windows, goodParries);
             if (r == DefenseResult.Parried || r == DefenseResult.Blocked) LastPressTime = double.NaN;
             if (r != DefenseResult.OutOfRange) Defended?.Invoke(r, from);
             return r;

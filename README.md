@@ -46,11 +46,26 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Hub & Loop slice (title, village, stage and back)
+
+Menu **Project Hymn → Build Hub & Loop**. It builds the game database and three scenes, puts them first in the build list (Title, Village, Cliffside), and opens Title. Press **Play** in Title for the whole loop. Pressing Play in any other scene starts **free play** (Knight, every sequence known, nothing saved).
+
+- **Title:** New Game (choose Knight or Barbarian), Continue (the save), Settings, Quit. The battle theme plays under it.
+- **Classes (the weapon is the class):** the **Knight** has sword and shield, 5 hearts, and Good-timed guards parry too. The **Barbarian** has the greatsword, 6 hearts and ×1.3 damage, but only Perfect and Great guards parry. Every scene holds one player per class; *Players* (PlayerSpawner) keeps the save's class and places it at the spawn point it arrived at. The class trainer in the village switches class.
+- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), class trainer, three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate to the cliffs. No music clock runs here, so swords are inert.
+- **Cliffside** now has Notes caches on the beach, tier 1 and the far ledge, a lore cairn on the beach, and the **Tempest scroll** on a high ledge over tier 3 (double jump). Enemies drop 20–40 Notes. Reaching the summit clears the stage and returns you to the village (saving); the path at the west end of the beach and the pause menu go back too.
+- **Sequences are learned:** a new game knows Crossing Cuts only. Scrolls (bought or found) teach Powerslice and Tempest; the Songbook in the pause menu lists what you know and the lore you have found.
+- **Items:** the quick slot (bottom left) holds a potion (heals 2) or a tonic (×1.25 damage for 16 beats). **E** uses it, **Q** changes it, or pick one under Items in the pause menu. Stacks hold 9.
+- **HUD:** hearts and Notes (top left), the quick item, sequence banners and toasts. Judgement and chain stay on screen; the rest of the prototype rhythm HUD is the debug HUD (Settings, or **F9**).
+- **Pause (Esc / Start):** stops the music and the world. Songbook, Items, Settings (volume, easy timing for wider windows, animation offset, debug HUD, latency calibration), Return to the village, Quit to title.
+- **Save:** `hymn_save.json` in Unity's persistent data folder (class, Notes, items, known sequences, lore, collected pickups, cleared stages, where you rested). Delete it to start over.
+- **Data:** classes and items are assets in `Data/Game` (`Resources/HymnDatabase` lists them and the shop's stock); the village layout is `Movement/VillageLayout.cs`; pickups in Cliffside are markers in `CliffsideLayout.cs` (the name says what they are).
+
 ## Art pass (CC0 packs)
 
 The Cliffside builder uses imported art when it finds it, and falls back to the generated placeholders otherwise.
 
-- **Characters (KayKit by Kay Lousberg, CC0):** the hero is the Knight with sword and shield (Tab: greatsword); the shield-knight enemy is the Skeleton Warrior with blade and large shield. Files live in `Art/Imported/KayKit` (Characters, Weapons, Animations).
+- **Characters (KayKit by Kay Lousberg, CC0):** the Knight (sword and shield) and the Barbarian (greatsword) are the two classes; villagers are the Mage, Rogue, hooded Rogue and Ranger, looping idle clips and turning to face you; the shield-knight enemy is the Skeleton Warrior with blade and large shield. Files live in `Art/Imported/KayKit` (Characters, Weapons, Animations).
 - **Animation on the beat:** every attack, the guard, idle, run, jump, fall and land are KayKit clips, baked by the builder into `Data/Clips` (per-bone samples). Each attack's impact frame (measured from the weapon hand's peak speed) is placed exactly on the judged beat: the wind-up is stretched over the beats before it and the follow-through over the beats after, so tempo still sets the speed. Footfalls of the run land on beats. Hanging and climbing use a base pose with the hands placed on the ledge by IK; the double jump still flips. Moves are in `Data/KayKit/Moves` (clip, impact frame, span in beats, damage, reach, trail colour).
 - **Environment (Quaternius Medieval Village MegaKit and Poly Haven boulders, CC0):** textured cliffs (generated meshes with world-space UVs), stone borders, vines, fences, crates, a house and a town gate at the summit, scanned boulders on the beach and as sea stacks. Files in `Art/Imported/Village` and `Art/Imported/Boulders`.
 - Weapons sit on the KayKit hand slots with no offset; if one is held wrongly, rotate it under `handslot.r` / `handslot.l` on the Player.
@@ -66,8 +81,12 @@ The Cliffside builder uses imported art when it finds it, and falls back to the 
 | Note 2 (heavy) | K | Y / Triangle |
 | Guard / parry (Cliffside) | L | LB / L1 |
 | Dash | Left Shift | RB / R1 |
+| Talk, shop, rest, use a door | W / Up | Stick up |
+| Use quick item / change it | E / Q | B / Circle, D-pad down |
+| Pause menu | Esc | Start / Options |
 | Restart the slice (Cliffside) | R | – |
-| Saber / broadsword | Tab | Select / View |
+| Saber / broadsword (M2 prototype scene only) | Tab | Select / View |
+| Rhythm debug HUD | F9 | – |
 | Animation offset | [ and ] | D-pad left / right |
 | Test tempos | F1 – F4 | – |
 | Calibrate latency | C, then tap J on 16 clicks | – |

@@ -65,7 +65,8 @@ namespace ProjectHymn.EditorTools.Art
                 light: ("Diagonal", "Horizontal"), heavy: "Chop", guard: "Guard",
                 crossing: new[] { "Diagonal", "Chop", "Horizontal" }, powerslice: new[] { "ShieldBash", "LeapChop" },
                 tempest: new[] { "Diagonal", "Horizontal", "Diagonal", "Kick", "Horizontal", "Diagonal", "Stab" });
-            var great = Weapon("Greatsword", "Greatsword", "Greatsword", "", "Melee_2H_Idle", 1.3f,
+            // Heft 1.0: the Barbarian class's damage multiplier (1.3) supplies the greatsword's weight.
+            var great = Weapon("Greatsword", "Greatsword", "Greatsword", "", "Melee_2H_Idle", 1f,
                 new[]
                 {
                     new M("Slice", "Great Slice", "Melee_2H_Attack_Slice", 12f, 0xffe08a, radius: 1.1f),
@@ -247,27 +248,38 @@ namespace ProjectHymn.EditorTools.Art
             trail.receiveShadows = false;
         }
 
+        /// <summary>Weapon models by the object name a <see cref="WeaponSet"/> asks for, with their trail widths.</summary>
+        static readonly Dictionary<string, (string fbx, float trail)> WeaponModels = new Dictionary<string, (string, float)>
+        {
+            ["Sword"] = ("sword_1handed.fbx", 0.22f),
+            ["Greatsword"] = ("sword_2handed_color.fbx", 0.3f),
+            ["Shield"] = ("shield_badge_color.fbx", 0f),
+        };
+
+        public static string CharacterFbx(string character) => $"{ArtLibrary.KayKit}/Characters/{character}.fbx";
+        public static bool HasCharacter(string character) => File.Exists(CharacterFbx(character));
+        static Material CharacterMat(string character) => Mat($"KayKit_{character}", $"{character.ToLowerInvariant()}_texture.png");
+        /// <summary>The weapons share the knight's texture atlas, whoever holds them.</summary>
+        static Material WeaponMat => Mat("KayKit_Knight", "knight_texture.png");
+
         /// <summary>
-        /// The KayKit Knight as the player's body: model, sword / greatsword / shield on the hand slots, trails,
-        /// and the RhythmAnimator wired to the KayKit rig. Returns the combat controller.
+        /// A KayKit adventurer (<paramref name="character"/>: Knight, Barbarian, ...) as the player's body: model, the
+        /// weapons its <paramref name="weapons"/> name on the hand slots, trails, and the RhythmAnimator wired to the
+        /// KayKit rig. Returns the combat controller.
         /// </summary>
         public static SwordCombatController RigHero(GameObject player, Transform visual, Conductor conductor, List<WeaponSet> weapons,
-                                                    LocomotionSet locomotion, Material additive, out float hangDrop)
+                                                    LocomotionSet locomotion, Material additive, out float hangDrop,
+                                                    string character = "Knight", float height = 1.85f)
         {
             var model = new GameObject("Model").transform;
             model.SetParent(visual, false);
-            var mat = Mat("KayKit_Knight", "knight_texture.png");
-            var (fit, rigRoot, body) = Place(ArtLibrary.KnightFbx, model, 1.85f, mat);
+            if (!HasCharacter(character)) character = "Knight";
+            var (fit, rigRoot, body) = Place(CharacterFbx(character), model, height, CharacterMat(character));
             var bones = rigRoot.GetComponentsInChildren<Transform>(true);          // before the weapons are added
 
             var handR = ArtLibrary.FindDeep(rigRoot, "handslot.r");
             var handL = ArtLibrary.FindDeep(rigRoot, "handslot.l");
-            string W(string f) => $"{ArtLibrary.KayKit}/Weapons/{f}";
-            var sword = Attach(W("sword_1handed.fbx"), handR, "Sword", mat);
-            var great = Attach(W("sword_2handed_color.fbx"), handR, "Greatsword", mat);
-            Attach(W("shield_badge_color.fbx"), handL, "Shield", mat);
-            if (sword != null) AddTip(sword, additive, 0.22f);
-            if (great != null) AddTip(great, additive, 0.3f);
+            AttachWeapons(weapons, handR, handL, additive);
 
             var anim = player.GetComponent<RhythmAnimator>();
             SetRef(anim, "conductor", conductor);
@@ -306,6 +318,51 @@ namespace ProjectHymn.EditorTools.Art
             SetRef(combat, "animator", anim);
             SetList(combat, "weapons", weapons);
             return combat;
+        }
+
+        static void AttachWeapons(List<WeaponSet> weapons, Transform handR, Transform handL, Material additive)
+        {
+            var done = new HashSet<string>();
+            foreach (var w in weapons)
+            {
+                if (w == null) continue;
+                foreach (var (name, hand) in new[] { (w.swordObject, handR), (w.offHandObject, handL) })
+                {
+                    if (string.IsNullOrEmpty(name) || hand == null || !done.Add(name) || !WeaponModels.TryGetValue(name, out var m)) continue;
+                    var go = Attach($"{ArtLibrary.KayKit}/Weapons/{m.fbx}", hand, name, WeaponMat);
+                    if (go != null && m.trail > 0f && additive != null) AddTip(go, additive, m.trail);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A posed KayKit adventurer with no gameplay: loops <paramref name="idle"/> and turns toward the player
+        /// (village folk, the title screen). <paramref name="props"/> are weapon object names to hold.
+        /// </summary>
+        public static GameObject BuildFigure(Transform parent, string name, string character, Vector3 position, float restYaw,
+                                             string idle = "Idle_A", string near = "Idle_B", float height = 1.8f, params string[] props)
+        {
+            var root = new GameObject(name, typeof(Villager));
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            if (!HasCharacter(character)) character = "Knight";
+            var (fit, rigRoot, model) = Place(CharacterFbx(character), body, height, CharacterMat(character));
+            var handR = ArtLibrary.FindDeep(rigRoot, "handslot.r");
+            var handL = ArtLibrary.FindDeep(rigRoot, "handslot.l");
+            foreach (var p in props)
+                if (WeaponModels.TryGetValue(p, out var m)) Attach($"{ArtLibrary.KayKit}/Weapons/{m.fbx}", p == "Shield" ? handL : handR, p, WeaponMat);
+            var v = root.GetComponent<Villager>();
+            SetRef(v, "rigRoot", rigRoot);
+            SetRef(v, "body", body);
+            SetRef(v, "idleClip", ArtLibrary.Clip(idle));
+            if (!string.IsNullOrEmpty(near)) SetRef(v, "nearClip", ArtLibrary.Clip(near));
+            var so = new SerializedObject(v);
+            so.FindProperty("restYaw").floatValue = restYaw;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            body.localRotation = Quaternion.Euler(0f, restYaw, 0f);
+            return root;
         }
 
         static void SetStrings(SerializedProperty p, string[] values)

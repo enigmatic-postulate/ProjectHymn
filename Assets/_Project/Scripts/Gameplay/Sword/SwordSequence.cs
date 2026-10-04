@@ -12,12 +12,17 @@ namespace ProjectHymn.Gameplay
     public class SwordSequence : ScriptableObject
     {
         public string displayName = "Sequence";
+        [Tooltip("Save key (CrossingCuts, Powerslice, Tempest): sequences are learned by key, for every class at once. Empty = from the name.")]
+        [SerializeField] string id = "";
         public List<NoteButton> notes = new List<NoteButton>();
         [Tooltip("One move per note, same order.")]
         public List<SwordMove> moves = new List<SwordMove>();
         [Tooltip("Damage multiplier on the hit that completes the rhythm.")]
         public float finisherMultiplier = 2f;
         public Color color = new Color(1f, 0.82f, 0.48f);
+
+        public string key => string.IsNullOrEmpty(id) ? displayName.Replace(" ", "") : id;
+        public string NotesText => string.Join("-", notes.ConvertAll(n => ((int)n).ToString()));
 
         public bool IsValid => notes.Count > 0 && moves.Count == notes.Count && !moves.Contains(null);
         public SequencePattern ToPattern() => new SequencePattern(displayName, notes.ToArray(), this);

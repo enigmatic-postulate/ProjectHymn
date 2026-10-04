@@ -66,6 +66,22 @@ namespace ProjectHymn.Gameplay
         readonly Dictionary<int, NoteResult> _pending = new Dictionary<int, NoteResult>();
         readonly Collider[] _hits = new Collider[16];
 
+        float _boost = 1f;
+        double _boostUntil = double.NegativeInfinity;
+
+        /// <summary>Class damage scale (the Barbarian hits harder).</summary>
+        public float DamageMultiplier { get; set; } = 1f;
+        /// <summary>A tonic: extra damage until a song time.</summary>
+        public void ApplyBoost(float multiplier, int beats)
+        {
+            if (conductor == null || !conductor.IsPlaying) return;
+            _boost = multiplier;
+            _boostUntil = conductor.SongTime + beats * conductor.CurrentBeat.SecondsPerBeat;
+        }
+        /// <summary>Tonics need the music clock (they last a number of beats).</summary>
+        public bool CanBoost => conductor != null && conductor.IsPlaying;
+        public bool Boosted => conductor != null && conductor.SongTime < _boostUntil;
+
         public GrooveMeter Groove { get; } = new GrooveMeter();
         public ScoreKeeper Score { get; } = new ScoreKeeper();
         public RhythmChain Chain => _chain;
@@ -88,14 +104,28 @@ namespace ProjectHymn.Gameplay
 
         void Start() => SelectWeapon(0);
 
+        /// <summary>Re-read which sequences the player knows (a scroll was learned).</summary>
+        public void RefreshSequences() => SelectWeapon(_weaponIndex);
+
+        void OnSessionChanged()
+        {
+            int known = 0;
+            if (Weapon != null) foreach (var s in Weapon.sequences) if (s != null && Knows(s)) known++;
+            if (known != _chain.Sequences.Count) RefreshSequences();
+        }
+
+        static bool Knows(SwordSequence s) => !GameSession.Exists || GameSession.Instance.FreePlay || GameSession.Instance.Data.Knows(s.key);
+
         void OnEnable()
         {
+            if (GameSession.Exists) GameSession.Instance.Changed += OnSessionChanged;
             if (animator != null) animator.Impact += OnImpact;
             if (conductor != null) conductor.SongStarted += OnSongStarted;
         }
 
         void OnDisable()
         {
+            if (GameSession.Exists) GameSession.Instance.Changed -= OnSessionChanged;
             if (animator != null) animator.Impact -= OnImpact;
             if (conductor != null) conductor.SongStarted -= OnSongStarted;
         }
@@ -112,7 +142,7 @@ namespace ProjectHymn.Gameplay
             _weaponIndex = ((index % weapons.Count) + weapons.Count) % weapons.Count;
             var w = Weapon;
             var patterns = new List<SequencePattern>();
-            foreach (var s in w.sequences) if (s != null && s.IsValid) patterns.Add(s.ToPattern());
+            foreach (var s in w.sequences) if (s != null && s.IsValid && Knows(s)) patterns.Add(s.ToPattern());
             _chain.SetSequences(patterns);
             _pending.Clear();
             if (animator != null) animator.SetWeapon(w);
@@ -137,7 +167,8 @@ namespace ProjectHymn.Gameplay
             var w = Weapon;
             if (w == null || animator == null) return;
             var map = conductor.Map;
-            var judge = BeatJudge.Judge(map, pressTime, windows);
+            var win = windows; win.scale = GameSettings.WindowScale;
+            var judge = BeatJudge.Judge(map, pressTime, win);
             var step = _chain.Register(judge.Beat.Index, button, judge.IsOnBeat);
 
             SwordSequence seq = step.Sequence >= 0 && step.Sequence < _chain.Sequences.Count
@@ -189,6 +220,7 @@ namespace ProjectHymn.Gameplay
             {
                 damage = move.damage * Weapon.damageScale * BeatJudge.DamageMultiplier(note.Judge.Judgement) * Groove.DamageMultiplier;
                 if (completed) damage *= note.Sequence.finisherMultiplier;
+                damage *= DamageMultiplier * (Boosted ? _boost : 1f);
             }
 
             int hit = 0;

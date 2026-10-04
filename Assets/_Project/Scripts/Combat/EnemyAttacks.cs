@@ -107,13 +107,13 @@ namespace ProjectHymn.Combat
     public static class ParryJudge
     {
         /// <param name="guardPressTime">Calibrated song time of the latest guard press (NaN if none).</param>
-        public static DefenseResult Resolve(bool inRange, double guardPressTime, double hitTime, TimingWindows w)
+        public static DefenseResult Resolve(bool inRange, double guardPressTime, double hitTime, TimingWindows w, bool goodParries = false)
         {
             if (!inRange) return DefenseResult.OutOfRange;
             if (double.IsNaN(guardPressTime)) return DefenseResult.Hit;
             double d = Math.Abs(guardPressTime - hitTime);
             if (d <= w.Great) return DefenseResult.Parried;
-            if (d <= w.Good) return DefenseResult.Blocked;
+            if (d <= w.Good) return goodParries ? DefenseResult.Parried : DefenseResult.Blocked;   // the Knight's shield
             return DefenseResult.Hit;
         }
 
@@ -144,5 +144,14 @@ namespace ProjectHymn.Combat
         }
 
         public void Refill() { Hp = Max; _graceUntil = double.NegativeInfinity; }
+
+        /// <summary>Restore up to <paramref name="amount"/> (not past Max, not when dead). Returns how much was restored.</summary>
+        public int Heal(int amount)
+        {
+            if (IsDead || amount <= 0) return 0;
+            int before = Hp;
+            Hp = Math.Min(Max, Hp + amount);
+            return Hp - before;
+        }
     }
 }
