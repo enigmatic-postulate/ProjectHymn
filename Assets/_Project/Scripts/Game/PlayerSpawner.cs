@@ -57,6 +57,7 @@ namespace ProjectHymn.Gameplay
                 if (combat != null) combat.DamageMultiplier = def.damage;
             }
             session.PendingSpawn = null;
+            var hud = ProjectHymn.UI.GameHud.Instance;      // hearts, Notes and the quick item from the first frame
         }
     }
 }
