@@ -60,6 +60,10 @@ namespace ProjectHymn.Gameplay
                     _src.PlayOneShot(_block, volume * 0.8f);
                     if (popups != null) popups.Show(at, "BLOCK", new Color(0.7f, 0.85f, 1f), 1f);
                     break;
+                case DefenseResult.Dodged:
+                    _src.PlayOneShot(_guard, volume * 0.6f);
+                    if (popups != null) popups.Show(at, "DODGE", new Color(0.6f, 1f, 0.75f), 1f);
+                    break;
             }
         }
 

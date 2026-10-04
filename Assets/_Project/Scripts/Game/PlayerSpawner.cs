@@ -51,8 +51,6 @@ namespace ProjectHymn.Gameplay
             {
                 var health = Active.GetComponent<PlayerHealth>();
                 if (health != null) health.SetMaxHearts(def.hearts);
-                var guard = Active.GetComponent<PlayerGuard>();
-                if (guard != null) guard.GoodParries = def.goodParries;
                 var combat = Active.GetComponent<SwordCombatController>();
                 if (combat != null) combat.DamageMultiplier = def.damage;
             }

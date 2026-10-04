@@ -94,6 +94,7 @@ namespace ProjectHymn.Gameplay
                 c.a = Mathf.Clamp01(_toastTime * 2f);
                 toast.color = c;
             }
+            if (RestartPressed() && FindAnyObjectByType<StageDirector>() is StageDirector director) { director.Restart(); return; }
             if (RestartPressed() && player != null)
             {
                 player.SetRespawn(_start);

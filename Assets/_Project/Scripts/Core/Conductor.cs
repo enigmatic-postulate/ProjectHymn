@@ -47,6 +47,21 @@ namespace ProjectHymn.Core
         /// <summary>Song time corrected for the player's audio/input latency. Judge input against this.</summary>
         public double InputSongTime => SongTime - CalibrationSeconds;
 
+        /// <summary>
+        /// Calibrated song time at a moment on the <c>Time.realtimeSinceStartupAsDouble</c> clock, such as the moment an
+        /// input event happened. Judging presses by their own time rather than the frame they were read in removes up to a
+        /// frame (16.7 ms at 60 fps) of error, which True Perfect (\u00b115 ms) can't afford.
+        /// </summary>
+        public double InputSongTimeAt(double realtime)
+        {
+            if (double.IsNaN(realtime) || IsPaused || !IsPlaying) return InputSongTime;
+            double dt = realtime - _songTimeRealtime;
+            if (dt > 0.25 || dt < -0.25) dt = 0.0;          // a stale stamp: fall back to the frame's time
+            return SongTime + dt - CalibrationSeconds;
+        }
+
+        double _songTimeRealtime;
+
         public double CalibrationSeconds { get; set; }
 
         public BeatInfo CurrentBeat { get; private set; }
@@ -196,6 +211,7 @@ namespace ProjectHymn.Core
             }
 
             SongTime = _smoothedDsp - _dspSongStart - song.firstBeatOffset;
+            _songTimeRealtime = Time.realtimeSinceStartupAsDouble;
 
             double beatPos = Map.TimeToBeat(SongTime);
             long beatIndex = (long)Math.Floor(beatPos);

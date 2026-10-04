@@ -71,16 +71,16 @@ namespace ProjectHymn.EditorTools
 
             var knight = Asset<ClassDefinition>($"{DataDir}/Classes/Knight.asset");
             knight.id = "knight"; knight.displayName = "Knight";
-            knight.description = "Sword and shield. Quick cuts, and the shield turns even a Good guard into a parry.";
-            knight.hearts = 5; knight.damage = 1f; knight.goodParries = true;
+            knight.description = "Sword and shield. Quick cuts and a steady guard.";
+            knight.hearts = 5; knight.damage = 1f;
             knight.weapon = weapons.Count > 0 ? weapons[0] : null;
             knight.startingSequences = new List<string> { "CrossingCuts" };
             EditorUtility.SetDirty(knight);
 
             var barbarian = Asset<ClassDefinition>($"{DataDir}/Classes/Barbarian.asset");
             barbarian.id = "barbarian"; barbarian.displayName = "Barbarian";
-            barbarian.description = "Greatsword. Heavier blows and a sixth heart, but only Perfect and Great guards parry.";
-            barbarian.hearts = 6; barbarian.damage = 1.3f; barbarian.goodParries = false;
+            barbarian.description = "Greatsword. Heavier blows and a sixth heart.";
+            barbarian.hearts = 6; barbarian.damage = 1.3f;
             barbarian.weapon = weapons.Count > 1 ? weapons[1] : knight.weapon;
             barbarian.startingSequences = new List<string> { "CrossingCuts" };
             EditorUtility.SetDirty(barbarian);

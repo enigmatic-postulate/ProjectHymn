@@ -53,8 +53,16 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float cameraYaw = 14f;
         [SerializeField] float turnSpeed = 1440f;
 
+        [Header("Dodge")]
+        [Tooltip("A roll along the lane (Shift / RT). Its invulnerable frames are the guard's business (PlayerGuard).")]
+        [SerializeField] float dodgeDistance = 2.8f;
+        [SerializeField] float dodgeSeconds = 0.4f;
+        [SerializeField] float dodgeCooldown = 0.2f;
+
         [Header("Respawn")]
         [SerializeField] float killY = CliffsideLayout.KillY;
+        [Tooltip("Off: a fall below the kill height raises FellOut and the stage decides (it restarts the stage).")]
+        [SerializeField] bool respawnOnFall = true;
 
         CharacterController _cc;
         PlayerInputReader _input;
@@ -68,6 +76,8 @@ namespace ProjectHymn.Gameplay
         Vector3 _climbFrom, _climbTo;
         Vector3 _respawn;
         Checkpoint _checkpoint;
+        float _dodgeDir, _dodgeCooldownLeft;
+        bool _fellOut;
 
         public LocoState State => _state;
         public float StateTime => _stateTime;
@@ -80,7 +90,10 @@ namespace ProjectHymn.Gameplay
         public float HangDrop { get => hangDrop; set => hangDrop = value; }
         public Vector2 Facing => new Vector2(_face, 0f);
         public bool Attacking { get; set; }
-        public bool CanAttack => _state != LocoState.Hang && _state != LocoState.Climb;
+        public bool CanAttack => _state != LocoState.Hang && _state != LocoState.Climb && _state != LocoState.Dodge && !_fellOut;
+        public bool IsDodging => _state == LocoState.Dodge;
+        public float DodgeSeconds => dodgeSeconds;
+        public bool RespawnOnFall { get => respawnOnFall; set => respawnOnFall = value; }
         public float RunSpeed => runSpeed;
         public Checkpoint CurrentCheckpoint => _checkpoint;
 
@@ -90,6 +103,8 @@ namespace ProjectHymn.Gameplay
         public event Action LedgeGrabbed;
         public event Action Respawned;
         public event Action<Checkpoint> CheckpointReached;
+        /// <summary>Fell below the kill height with <see cref="RespawnOnFall"/> off (the stage restarts).</summary>
+        public event Action FellOut;
 
         JumpArc Arc => new JumpArc(gravity, fallMultiplier, maxFallSpeed);
 
@@ -110,17 +125,24 @@ namespace ProjectHymn.Gameplay
         {
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
+            if (_fellOut) return;
             _stateTime += dt;
             _grabCooldown -= dt;
+            _dodgeCooldownLeft -= dt;
 
             switch (_state)
             {
                 case LocoState.Hang: UpdateHang(); break;
                 case LocoState.Climb: UpdateClimb(); break;
+                case LocoState.Dodge: UpdateDodge(dt); break;
                 default: UpdateMove(dt); break;
             }
 
-            if (transform.position.y < killY) Respawn();
+            if (transform.position.y < killY)
+            {
+                if (respawnOnFall) Respawn();
+                else { _fellOut = true; FellOut?.Invoke(); }
+            }
             TurnVisual(dt);
         }
 
@@ -186,6 +208,39 @@ namespace ProjectHymn.Gameplay
             else if (_state == LocoState.Jump && _vel.y < 0f) SetState(LocoState.Fall);
             else if (_state == LocoState.AirJump && _vel.y < -2f && _stateTime > 0.45f) SetState(LocoState.Fall);
             TryGrabLedge();
+        }
+
+        // ---------------- Dodge ----------------
+
+        /// <summary>
+        /// Roll along the lane in <paramref name="direction"/> (-1 / +1; 0 = the way the player faces). Only from the
+        /// ground and not while hanging or climbing. Returns false if it can't start.
+        /// </summary>
+        public bool TryDodge(float direction)
+        {
+            if (_fellOut || _dodgeCooldownLeft > 0f || _cc == null || !_cc.enabled) return false;
+            if (_state != LocoState.Idle && _state != LocoState.Run && _state != LocoState.Land) return false;
+            if (!_cc.isGrounded) return false;
+            _dodgeDir = direction > 0.1f ? 1f : direction < -0.1f ? -1f : _face;
+            _face = _dodgeDir > 0f ? 1 : -1;
+            Attacking = false;
+            SetState(LocoState.Dodge);
+            return true;
+        }
+
+        void UpdateDodge(float dt)
+        {
+            float k = Mathf.Clamp01(_stateTime / Mathf.Max(0.05f, dodgeSeconds));
+            // Fast out of the start, easing over the last third.
+            float speed = dodgeDistance / Mathf.Max(0.05f, dodgeSeconds) * (k < 0.66f ? 1.2f : Mathf.Lerp(1.2f, 0.3f, (k - 0.66f) / 0.34f));
+            _vel.x = _dodgeDir * speed;
+            if (_cc.isGrounded && _vel.y <= 0f) _vel.y = -2f; else _vel.y = Arc.Step(_vel.y, dt);
+            var flags = _cc.Move(new Vector3(_vel.x, _vel.y, 0f) * dt);
+            if ((flags & CollisionFlags.Sides) != 0 && SideBlocked()) _vel.x = 0f;
+            if (k < 1f) return;
+            _dodgeCooldownLeft = dodgeCooldown;
+            _vel.x *= 0.4f;
+            SetState(_cc.isGrounded ? (Mathf.Abs(_vel.x) > 0.4f ? LocoState.Run : LocoState.Idle) : LocoState.Fall);
         }
 
         bool SideBlocked() =>
@@ -323,6 +378,7 @@ namespace ProjectHymn.Gameplay
 
         public void Respawn()
         {
+            _fellOut = false;
             Teleport(_respawn, keepDisabled: false);
             _vel = Vector3.zero;
             _airHang = 0f;

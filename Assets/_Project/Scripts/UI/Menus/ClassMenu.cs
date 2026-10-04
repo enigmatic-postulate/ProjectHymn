@@ -54,7 +54,7 @@ namespace ProjectHymn.UI
             var sb = new StringBuilder();
             sb.Append(c.description).Append("\n\n");
             sb.Append($"<color=#ff5a4a>{new string('♥', c.hearts)}</color>   damage ×{c.damage:0.0#}   ");
-            sb.Append(c.goodParries ? "shield: a Good guard parries" : "guard: a Good guard blocks").Append("\n");
+            sb.Append("guard: Perfect parries, Great or Good blocks").Append("\n");
             if (c.weapon != null)
                 foreach (var s in c.weapon.sequences)
                     if (s != null)

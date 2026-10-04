@@ -26,7 +26,7 @@ namespace ProjectHymn.Combat
     {
         /// <summary>Consecutive on-beat notes so far, including this one (0 after an off-beat note).</summary>
         public readonly int ChainLength;
-        /// <summary>GDD M2: single notes do nothing; from the second note of a chain on, hits deal damage.</summary>
+        /// <summary>GDD update 3: every note deals damage (off-beat notes at 25%). Always true; kept for callers.</summary>
         public readonly bool DealsDamage;
         /// <summary>Index of the sequence this note is following (-1 = none: a plain cut).</summary>
         public readonly int Sequence;
@@ -48,7 +48,7 @@ namespace ProjectHymn.Combat
     /// The M2 rhythm rules, pure C#:
     /// - A chain is a run of on-beat notes on consecutive beats. A gap of a beat or more starts a new chain;
     ///   an off-beat note (or a second press on the same beat) breaks it.
-    /// - Damage needs rhythm: the first note of a chain never deals damage, every later note does.
+    /// - Every note deals damage (GDD update 3); rhythm decides the combo, not whether a note hits.
     /// - The chain's most recent notes are matched against the sequences (1-2-1, 2-2, 1-1-1-2-1-1-1...): the longest
     ///   tail of the chain that is the start of a sequence decides which move plays. Finishing a sequence completes it;
     ///   the chain keeps going and the next note starts matching afresh.
@@ -92,7 +92,7 @@ namespace ProjectHymn.Combat
             if (!onBeat || beatIndex == _lastBeat)
             {
                 Reset();
-                return new ChainStep(0, false, -1, -1, false, broke: true);
+                return new ChainStep(0, true, -1, -1, false, broke: true);
             }
 
             if (_lastBeat != long.MinValue && beatIndex == _lastBeat + 1) ChainLength++;
@@ -113,7 +113,7 @@ namespace ProjectHymn.Combat
             bool completed = seq >= 0 && _tail.Count == _sequences[seq].Length;
             CurrentSequence = seq;
             CurrentStep = step;
-            var result = new ChainStep(ChainLength, ChainLength >= 2, seq, step, completed, broke: false);
+            var result = new ChainStep(ChainLength, true, seq, step, completed, broke: false);
             if (completed)
             {
                 SequenceCompleted?.Invoke(_sequences[seq]);

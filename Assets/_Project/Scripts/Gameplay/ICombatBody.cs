@@ -20,7 +20,7 @@ namespace ProjectHymn.Gameplay
         void AttackStarted(bool onBeat);
     }
 
-    public enum LocoState { Idle, Run, Jump, AirJump, Fall, Land, Hang, Climb }
+    public enum LocoState { Idle, Run, Jump, AirJump, Fall, Land, Hang, Climb, Dodge }
 
     /// <summary>Movement state the animator layers under the sword moves.</summary>
     public interface ILocomotionSource

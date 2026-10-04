@@ -28,7 +28,7 @@ namespace ProjectHymn.Gameplay
     public readonly struct ImpactInfo
     {
         public readonly NoteResult Note;
-        public readonly float Damage;          // 0 for single notes and off-beat notes
+        public readonly float Damage;          // every note deals damage; off-beat notes 25%
         public readonly int TargetsHit;
         public readonly Vector3 Point;
         public readonly bool CompletedSequence;
@@ -45,7 +45,7 @@ namespace ProjectHymn.Gameplay
     /// The M2 sword prototype's combat loop:
     /// press 1 or 2 → judge against the Conductor → the rhythm chain decides the move (a step of 1-2-1, 2-2,
     /// 1-1-1-2-1-1-1, or a lone cut) → the RhythmAnimator plays it with its hit on the beat → at the hit, damage is
-    /// applied only if the note was on the beat and continued a chain (single notes do nothing) → finishing a
+    /// applied for every note, scaled by its timing (off the beat 25%, True Perfect 200%) → finishing a
     /// sequence multiplies that last hit. Between notes the next move of the rhythm is anticipated so the swings flow.
     /// </summary>
     public class SwordCombatController : MonoBehaviour
@@ -157,8 +157,8 @@ namespace ProjectHymn.Gameplay
             if (_input.SwapWeaponPressed) SelectWeapon(_weaponIndex + 1);
             if (_input.OffsetNudge != 0 && animator != null) animator.AnimationOffsetMs += 10f * _input.OffsetNudge;
             if (_motor != null && !_motor.CanAttack) return;
-            if (_input.StrikePressed) Press(NoteButton.One, conductor.InputSongTime);
-            if (_input.SmashPressed) Press(NoteButton.Two, conductor.InputSongTime);
+            if (_input.StrikePressed) Press(NoteButton.One, conductor.InputSongTimeAt(_input.StrikeRealtime));
+            if (_input.SmashPressed) Press(NoteButton.Two, conductor.InputSongTimeAt(_input.SmashRealtime));
         }
 
         /// <summary>A note at a given (calibrated) song time. Public for tests and tools.</summary>
@@ -167,8 +167,7 @@ namespace ProjectHymn.Gameplay
             var w = Weapon;
             if (w == null || animator == null) return;
             var map = conductor.Map;
-            var win = windows; win.scale = GameSettings.WindowScale;
-            var judge = BeatJudge.Judge(map, pressTime, win);
+            var judge = BeatJudge.Judge(map, pressTime, windows);
             var step = _chain.Register(judge.Beat.Index, button, judge.IsOnBeat);
 
             SwordSequence seq = step.Sequence >= 0 && step.Sequence < _chain.Sequences.Count
@@ -214,14 +213,11 @@ namespace ProjectHymn.Gameplay
             Vector3 center = transform.position + new Vector3(facing.x, 0f, facing.y) * move.reach + Vector3.up * 1.05f;
             bool completed = note.Step.Completed && note.Sequence != null;
 
-            // GDD M2: damage only from rhythm — on the beat, and not the first note of a chain.
-            float damage = 0f;
-            if (note.OnBeat && note.Step.DealsDamage)
-            {
-                damage = move.damage * Weapon.damageScale * BeatJudge.DamageMultiplier(note.Judge.Judgement) * Groove.DamageMultiplier;
-                if (completed) damage *= note.Sequence.finisherMultiplier;
-                damage *= DamageMultiplier * (Boosted ? _boost : 1f);
-            }
+            // GDD update 3: every note hits. Off the beat 25%; on it 100-115%, a True Perfect 200%, and a finished
+            // sequence multiplies its last hit (a True Perfect finisher stacks: 2.0 x the finisher).
+            float damage = move.damage * Weapon.damageScale * BeatJudge.DamageMultiplier(note.Effective) * Groove.DamageMultiplier;
+            if (completed) damage *= note.Sequence.finisherMultiplier;
+            damage *= DamageMultiplier * (Boosted ? _boost : 1f);
 
             int hit = 0;
             Vector3 point = center;

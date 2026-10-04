@@ -105,6 +105,7 @@ namespace ProjectHymn.Gameplay
 
         static Color JudgementColor(Judgement j) => j switch
         {
+            Judgement.TruePerfect => new Color(0.65f, 1f, 1f),
             Judgement.Perfect => new Color(1f, 0.82f, 0.25f),
             Judgement.Great => new Color(0.95f, 0.95f, 1f),
             Judgement.Good => new Color(0.5f, 0.8f, 1f),
@@ -116,6 +117,12 @@ namespace ProjectHymn.Gameplay
             if (player == null) return;
             var feet = player.position + Vector3.up * 0.03f;
             if (n.OnBeat) Ring(feet, 0.25f, 1.1f, 0.35f, JudgementColor(n.Effective));
+            if (n.Effective == Judgement.TruePerfect)
+            {
+                // True Perfect: a second, wider white ring and a flash of light.
+                Ring(feet, 0.1f, 1.9f, 0.5f, Color.white);
+                Emit(_burst, player.position + Vector3.up * 1.1f, new Color(0.75f, 1f, 1f), 24);
+            }
             else Emit(_dust, feet + Vector3.up * 0.1f, new Color(0.5f, 0.5f, 0.55f, 0.6f), 10);
         }
 

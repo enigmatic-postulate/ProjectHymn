@@ -62,7 +62,7 @@ namespace ProjectHymn.Combat
 
         public static float RecoveryScale(Judgement j) => j switch
         {
-            Judgement.Perfect => 0.4f,
+            Judgement.TruePerfect or Judgement.Perfect => 0.4f,
             Judgement.Great => 0.6f,
             _ => 1.0f,
         };
@@ -79,7 +79,7 @@ namespace ProjectHymn.Combat
             double cancelOpen = j switch
             {
                 // Perfect/Great: cancel opens as early as the next beat's Good window.
-                Judgement.Perfect or Judgement.Great => nextBeatTime - windows.Good,
+                Judgement.TruePerfect or Judgement.Perfect or Judgement.Great => nextBeatTime - windows.Good,
                 // Good: a later cancel, from the next beat's Great window.
                 Judgement.Good => nextBeatTime - windows.Great,
                 _ => double.PositiveInfinity,
@@ -87,7 +87,7 @@ namespace ProjectHymn.Combat
             // Can never cancel before the hit frames have played.
             if (!double.IsPositiveInfinity(cancelOpen)) cancelOpen = Math.Max(cancelOpen, activeEnd);
 
-            return new ActionLock(inputTime, activeEnd, recoveryEnd, cancelOpen, j == Judgement.Perfect, winded);
+            return new ActionLock(inputTime, activeEnd, recoveryEnd, cancelOpen, j >= Judgement.Perfect, winded);
         }
     }
 }

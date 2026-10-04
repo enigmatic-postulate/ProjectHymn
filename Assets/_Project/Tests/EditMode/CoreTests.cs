@@ -73,7 +73,10 @@ namespace ProjectHymn.Tests
         readonly TempoMap _map = new TempoMap(new List<TempoSection> { new TempoSection(8, 120f, 4) }, false);
         readonly TimingWindows _w = TimingWindows.Default;
 
-        [TestCase(1.00, Judgement.Perfect)]
+        [TestCase(1.00, Judgement.TruePerfect)]
+        [TestCase(1.014, Judgement.TruePerfect)]
+        [TestCase(0.986, Judgement.TruePerfect)]
+        [TestCase(1.02, Judgement.Perfect)]
         [TestCase(1.04, Judgement.Perfect)]
         [TestCase(0.93, Judgement.Great)]
         [TestCase(1.12, Judgement.Good)]
@@ -92,10 +95,11 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
-        public void EasyModeWidensWindows()
+        public void TruePerfectFallsBackForOldAssets()
         {
-            var easy = _w; easy.scale = 1.5f;
-            Assert.AreEqual(Judgement.Good, BeatJudge.Judge(_map, 1.18, easy).Judgement);
+            var old = _w; old.truePerfect = 0f;                  // saved before True Perfect existed
+            Assert.AreEqual(0.015f, old.TruePerfect, 1e-6);
+            Assert.AreEqual(Judgement.TruePerfect, BeatJudge.Judge(_map, 1.01, old).Judgement);
         }
     }
 
@@ -243,11 +247,12 @@ namespace ProjectHymn.Tests
 
     public class DamageTableTests
     {
+        [TestCase(Judgement.TruePerfect, 2.0f)]
         [TestCase(Judgement.Perfect, 1.15f)]
         [TestCase(Judgement.Great, 1.10f)]
         [TestCase(Judgement.Good, 1.0f)]
-        [TestCase(Judgement.OffBeat, 1.0f)]
-        public void SmallDifferencesOnly(Judgement j, float expected)
+        [TestCase(Judgement.OffBeat, 0.25f)]
+        public void Update3DamageTable(Judgement j, float expected)
         {
             Assert.AreEqual(expected, BeatJudge.DamageMultiplier(j));
         }

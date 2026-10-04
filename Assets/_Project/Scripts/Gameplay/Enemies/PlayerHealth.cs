@@ -6,8 +6,8 @@ namespace ProjectHymn.Gameplay
 {
     /// <summary>
     /// The player's hit points (vertical slice 2): 5 by default, a short grace after each hit, knockback, a red
-    /// flash on the model. At zero the player respawns at the last checkpoint with full HP and every enemy still
-    /// standing resets.
+    /// flash on the model. At zero the stage restarts (GDD: no checkpoints); with test checkpoints on, the player
+    /// respawns at the last checkpoint with full HP and every enemy still standing resets.
     /// </summary>
     public class PlayerHealth : MonoBehaviour
     {
@@ -23,6 +23,9 @@ namespace ProjectHymn.Gameplay
         float _flash, _respawnAt = -1f;
         Color[][] _base;
         bool _tinted;
+
+        /// <summary>Off: at zero hearts only <see cref="Died"/> is raised and the stage restarts (no checkpoints).</summary>
+        public bool RespawnOnDeath { get; set; } = true;
 
         public int Hp => _vit != null ? _vit.Hp : maxHp;
         public int MaxHp => maxHp;
@@ -82,7 +85,7 @@ namespace ProjectHymn.Gameplay
             if (!_vit.IsDead) { var anim = GetComponent<RhythmAnimator>(); if (anim != null) anim.PlayHurt(); }
             if (_vit.IsDead)
             {
-                _respawnAt = Time.time + respawnDelay;
+                if (RespawnOnDeath) _respawnAt = Time.time + respawnDelay;
                 Died?.Invoke();
             }
             return true;

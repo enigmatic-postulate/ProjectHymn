@@ -65,10 +65,11 @@ namespace ProjectHymn.UI
         {
             _history[n.Judge.Beat.Index] = (n.Button, n.Effective);
             if (judgementText == null) return;
-            string label = n.Step.Broke && n.Judge.IsOnBeat ? "DOUBLE" : n.OnBeat ? n.Effective.ToString().ToUpperInvariant() : "OFF-BEAT";
+            string label = n.Step.Broke && n.Judge.IsOnBeat ? "DOUBLE" : !n.OnBeat ? "OFF-BEAT" : n.Effective == Judgement.TruePerfect ? "TRUE PERFECT" : n.Effective.ToString().ToUpperInvariant();
             judgementText.text = $"{label}  {n.Judge.OffsetMs:+0;-0;0} ms";
             judgementText.color = n.Effective switch
             {
+                Judgement.TruePerfect => new Color(0.6f, 1f, 1f),
                 Judgement.Perfect => Gold,
                 Judgement.Great => Color.white,
                 Judgement.Good => new Color(0.5f, 0.8f, 1f),
@@ -79,7 +80,6 @@ namespace ProjectHymn.UI
 
         void OnImpact(ImpactInfo i)
         {
-            if (i.Note.OnBeat && !i.Note.Step.DealsDamage && i.TargetsHit > 0) Banner("SINGLE NOTE — chain a second note to deal damage", 1.2f, small: true);
         }
 
         void OnSequence(SwordSequence s) => Banner($"{s.displayName.ToUpperInvariant()}!", 1.8f, color: s.color);
@@ -134,6 +134,7 @@ namespace ProjectHymn.UI
                 {
                     var c = h.j switch
                     {
+                        Judgement.TruePerfect => "#a0ffff",
                         Judgement.Perfect => "#ffd040",
                         Judgement.Great => "#ffffff",
                         Judgement.Good => "#80ccff",

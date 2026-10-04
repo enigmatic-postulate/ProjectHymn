@@ -39,7 +39,7 @@ namespace ProjectHymn.Combat
             _idle = 0f;
             float delta = j switch
             {
-                Judgement.Perfect => PerfectGain,
+                Judgement.TruePerfect or Judgement.Perfect => PerfectGain,
                 Judgement.Great => GreatGain,
                 Judgement.Good => GoodGain,
                 _ => -OffBeatLoss,

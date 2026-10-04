@@ -12,8 +12,6 @@ namespace ProjectHymn.Gameplay
         [TextArea] public string description = "";
         public int hearts = 5;
         public float damage = 1f;
-        [Tooltip("A Good-timed guard parries too (the shield), not just blocks.")]
-        public bool goodParries;
         public WeaponSet weapon;
         [Tooltip("Sequence keys known from the start.")]
         public List<string> startingSequences = new List<string> { "CrossingCuts" };

@@ -19,6 +19,7 @@ namespace ProjectHymn.Combat
 
         public int PointsFor(Judgement j) => j switch
         {
+            Judgement.TruePerfect => PerfectPoints * 2,
             Judgement.Perfect => PerfectPoints,
             Judgement.Great => GreatPoints,
             Judgement.Good => GoodPoints,

@@ -23,7 +23,7 @@ namespace ProjectHymn.Gameplay
 
         AudioSource[] _voices;
         int _nextVoice;
-        AudioClip _perfect, _great, _good, _thud, _finisher, _tick;
+        AudioClip _truePerfect, _perfect, _great, _good, _thud, _finisher, _tick;
 
         void Awake()
         {
@@ -75,6 +75,8 @@ namespace ProjectHymn.Gameplay
 
             int tonic = 72 + root; // tonic in octave 5
             _perfect = Synth.Chord("HitPerfect", new[] { tonic + 12, tonic + 19, tonic + 24 }, 0.28f, 14f, bright: true);
+            // True Perfect: its own sound above the Perfect chord (an octave higher, with a ring-out).
+            _truePerfect = Synth.Chord("HitTruePerfect", new[] { tonic + 19, tonic + 24, tonic + 28, tonic + 31, tonic + 36 }, 0.5f, 7f, bright: true);
             _great = Synth.Chord("HitGreat", new[] { tonic, tonic + 7 }, 0.18f, 22f, bright: false);
             _good = Synth.Chord("HitGood", new[] { tonic - 12 + third + 12 }, 0.12f, 30f, bright: false);
             _finisher = Synth.Chord("HitFinisher", new[] { tonic - 12, tonic - 5, tonic, tonic + third, tonic + 7 }, 0.6f, 6f, bright: true);
@@ -93,11 +95,13 @@ namespace ProjectHymn.Gameplay
             if (!i.DealtDamage) { PlayQuantized(_tick, 0.5f); return; }
             var clip = i.Note.Effective switch
             {
+                Judgement.TruePerfect => _truePerfect,
                 Judgement.Perfect => _perfect,
                 Judgement.Great => _great,
                 _ => _good,
             };
             PlayQuantized(clip, 1f);
+            if (i.Note.Effective == Judgement.TruePerfect && cameraRig != null) cameraRig.Shake(0.06f, 0.1f);
             if (i.Note.Move != null && i.Note.Move.effect == "power" && cameraRig != null) cameraRig.Shake(0.1f, 0.15f);
         }
 

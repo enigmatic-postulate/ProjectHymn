@@ -68,18 +68,32 @@ namespace ProjectHymn.Tests
         [Test]
         public void GradesByDistanceFromTheHit()
         {
-            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 10.03, 10.0, W));
-            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 9.92, 10.0, W));
-            Assert.AreEqual(DefenseResult.Blocked, ParryJudge.Resolve(true, 10.12, 10.0, W));
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 10.03, 10.0, W));     // Perfect parries
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 9.96, 10.0, W));
+            Assert.AreEqual(DefenseResult.Blocked, ParryJudge.Resolve(true, 9.92, 10.0, W));      // Great only blocks now
+            Assert.AreEqual(DefenseResult.Blocked, ParryJudge.Resolve(true, 10.12, 10.0, W));     // Good blocks
             Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, 10.2, 10.0, W));
             Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, double.NaN, 10.0, W));
         }
 
         [Test]
-        public void ShieldClassParriesOnGood()
+        public void OnlyPerfectParriesWithAnyBlockBonus()
         {
-            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 10.12, 10.0, W, goodParries: true));
-            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, 10.2, 10.0, W, goodParries: true));
+            // A class perk (the Fighter) widens the block window, never the parry.
+            Assert.AreEqual(DefenseResult.Blocked, ParryJudge.Resolve(true, 10.17, 10.0, W, blockBonus: 0.05));
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, 10.17, 10.0, W));
+            Assert.AreEqual(DefenseResult.Blocked, ParryJudge.Resolve(true, 10.06, 10.0, W, blockBonus: 0.05));
+        }
+
+        [Test]
+        public void DodgeFramesCoverTheHit()
+        {
+            Assert.AreEqual(DefenseResult.Dodged, ParryJudge.Resolve(true, double.NaN, 10.0, W, dodgeStart: 9.9, dodgeSeconds: 0.25));
+            Assert.AreEqual(DefenseResult.Dodged, ParryJudge.Resolve(true, double.NaN, 10.0, W, dodgeStart: 10.03, dodgeSeconds: 0.25));  // a touch late
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, double.NaN, 10.0, W, dodgeStart: 9.6, dodgeSeconds: 0.25));      // frames over
+            Assert.AreEqual(DefenseResult.Hit, ParryJudge.Resolve(true, double.NaN, 10.0, W, dodgeStart: 10.1, dodgeSeconds: 0.25));     // too late
+            // A guard that blocks or parries counts first.
+            Assert.AreEqual(DefenseResult.Parried, ParryJudge.Resolve(true, 10.0, 10.0, W, dodgeStart: 9.9, dodgeSeconds: 0.25));
         }
 
         [Test]

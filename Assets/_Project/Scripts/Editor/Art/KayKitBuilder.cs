@@ -171,6 +171,7 @@ namespace ProjectHymn.EditorTools.Art
             a.hangClip = ArtLibrary.Clip("Jump_Idle");
             a.hangClipTime = 0.5f;
             a.minStride = 0.4f;
+            a.dodgeClip = ArtLibrary.Clip("Dodge_Forward");
             a.hurt = Move("Hero", new M("Hurt", "Hurt", "Hit_A", 0f, 0xffffff, "guard"), 1f);
             a.hurt.keys = new List<MoveKey> { new MoveKey { beat = -0.05f }, new MoveKey { beat = 0f }, new MoveKey { beat = 0.9f } };
             a.hurt.activeStart = 1f; a.hurt.activeEnd = 0f;

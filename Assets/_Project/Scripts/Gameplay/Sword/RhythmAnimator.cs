@@ -202,6 +202,13 @@ namespace ProjectHymn.Gameplay
                     item.gameObject.SetActive(!string.IsNullOrEmpty(w.offHandObject) && item.name == w.offHandObject);
         }
 
+        /// <summary>Drop the move in progress (a dodge cuts an attack short); its impact never fires.</summary>
+        public void CancelAttack()
+        {
+            _current = null;
+            _anticipate = null;
+        }
+
         /// <summary>Drop every move and go back to the stance (song change, weapon swap).</summary>
         public void Stop()
         {
@@ -663,6 +670,14 @@ namespace ProjectHymn.Gameplay
                     float k = _loco.ClimbProgress;
                     if (k < 0.5f || L.landClip == null) HangPose(L);
                     else SampleClip(L.landClip, Mathf.Lerp(0.15f, 1f, (k - 0.5f) / 0.5f), false, _locoPose, _locoPos);
+                    return true;
+                }
+                case LocoState.Dodge:
+                {
+                    if (L.dodgeClip == null) { AirPose(L); return true; }
+                    float secs = _loco is PlatformerController pc ? pc.DodgeSeconds : 0.4f;
+                    float k = Mathf.Clamp01(t / Mathf.Max(0.05f, secs));
+                    SampleClip(L.dodgeClip, Mathf.Lerp(L.dodgeClipStart, L.dodgeClipEnd, k), false, _locoPose, _locoPos);
                     return true;
                 }
                 default:

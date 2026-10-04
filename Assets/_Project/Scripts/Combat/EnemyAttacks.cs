@@ -97,25 +97,36 @@ namespace ProjectHymn.Combat
         }
     }
 
-    public enum DefenseResult { Hit, Blocked, Parried, OutOfRange }
+    public enum DefenseResult { Hit, Blocked, Parried, OutOfRange, Dodged }
 
     /// <summary>
-    /// The player's guard against an enemy hit (vertical slice 2), judged against the hit's own time:
-    /// Perfect or Great timing parries (the enemy is staggered), Good only blocks, anything else is a hit.
-    /// Pure C#.
+    /// The player's defence against an enemy hit, judged against the hit's own time (GDD update 3):
+    /// a guard with Perfect timing parries (the enemy is staggered); Great or Good timing blocks; a dodge whose
+    /// invulnerable frames cover the hit dodges it; anything else is a hit. Pure C#.
     /// </summary>
     public static class ParryJudge
     {
         /// <param name="guardPressTime">Calibrated song time of the latest guard press (NaN if none).</param>
-        public static DefenseResult Resolve(bool inRange, double guardPressTime, double hitTime, TimingWindows w, bool goodParries = false)
+        /// <param name="dodgeStart">Calibrated song time the latest dodge began (NaN if none).</param>
+        /// <param name="dodgeSeconds">How long that dodge is invulnerable.</param>
+        /// <param name="blockBonus">Extra seconds of block window either side (a class perk, e.g. the Fighter).</param>
+        public static DefenseResult Resolve(bool inRange, double guardPressTime, double hitTime, TimingWindows w,
+                                            double dodgeStart = double.NaN, double dodgeSeconds = 0.0, double blockBonus = 0.0)
         {
             if (!inRange) return DefenseResult.OutOfRange;
-            if (double.IsNaN(guardPressTime)) return DefenseResult.Hit;
-            double d = Math.Abs(guardPressTime - hitTime);
-            if (d <= w.Great) return DefenseResult.Parried;
-            if (d <= w.Good) return goodParries ? DefenseResult.Parried : DefenseResult.Blocked;   // the Knight's shield
+            if (!double.IsNaN(guardPressTime))
+            {
+                double d = Math.Abs(guardPressTime - hitTime);
+                if (d <= w.Perfect) return DefenseResult.Parried;
+                if (d <= w.Good + blockBonus) return DefenseResult.Blocked;
+            }
+            if (Dodges(dodgeStart, dodgeSeconds, hitTime, w)) return DefenseResult.Dodged;
             return DefenseResult.Hit;
         }
+
+        /// <summary>The dodge's invulnerable frames cover the hit (a dodge may start up to a Perfect window late).</summary>
+        public static bool Dodges(double dodgeStart, double dodgeSeconds, double hitTime, TimingWindows w) =>
+            !double.IsNaN(dodgeStart) && hitTime >= dodgeStart - w.Perfect && hitTime <= dodgeStart + dodgeSeconds;
 
         /// <summary>When an attack can be resolved: once a late guard press could no longer count.</summary>
         public static double ResolveTime(double hitTime, TimingWindows w) => hitTime + w.Good;

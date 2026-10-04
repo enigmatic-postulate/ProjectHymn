@@ -46,6 +46,17 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Core Combat slice (GDD update 3)
+
+Rebuild with **Project Hymn → Build Hub & Loop**, then play Cliffside (from the village gate, or press Play in `Scenes/Cliffside.unity`).
+
+- **Every attack hits.** Timing sets the damage: **True Perfect** (±15 ms) 200%, Perfect (±45) 115%, Great (±90) 110%, Good (±135) 100%, off the beat 25%. Only on-beat notes on consecutive beats build combos and sequences; a finisher's multiplier stacks with True Perfect. True Perfect has its own chord, ring and flash.
+- **Presses are timed by the input event**, not the frame they were read in (Input System event times), so a 60 fps frame no longer blurs ±8 ms. Calibration (C) now takes the median of 16 taps and reports their spread; under ±15 ms is good enough for True Perfect. Settings has a fine audio offset in 1 ms steps.
+- **No Easy mode.** Windows are the same for everyone.
+- **Guard:** only Perfect timing parries (stagger, ×1.5 damage); Great and Good block. **Dodge** (Left Shift / RT) replaces the dash: a roll with 0.25 s of invulnerability; a hit those frames cover is dodged ("DODGE").
+- **No checkpoints:** dying or falling into the sea restarts the whole stage, timer included. **R** restarts too. For tuning, **F7** (or Settings → Checkpoints) brings the old checkpoints back.
+- **Stage timer and tally:** Cliffside's par is 1:15. Reaching the gate shows a results screen: time and time rank, the rank after its gates, hits by judgement, parries (count as Perfect), blocks and dodges (count as Great), hits taken, enemies, efficiency (14 attacks for a perfect run, a placeholder) and the mastery score. It's a debug screen: nothing affects progress until Rank & Class.
+
 ## Hub & Loop slice (title, village, stage and back)
 
 Menu **Project Hymn → Build Hub & Loop**. It builds the game database and three scenes, puts them first in the build list (Title, Village, Cliffside), and opens Title. Press **Play** in Title for the whole loop. Pressing Play in any other scene starts **free play** (Knight, every sequence known, nothing saved).
@@ -80,11 +91,12 @@ The Cliffside builder uses imported art when it finds it, and falls back to the 
 | Note 1 (light) | J | X / Square |
 | Note 2 (heavy) | K | Y / Triangle |
 | Guard / parry (Cliffside) | L | LB / L1 |
-| Dash | Left Shift | RB / R1 |
+| Dodge (roll, i-frames) | Left Shift | RT / R2 |
 | Talk, shop, rest, use a door | W / Up | Stick up |
 | Use quick item / change it | E / Q | B / Circle, D-pad down |
 | Pause menu | Esc | Start / Options |
-| Restart the slice (Cliffside) | R | – |
+| Restart the stage (Cliffside) | R | – |
+| Test checkpoints on / off | F7 | – |
 | Saber / broadsword (M2 prototype scene only) | Tab | Select / View |
 | Rhythm debug HUD | F9 | – |
 | Animation offset | [ and ] | D-pad left / right |

@@ -23,12 +23,13 @@ namespace ProjectHymn.Tests
         ChainStep On(long beat, NoteButton b) => _chain.Register(beat, b, true);
 
         [Test]
-        public void SingleNotesDealNoDamage()
+        public void EveryNoteDealsDamage()
         {
             var s = On(0, A);
             Assert.AreEqual(1, s.ChainLength);
-            Assert.IsFalse(s.DealsDamage);
+            Assert.IsTrue(s.DealsDamage);                              // GDD update 3: the first note hits too
             Assert.IsTrue(On(1, A).DealsDamage);
+            Assert.IsTrue(_chain.Register(5, B, false).DealsDamage);   // off the beat still hits (for 25%)
         }
 
         [Test]
@@ -37,7 +38,6 @@ namespace ProjectHymn.Tests
             On(0, A); On(1, A);
             var s = On(3, A); // beat 2 skipped
             Assert.AreEqual(1, s.ChainLength);
-            Assert.IsFalse(s.DealsDamage);
         }
 
         [Test]
@@ -46,7 +46,6 @@ namespace ProjectHymn.Tests
             On(0, A); On(1, B);
             var off = _chain.Register(2, A, false);
             Assert.IsTrue(off.Broke);
-            Assert.IsFalse(off.DealsDamage);
             On(3, A);
             var dbl = On(3, B);
             Assert.IsTrue(dbl.Broke);
@@ -73,7 +72,6 @@ namespace ProjectHymn.Tests
         {
             var first = On(0, B);
             Assert.AreEqual(1, first.Sequence);
-            Assert.IsFalse(first.DealsDamage);
             var second = On(1, B);
             Assert.IsTrue(second.Completed);
             Assert.IsTrue(second.DealsDamage);

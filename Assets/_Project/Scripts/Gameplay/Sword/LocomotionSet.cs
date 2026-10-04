@@ -36,6 +36,10 @@ namespace ProjectHymn.Gameplay
         [Range(0f, 1f)] public float hangClipTime = 0.5f;
         [Tooltip("Played (full body, briefly) when the player is hurt.")]
         public SwordMove hurt;
+        [Tooltip("The dodge roll, played once over the dodge (full body).")]
+        public BakedClip dodgeClip;
+        [Range(0f, 1f)] public float dodgeClipStart = 0.05f;
+        [Range(0f, 1f)] public float dodgeClipEnd = 0.85f;
 
         public bool UsesClips => runClip != null;
 
