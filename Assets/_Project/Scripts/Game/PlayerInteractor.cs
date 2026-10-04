@@ -21,6 +21,9 @@ namespace ProjectHymn.Gameplay
             _body = GetComponent<PlatformerController>();
         }
 
+        /// <summary>Someone to talk to (or a door) is in reach: E talks instead of using the quick item.</summary>
+        public bool HasTarget => _near != null;
+
         void Update()
         {
             _near = null;
@@ -35,7 +38,8 @@ namespace ProjectHymn.Gameplay
                 if (dx < best) { best = dx; _near = i; }
             }
             GameHud.Prompt(_near != null ? _near.prompt : null);
-            if (_near != null && _input != null && _input.InteractPressed && !UiState.JustClosed) _near.Interact(this);
+            // E (gamepad B) talks when someone is near; otherwise it uses the quick item. W / Up works too.
+            if (_near != null && _input != null && (_input.InteractPressed || _input.UseItemPressed) && !UiState.JustClosed) _near.Interact(this);
         }
     }
 }

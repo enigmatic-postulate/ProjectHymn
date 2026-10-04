@@ -169,8 +169,8 @@ namespace ProjectHymn.EditorTools.Art
                 var go = ArtLibrary.Instance($"{ArtLibrary.Boulders}/namaqualand_boulder_03.fbx", root);
                 if (go != null)
                 {
-                    go.transform.SetPositionAndRotation(new Vector3((x0 + x1) * 0.5f, y - 0.3f, (z0 + z1) * 0.5f), Quaternion.Euler(0f, R() * 360f, 0f));
-                    go.transform.localScale = Vector3.one * (2f + R() * 2.5f);
+                    go.transform.SetPositionAndRotation(new Vector3((x0 + x1) * 0.5f, y - 0.3f, (z0 + z1) * 0.5f), Quaternion.Euler(0f, R() * 360f, 0f) * go.transform.localRotation);
+                    go.transform.localScale = go.transform.localScale * (2f + R() * 2.5f);
                     ArtLibrary.Paint(go, ArtLibrary.Textured("Far_Boulder", $"{ArtLibrary.Boulders}/namaqualand_boulder_03_diff_1k.jpg", $"{ArtLibrary.Boulders}/namaqualand_boulder_03_nor_1k.png",
                         Color.Lerp(new Color(0.95f, 0.9f, 0.86f), Fog, Haze[0]), 0.05f));
                 }
@@ -185,9 +185,11 @@ namespace ProjectHymn.EditorTools.Art
         {
             var go = ArtLibrary.Instance(Model(model), parent);
             if (go == null) return null;
+            // Keep the model's own root rotation and scale (the kit's FBX files are Z-up: their root carries the
+            // -90° turn that stands them upright) and turn it about the vertical on top.
             var rot = Quaternion.Euler(0f, yaw, 0f);
-            go.transform.SetPositionAndRotation(position + rot * localOffset, rot);
-            go.transform.localScale = Vector3.one * scale;
+            go.transform.SetPositionAndRotation(position + rot * localOffset, rot * go.transform.localRotation);
+            go.transform.localScale = go.transform.localScale * scale;
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 var mats = r.sharedMaterials;
@@ -283,8 +285,8 @@ namespace ProjectHymn.EditorTools.Art
             {
                 var go = ArtLibrary.Instance(B(file), root);
                 if (go == null) return;
-                go.transform.SetPositionAndRotation(p, Quaternion.Euler(0f, yaw, 0f));
-                go.transform.localScale = Vector3.one * scale;
+                go.transform.SetPositionAndRotation(p, Quaternion.Euler(0f, yaw, 0f) * go.transform.localRotation);
+                go.transform.localScale = go.transform.localScale * scale;
                 ArtLibrary.Paint(go, m);
                 go.isStatic = true;
             }

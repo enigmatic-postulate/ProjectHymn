@@ -23,17 +23,17 @@ namespace ProjectHymn.Gameplay
             }
         }
 
-        /// <summary>Advance dialogue: Enter, Space, J, W / up, or A / X on a pad.</summary>
+        /// <summary>Advance dialogue: Enter, Space, J, E, W / up, or A / X on a pad.</summary>
         public static bool Advance
         {
             get
             {
 #if ENABLE_INPUT_SYSTEM && HYMN_INPUT_SYSTEM
                 var kb = Keyboard.current; var gp = Gamepad.current;
-                return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame || kb.jKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame))
+                return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame || kb.jKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame))
                     || (gp != null && (gp.buttonSouth.wasPressedThisFrame || gp.buttonWest.wasPressedThisFrame));
 #else
-                return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.J)
+                return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.E)
                     || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.JoystickButton0);
 #endif
             }

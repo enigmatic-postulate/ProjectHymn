@@ -18,7 +18,10 @@ namespace ProjectHymn.Gameplay
             _input = GetComponent<PlayerInputReader>();
             _health = GetComponent<PlayerHealth>();
             _combat = GetComponent<SwordCombatController>();
+            _interactor = GetComponent<PlayerInteractor>();
         }
+
+        PlayerInteractor _interactor;
 
         void Update()
         {
@@ -26,6 +29,8 @@ namespace ProjectHymn.Gameplay
             var s = GameSession.Instance;
             if (_input.CycleItemPressed) s.CycleQuickItem();
             if (!_input.UseItemPressed) return;
+            if (_interactor != null && _interactor.HasTarget) return;     // E talks to whoever is near
+            if (UiState.JustClosed) return;
             var id = s.Data.quickItem;
             var item = s.Db != null ? s.Db.Item(id) : null;
             if (item == null) { GameHud.Toast("No item in the quick slot"); return; }

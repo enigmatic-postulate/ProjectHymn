@@ -117,7 +117,7 @@ namespace ProjectHymn.UI
                 var prt = (RectTransform)_prompt.transform;
                 prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
                 prt.anchoredPosition = local;
-                _prompt.text = $"<color=#ffd56a>▲</color> {_promptText}";
+                _prompt.text = $"<color=#ffd56a>[E]</color> {_promptText}";
             }
             else _prompt.text = "";
         }
