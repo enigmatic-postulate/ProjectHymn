@@ -75,6 +75,9 @@ namespace ProjectHymn.Gameplay
         public float VerticalSpeed => _vel.y;
         public float ClimbProgress => _state == LocoState.Climb ? Mathf.Clamp01(_stateTime / climbSeconds) : 0f;
         public bool Grounded => _cc != null && _cc.enabled && _cc.isGrounded;
+        public Vector3 LedgePoint => new Vector3(_wallX, _ledgeTop, laneZ);
+        /// <summary>Feet below the ledge top while hanging (set from the character's arm reach).</summary>
+        public float HangDrop { get => hangDrop; set => hangDrop = value; }
         public Vector2 Facing => new Vector2(_face, 0f);
         public bool Attacking { get; set; }
         public bool CanAttack => _state != LocoState.Hang && _state != LocoState.Climb;

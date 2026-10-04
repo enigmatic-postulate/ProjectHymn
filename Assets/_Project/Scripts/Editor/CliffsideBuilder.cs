@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using static ProjectHymn.EditorTools.ProjectHymnSetup;
+using ProjectHymn.EditorTools.Art;
 using Lit = ProjectHymn.EditorTools.Sword.SwordsmanBuilder;
 
 namespace ProjectHymn.EditorTools
@@ -32,11 +33,15 @@ namespace ProjectHymn.EditorTools
         public static void Build()
         {
             PrepareContent();
+            ArtLibrary.EnsureImportSettings();
+            AssetDatabase.Refresh();
+            _art = ArtLibrary.HasKayKit;
+            _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var theme = LoadTheme();
-            var weapons = LoadWeapons();
+            var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
-            var locomotion = Sword.SwordContent.EnsureLocomotion();
+            var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
             BuildLighting();
             var level = new GameObject("Level").transform;
@@ -44,6 +49,8 @@ namespace ProjectHymn.EditorTools
             foreach (var b in CliffsideLayout.Props) BuildBlock(level, b);
             BuildWaterAndBackdrop(level);
             BuildDressing(level);
+            if (_village) EnvironmentArt.Dress(level, FrontZ);
+            EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
 
             var conductor = BuildConductor(theme);
 
@@ -58,7 +65,15 @@ namespace ProjectHymn.EditorTools
             var visual = new GameObject("Visual").transform;
             visual.SetParent(player.transform, false);
             SetRef(player.GetComponent<PlatformerController>(), "visual", visual);
-            var combat = RigSwordsman(player, visual, conductor, weapons, locomotion);
+            SwordCombatController combat;
+            if (_art)
+            {
+                combat = KayKitBuilder.RigHero(player, visual, conductor, weapons, locomotion, additive, out float hangDrop);
+                var pso = new SerializedObject(player.GetComponent<PlatformerController>());
+                pso.FindProperty("hangDrop").floatValue = hangDrop;
+                pso.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else combat = RigSwordsman(player, visual, conductor, weapons, locomotion);
             SetRef(player.GetComponent<PlayerGuard>(), "conductor", conductor);
             SetRef(player.GetComponent<PlayerGuard>(), "animator", player.GetComponent<RhythmAnimator>());
 
@@ -106,6 +121,8 @@ namespace ProjectHymn.EditorTools
                       "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
                       "Shift dash, Tab weapon, R restart, F1-F4 tempos.");
         }
+
+        static bool _art, _village;
 
         static CliffsideLayout.Marker Marker(CliffsideLayout.MarkerKind kind)
         {
@@ -160,6 +177,21 @@ namespace ProjectHymn.EditorTools
             float front = pillar ? -1.4f : FrontZ, back = pillar ? 1.4f : BackZ;
             uint body = wall ? StoneDark : pillar ? StoneWarm : Stone;
 
+            if (_village)
+            {
+                // Art pass: kit stone with world-space UVs, grass (sand on the beach) on top.
+                var sides = wall ? EnvironmentArt.DarkStone : pillar ? EnvironmentArt.Pillar : EnvironmentArt.Stone;
+                var top = ground ? EnvironmentArt.Sand : EnvironmentArt.Grass;
+                EnvironmentArt.Block(root, $"Rock {b.Name}", new Vector3(b.XMin, Bottom, front), new Vector3(b.XMax, b.Top, back), sides, top, 3.2f, 5f, collider: true);
+                if (!ground && !wall)
+                {
+                    float o = 0.12f;
+                    EnvironmentArt.Block(root, $"Lip {b.Name}", new Vector3(b.XMin - o, b.Top - 0.4f, front - o), new Vector3(b.XMax + o, b.Top + 0.02f, front + 0.6f),
+                        EnvironmentArt.GrassDark, EnvironmentArt.Grass, 1.5f, 5f, collider: false);
+                }
+                return;
+            }
+
             // The solid block the player walks on and climbs.
             Box(root, "Rock", new Vector3(b.XMin, Bottom, front), new Vector3(b.XMax, b.Top, back), body, collider: true);
             if (wall) return;
@@ -210,6 +242,7 @@ namespace ProjectHymn.EditorTools
                 for (float x = b.XMin + 1.5f; x < b.XMax - 1.5f; x += 3f + (float)rng.NextDouble() * 4f)
                 {
                     bool rock = b.Kind == CliffsideLayout.Kind.Ground || rng.NextDouble() < 0.35;
+                    if (rock && _village) continue;              // the kit and the scanned boulders dress the ground instead
                     var go = GameObject.CreatePrimitive(rock ? PrimitiveType.Cube : PrimitiveType.Sphere);
                     Object.DestroyImmediate(go.GetComponent<Collider>());
                     go.name = rock ? "Boulder" : "Bush";
@@ -274,7 +307,8 @@ namespace ProjectHymn.EditorTools
             var ledge = default(CliffsideLayout.Block);
             foreach (var b in CliffsideLayout.Route) if (m.X > b.XMin && m.X < b.XMax) ledge = b;
             var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
-            EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
+            if (_art && ArtLibrary.HasSkeleton) KayKitBuilder.BuildSkeletonKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
+            else EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
         }
 
         static void BuildGoal(Transform level, CliffsideLayout.Marker m)
@@ -285,12 +319,16 @@ namespace ProjectHymn.EditorTools
             var box = go.GetComponent<BoxCollider>();
             box.isTrigger = true; box.size = new Vector3(2.5f, 4f, 4f); box.center = new Vector3(0f, 2f, 0f);
 
-            // A stone arch standing behind the lane, with a slowly turning crystal under it.
+            // A stone arch standing behind the lane (the kit's town gate when the art is in), with a turning crystal.
             var arch = go.transform;
+            if (_village) EnvironmentArt.Gate(arch, new Vector3(m.X, m.Y, 0f));
+            else
+            {
             Box(arch, "Pillar L", new Vector3(m.X - 1.8f, m.Y, 1.0f), new Vector3(m.X - 1.2f, m.Y + 4.2f, 1.8f), StoneWarm, false);
             Box(arch, "Pillar R", new Vector3(m.X + 1.2f, m.Y, 1.0f), new Vector3(m.X + 1.8f, m.Y + 4.2f, 1.8f), StoneWarm, false);
             Box(arch, "Lintel", new Vector3(m.X - 2.1f, m.Y + 4.2f, 0.9f), new Vector3(m.X + 2.1f, m.Y + 4.8f, 1.9f), StoneDark, false);
             Box(arch, "Banner", new Vector3(m.X - 0.9f, m.Y + 2.6f, 1.38f), new Vector3(m.X + 0.9f, m.Y + 4.2f, 1.42f), Rope, false);
+            }
             var spin = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Object.DestroyImmediate(spin.GetComponent<Collider>());
             spin.name = "Goal Crystal";

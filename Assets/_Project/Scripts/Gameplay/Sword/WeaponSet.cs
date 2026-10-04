@@ -23,6 +23,11 @@ namespace ProjectHymn.Gameplay
         public SwordMove heavy;
         [Tooltip("Played when the player guards (keys in beats; 0 = the guard is up).")]
         public SwordMove guard;
+        [Header("Clip rig (art pass)")]
+        [Tooltip("Looping idle stance clip (replaces the stance keyframe when set).")]
+        public BakedClip idleClip;
+        [Tooltip("Name of the object under the off-hand slot to show with this weapon (a shield), or empty.")]
+        public string offHandObject = "";
         [Tooltip("Damage scale for this weapon.")]
         public float damageScale = 1f;
     }

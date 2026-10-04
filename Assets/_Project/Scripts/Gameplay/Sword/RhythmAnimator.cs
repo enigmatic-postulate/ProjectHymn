@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ProjectHymn.Combat;
 using ProjectHymn.Core;
 using ProjectHymn.Movement;
 using UnityEngine;
@@ -22,6 +23,10 @@ namespace ProjectHymn.Gameplay
     /// - Locomotion (vertical slice 1): with an <see cref="ILocomotionSource"/> and a <see cref="LocomotionSet"/>, the
     ///   body runs, jumps, flips, hangs and climbs; the run cycle's footfalls follow the beat. A sword move then owns
     ///   the upper body (spine up and both arms) while the legs and hips keep moving; standing still it owns everything.
+    /// - Clips (art pass): a move can carry an authored <see cref="BakedClip"/> instead of keyframes. The clip's wind-up
+    ///   is stretched over the beats before the hit and its follow-through over the beats after, so its impact frame
+    ///   lands on the beat at any tempo; idle, run, jump, fall and land can be clips too, and the hands reach for the
+    ///   ledge by IK while hanging and climbing. Bone names come from the Rig fields, so any rig works.
     /// Raises <see cref="Impact"/> when a move reaches its hit key; combat applies damage then.
     /// </summary>
     [DefaultExecutionOrder(50)]
@@ -34,6 +39,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] Transform modelRoot;
         [SerializeField] Transform[] bones = new Transform[0];
         [SerializeField] Transform grip;
+        [Tooltip("Off-hand slot (shields), optional.")]
+        [SerializeField] Transform offGrip;
         [SerializeField] WeaponSet weapon;
 
         [Header("Timing")]
@@ -61,8 +68,18 @@ namespace ProjectHymn.Gameplay
         [Tooltip("How fast the legs switch between the sword move and the locomotion pose.")]
         [SerializeField] float lowerBodyBlend = 0.12f;
 
-        /// <summary>Bones a sword move keeps while the player is moving; the rest follow the locomotion pose.</summary>
-        static readonly string[] UpperBody = { "Spine", "Chest", "Neck", "Head", "UpperArm.R", "LowerArm.R", "Hand.R", "UpperArm.L", "LowerArm.L", "Hand.L" };
+        [Header("Rig")]
+        [SerializeField] string rootBone = "Root";
+        [SerializeField] string hipsBone = "Hips";
+        [SerializeField] string spineBone = "Spine";
+        [SerializeField] string chestBone = "Chest";
+        [Tooltip("Bones a sword move keeps while the player is moving; the rest follow the locomotion pose.")]
+        [SerializeField] string[] upperBodyBones = { "Spine", "Chest", "Neck", "Head", "UpperArm.R", "LowerArm.R", "Hand.R", "UpperArm.L", "LowerArm.L", "Hand.L" };
+        [Tooltip("Upper arm, forearm, hand (the IK chain).")]
+        [SerializeField] string[] leftArm = { "UpperArm.L", "LowerArm.L", "Hand.L" };
+        [SerializeField] string[] rightArm = { "UpperArm.R", "LowerArm.R", "Hand.R" };
+        [Tooltip("Half the distance between the hands on a ledge (metres).")]
+        [SerializeField] float ledgeHandSpread = 0.17f;
         static readonly object[] LocoKeys = BuildLocoKeys();
         static object[] BuildLocoKeys()
         {
@@ -92,8 +109,12 @@ namespace ProjectHymn.Gameplay
         TrailRenderer _trail;
         bool _trailOn;
         ILocomotionSource _loco;
-        Quaternion[] _locoPose;
+        Quaternion[] _locoPose, _bindRot, _tmpRot;
+        Vector3[] _bindPos, _posDisplay, _posTarget, _posFrom, _locoPos, _tmpPos;
         Vector3 _locoRoot;
+        readonly Dictionary<BakedClip, int[]> _clipMaps = new Dictionary<BakedClip, int[]>();
+        int _chest = -1, _rootIdx = -1;
+        Transform[] _armL, _armR;
         bool[] _upper;
         string[] _names;
         float _lowerWeight, _blendDuration;
@@ -123,15 +144,29 @@ namespace ProjectHymn.Gameplay
             _target = new Quaternion[bones.Length];
             _from = new Quaternion[bones.Length];
             _locoPose = new Quaternion[bones.Length];
+            _tmpRot = new Quaternion[bones.Length];
+            _bindRot = new Quaternion[bones.Length];
+            _bindPos = new Vector3[bones.Length];
             _upper = new bool[bones.Length];
             _names = new string[bones.Length];
             for (int i = 0; i < bones.Length; i++)
             {
                 _names[i] = bones[i] != null ? bones[i].name : "";
-                _upper[i] = Array.IndexOf(UpperBody, _names[i]) >= 0;
+                _upper[i] = Array.IndexOf(upperBodyBones, _names[i]) >= 0;
+                _bindRot[i] = bones[i] != null ? bones[i].localRotation : Quaternion.identity;
+                _bindPos[i] = bones[i] != null ? bones[i].localPosition : Vector3.zero;
             }
-            if (!_index.TryGetValue("Hips", out _hips)) _hips = -1;
-            if (!_index.TryGetValue("Spine", out _spine)) _spine = -1;
+            _posDisplay = (Vector3[])_bindPos.Clone();
+            _posTarget = (Vector3[])_bindPos.Clone();
+            _posFrom = (Vector3[])_bindPos.Clone();
+            _locoPos = (Vector3[])_bindPos.Clone();
+            _tmpPos = (Vector3[])_bindPos.Clone();
+            if (!_index.TryGetValue(hipsBone, out _hips)) _hips = -1;
+            if (!_index.TryGetValue(spineBone, out _spine)) _spine = -1;
+            if (!_index.TryGetValue(chestBone, out _chest)) _chest = -1;
+            if (!_index.TryGetValue(rootBone, out _rootIdx)) _rootIdx = -1;
+            _armL = Chain(leftArm);
+            _armR = Chain(rightArm);
             _loco = GetComponentInParent<ILocomotionSource>();
             if (modelRoot != null) _modelBase = modelRoot.localPosition;
             SetWeapon(weapon);
@@ -162,6 +197,9 @@ namespace ProjectHymn.Gameplay
                 _trail = _tip != null ? _tip.GetComponent<TrailRenderer>() : null;
                 if (_trail != null) { _trail.emitting = false; _trail.Clear(); }
             }
+            if (offGrip != null)
+                foreach (Transform item in offGrip)
+                    item.gameObject.SetActive(!string.IsNullOrEmpty(w.offHandObject) && item.name == w.offHandObject);
         }
 
         /// <summary>Drop every move and go back to the stance (song change, weapon swap).</summary>
@@ -249,6 +287,25 @@ namespace ProjectHymn.Gameplay
 
         public void ClearAnticipation() => _anticipate = null;
 
+        /// <summary>A short full-body flinch (the locomotion set's hurt move), if there is one.</summary>
+        public void PlayHurt()
+        {
+            if (locomotion != null && locomotion.hurt != null)
+                PlayNow(locomotion.hurt, conductor != null && conductor.IsPlaying ? conductor.CurrentBeat.SecondsPerBeat : 60.0 / referenceBpm);
+        }
+
+        Transform[] Chain(string[] names)
+        {
+            if (names == null || names.Length < 3) return null;
+            var t = new Transform[3];
+            for (int i = 0; i < 3; i++)
+            {
+                if (!_index.TryGetValue(names[i], out int b)) return null;
+                t[i] = bones[b];
+            }
+            return t;
+        }
+
         // ---------------- Per frame ----------------
 
         double Now() => conductor != null ? conductor.SongTime + animationOffsetMs / 1000.0 : Time.timeAsDouble;
@@ -317,6 +374,7 @@ namespace ProjectHymn.Gameplay
                 if (moving)
                 {
                     Array.Copy(_locoPose, _target, _target.Length);
+                    Array.Copy(_locoPos, _posTarget, _posTarget.Length);
                     _rootTarget = _locoRoot;
                     source = LocoKeys[(int)locoState];
                 }
@@ -328,6 +386,7 @@ namespace ProjectHymn.Gameplay
             CurrentBeatPosition = tau;
             ApplyPose();
             SolveOffHand();
+            SolveLedgeHands();
             UpdateTrail(active, _current != null ? _current.Move : null, _current != null && _current.OnBeat);
         }
 
@@ -337,6 +396,7 @@ namespace ProjectHymn.Gameplay
             _blendDuration = source == null || source is Track ? blendSeconds : locoBlendSeconds;
             if (_display == null) return;
             Array.Copy(_display, _from, _display.Length);
+            if (_posDisplay != null) Array.Copy(_posDisplay, _posFrom, _posDisplay.Length);
             _rootFrom = _rootDisplay;
             _blend = 0f;
         }
@@ -349,7 +409,10 @@ namespace ProjectHymn.Gameplay
             for (int i = 0; i < bones.Length; i++)
             {
                 _display[i] = w >= 1f ? _target[i] : Quaternion.Slerp(_from[i], _target[i], w);
-                if (bones[i] != null) bones[i].localRotation = _display[i];
+                _posDisplay[i] = w >= 1f ? _posTarget[i] : Vector3.Lerp(_posFrom[i], _posTarget[i], w);
+                if (bones[i] == null) continue;
+                bones[i].localRotation = _display[i];
+                bones[i].localPosition = _posDisplay[i];
             }
             _rootDisplay = Vector3.Lerp(_rootFrom, _rootTarget, w);
             if (modelRoot != null) modelRoot.localPosition = _modelBase + _rootDisplay;
@@ -357,8 +420,43 @@ namespace ProjectHymn.Gameplay
 
         // ---------------- Pose evaluation ----------------
 
-        Quaternion StanceRot(string bone) =>
-            weapon != null && weapon.stance.TryGet(bone, out var e) ? Quaternion.Euler(e) : Quaternion.identity;
+        Quaternion StanceRot(string bone)
+        {
+            if (weapon != null && weapon.stance.TryGet(bone, out var e)) return Quaternion.Euler(e);
+            return _index.TryGetValue(bone, out int i) && _bindRot != null ? _bindRot[i] : Quaternion.identity;
+        }
+
+        int[] ClipMap(BakedClip clip)
+        {
+            if (_clipMaps.TryGetValue(clip, out var m)) return m;
+            m = new int[bones.Length];
+            for (int i = 0; i < m.Length; i++) m[i] = clip.IndexOf(_names[i]);
+            _clipMaps[clip] = m;
+            return m;
+        }
+
+        /// <summary>Sample a clip into a pose (bones the clip doesn't animate hold the stance and bind position).</summary>
+        void SampleClip(BakedClip clip, float u, bool loop, Quaternion[] rot, Vector3[] pos)
+        {
+            var map = ClipMap(clip);
+            for (int i = 0; i < bones.Length; i++)
+            {
+                int c = map[i];
+                rot[i] = c >= 0 ? clip.Rotation(c, u, loop) : StanceRot(_names[i]);
+                pos[i] = c >= 0 && i != _rootIdx && clip.TryPosition(c, u, loop, out var p) ? p : _bindPos[i];
+            }
+        }
+
+        /// <summary>The stance: the weapon's idle clip if it has one, otherwise its stance keyframe.</summary>
+        void StancePose(Quaternion[] rot, Vector3[] pos)
+        {
+            if (weapon != null && weapon.idleClip != null)
+            {
+                SampleClip(weapon.idleClip, (float)(Time.timeAsDouble / Mathf.Max(0.1f, weapon.idleClip.length)), true, rot, pos);
+                return;
+            }
+            for (int i = 0; i < bones.Length; i++) { rot[i] = bones[i] != null ? StanceRot(_names[i]) : Quaternion.identity; pos[i] = _bindPos[i]; }
+        }
 
         Quaternion KeyRot(MoveKey k, string bone) => k.TryGet(bone, out var e) ? Quaternion.Euler(e) : StanceRot(bone);
 
@@ -367,17 +465,34 @@ namespace ProjectHymn.Gameplay
         {
             if (move == null || move.keys.Count == 0)
             {
-                for (int i = 0; i < bones.Length; i++) _target[i] = bones[i] != null ? StanceRot(bones[i].name) : Quaternion.identity;
+                StancePose(_target, _posTarget);
                 _rootTarget = weapon != null ? weapon.stance.rootOffset : Vector3.zero;
                 if (conductor != null && conductor.IsPlaying)
                 {
                     // Idle groove: dip on every beat, more on the downbeat. Shows the tempo before any attack.
                     float k = Mathf.Exp(-conductor.BeatPhase * 6f) * (conductor.CurrentBeat.IsDownbeat ? 1.6f : 1f);
                     _rootTarget += Vector3.down * idleBob * k;
-                    if (_index.TryGetValue("Chest", out int c)) _target[c] *= Quaternion.Euler(6f * k, 0f, 0f);
+                    if (_chest >= 0) _target[_chest] *= Quaternion.Euler(6f * k, 0f, 0f);
                 }
                 return;
             }
+
+            if (move.clip != null)
+            {
+                // Authored clip: wind-up stretched over the beats before the hit, follow-through over the beats after.
+                float cu = ClipTiming.Warp(tau, move.FirstBeat, move.LastBeat, move.clipStart, move.clipHit, move.clipEnd);
+                SampleClip(move.clip, cu, false, _target, _posTarget);
+                if (!Mathf.Approximately(amplitude, 1f) && Mathf.Abs(cu - move.clipHit) > 1e-3f)
+                {
+                    // Tempo shaping as for keyframes: swing less far from the hit pose on fast songs, further on slow ones.
+                    SampleClip(move.clip, move.clipHit, false, _tmpRot, _tmpPos);
+                    for (int i = 0; i < bones.Length; i++) _target[i] = Quaternion.SlerpUnclamped(_tmpRot[i], _target[i], amplitude);
+                }
+                _rootTarget = weapon != null ? weapon.stance.rootOffset : Vector3.zero;
+                return;
+            }
+
+            Array.Copy(_bindPos, _posTarget, _posTarget.Length);
 
             var keys = move.keys;
             int hit = 0;
@@ -423,24 +538,15 @@ namespace ProjectHymn.Gameplay
             if (_loco == null || locomotion == null) return false;
             state = _loco.State;
             var L = locomotion;
+            if (L.UsesClips) return EvaluateLocomotionClips(now, ref state);
+            Array.Copy(_bindPos, _locoPos, _locoPos.Length);
             switch (state)
             {
                 case LocoState.Run:
                 {
                     float speed = _loco.Speed01;
                     if (speed < 0.05f || L.run.Count == 0) { state = LocoState.Idle; return false; }
-                    double spb, beatPos;
-                    if (conductor != null && conductor.IsPlaying && conductor.Map != null)
-                    {
-                        spb = conductor.CurrentBeat.SecondsPerBeat;
-                        beatPos = conductor.Map.TimeToBeat(now);
-                    }
-                    else
-                    {
-                        spb = 60.0 / referenceBpm;
-                        beatPos = Time.timeAsDouble / spb;
-                    }
-                    float phase = StrideClock.Phase(beatPos, StrideClock.StepsPerBeat(spb, L.cadence));
+                    float phase = StridePhase(now, L.cadence);
                     SampleCycle(L.run, phase, Mathf.Lerp(L.minStride, 1f, speed));
                     return true;
                 }
@@ -456,7 +562,7 @@ namespace ProjectHymn.Gameplay
                     {
                         // One forward flip around the hips; eased so it snaps through the middle.
                         float e = k * k * (3f - 2f * k);
-                        _locoPose[_hips] = Quaternion.AngleAxis(360f * e, Vector3.right) * _locoPose[_hips];
+                        _locoPose[_hips] = Quaternion.AngleAxis(360f * e, FlipAxis()) * _locoPose[_hips];
                     }
                     else if (k < 1f) PoseLerp(L.fall, L.fall, 0f);
                     return true;
@@ -474,6 +580,130 @@ namespace ProjectHymn.Gameplay
         }
 
         static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+        /// <summary>Run-cycle phase from the music (right foot down at 0, left at 0.5), or from real time when stopped.</summary>
+        float StridePhase(double now, float cadence)
+        {
+            double spb, beatPos;
+            if (conductor != null && conductor.IsPlaying && conductor.Map != null)
+            {
+                spb = conductor.CurrentBeat.SecondsPerBeat;
+                beatPos = conductor.Map.TimeToBeat(now);
+            }
+            else
+            {
+                spb = 60.0 / referenceBpm;
+                beatPos = Time.timeAsDouble / spb;
+            }
+            return StrideClock.Phase(beatPos, StrideClock.StepsPerBeat(spb, cadence));
+        }
+
+        /// <summary>The model's right axis in the hips' parent space (the double jump flips around it).</summary>
+        Vector3 FlipAxis()
+        {
+            var right = modelRoot != null ? modelRoot.right : transform.right;
+            var parent = _hips >= 0 ? bones[_hips].parent : null;
+            return parent != null ? Quaternion.Inverse(parent.rotation) * right : right;
+        }
+
+        /// <summary>Locomotion from authored clips (art pass): run on the beat, jump, air, land, hang and climb.</summary>
+        bool EvaluateLocomotionClips(double now, ref LocoState state)
+        {
+            var L = locomotion;
+            _locoRoot = StanceRoot;
+            float t = _loco.StateTime;
+            switch (state)
+            {
+                case LocoState.Run:
+                {
+                    float speed = _loco.Speed01;
+                    if (speed < 0.05f) { state = LocoState.Idle; return false; }
+                    float u = ClipTiming.Loop(StridePhase(now, L.cadence), L.runRightFootDown);
+                    SampleClip(L.runClip, u, true, _locoPose, _locoPos);
+                    float amount = Mathf.Lerp(L.minStride, 1f, speed);
+                    if (amount < 0.999f)
+                    {
+                        StancePose(_tmpRot, _tmpPos);
+                        for (int i = 0; i < bones.Length; i++)
+                        {
+                            _locoPose[i] = Quaternion.Slerp(_tmpRot[i], _locoPose[i], amount);
+                            _locoPos[i] = Vector3.Lerp(_tmpPos[i], _locoPos[i], amount);
+                        }
+                    }
+                    return true;
+                }
+                case LocoState.Jump:
+                    // The take-off half of the jump clip, then the air loop.
+                    if (L.jumpClip != null && t < 0.2f) SampleClip(L.jumpClip, Mathf.Lerp(0.55f, 1f, t / 0.2f), false, _locoPose, _locoPos);
+                    else AirPose(L);
+                    return true;
+                case LocoState.Fall:
+                    AirPose(L);
+                    return true;
+                case LocoState.AirJump:
+                {
+                    AirPose(L);
+                    float k = t / Mathf.Max(0.05f, L.flipSeconds);
+                    if (k < 1f && _current == null && _hips >= 0)
+                    {
+                        float e = k * k * (3f - 2f * k);
+                        _locoPose[_hips] = Quaternion.AngleAxis(360f * e, FlipAxis()) * _locoPose[_hips];
+                    }
+                    return true;
+                }
+                case LocoState.Land:
+                    if (L.landClip != null) SampleClip(L.landClip, Mathf.Lerp(0.2f, 0.7f, t / Mathf.Max(0.05f, L.landSeconds)), false, _locoPose, _locoPos);
+                    else AirPose(L);
+                    return true;
+                case LocoState.Hang:
+                    HangPose(L);
+                    return true;
+                case LocoState.Climb:
+                {
+                    float k = _loco.ClimbProgress;
+                    if (k < 0.5f || L.landClip == null) HangPose(L);
+                    else SampleClip(L.landClip, Mathf.Lerp(0.15f, 1f, (k - 0.5f) / 0.5f), false, _locoPose, _locoPos);
+                    return true;
+                }
+                default:
+                    return false;
+            }
+        }
+
+        void AirPose(LocomotionSet L)
+        {
+            var clip = L.airClip != null ? L.airClip : L.runClip;
+            SampleClip(clip, (float)(Time.timeAsDouble / Mathf.Max(0.1f, clip.length)), true, _locoPose, _locoPos);
+        }
+
+        void HangPose(LocomotionSet L)
+        {
+            var clip = L.hangClip != null ? L.hangClip : L.airClip != null ? L.airClip : L.runClip;
+            SampleClip(clip, L.hangClipTime, false, _locoPose, _locoPos);
+        }
+
+        /// <summary>While hanging (and the first half of a climb) the hands grip the ledge, placed by two-bone IK.</summary>
+        void SolveLedgeHands()
+        {
+            if (_loco == null || _armL == null || _armR == null) return;
+            float w;
+            if (_loco.State == LocoState.Hang) w = 1f;
+            else if (_loco.State == LocoState.Climb) w = 1f - Smooth((_loco.ClimbProgress - 0.35f) / 0.25f);
+            else return;
+            if (w <= 0f) return;
+            var basis = modelRoot != null ? modelRoot : transform;
+            var ledge = _loco.LedgePoint;
+            var right = basis.right; right.y = 0f; right = right.sqrMagnitude > 1e-4f ? right.normalized : Vector3.right;
+            var fwd = basis.forward; fwd.y = 0f; fwd = fwd.sqrMagnitude > 1e-4f ? fwd.normalized : Vector3.forward;
+            ReachFor(_armL, ledge - right * ledgeHandSpread + fwd * 0.04f, w);
+            ReachFor(_armR, ledge + right * ledgeHandSpread + fwd * 0.04f, w);
+        }
+
+        static void ReachFor(Transform[] arm, Vector3 target, float weight)
+        {
+            if (weight < 1f) target = Vector3.Lerp(arm[2].position, target, weight);
+            TwoBoneIk(arm[0], arm[1], arm[2], target);
+        }
 
         /// <summary>A locomotion key's rotation for a bone: replaces the stance, adds to it, or (unlisted) is the stance.</summary>
         Quaternion LocoRot(MoveKey k, int i, out bool listed)
@@ -537,12 +767,25 @@ namespace ProjectHymn.Gameplay
             if (w <= 0f) return;
             if (_hips >= 0 && _spine >= 0)
             {
-                var carried = Quaternion.Inverse(StanceRot("Hips")) * _target[_hips] * _target[_spine];
+                // The move's hip turn relative to its stance (for clips, relative to the idle pose's hips).
+                var stanceHips = weapon != null && weapon.idleClip != null ? IdleHips() : StanceRot(hipsBone);
+                var carried = Quaternion.Inverse(stanceHips) * _target[_hips] * _target[_spine];
                 _target[_spine] = Quaternion.Slerp(_target[_spine], carried, w);
             }
             for (int i = 0; i < bones.Length; i++)
-                if (!_upper[i] && bones[i] != null) _target[i] = Quaternion.Slerp(_target[i], _locoPose[i], w);
+                if (!_upper[i] && bones[i] != null)
+                {
+                    _target[i] = Quaternion.Slerp(_target[i], _locoPose[i], w);
+                    _posTarget[i] = Vector3.Lerp(_posTarget[i], _locoPos[i], w);
+                }
             _rootTarget = Vector3.Lerp(_rootTarget, _locoRoot, w);
+        }
+
+        Quaternion IdleHips()
+        {
+            var clip = weapon.idleClip;
+            int c = ClipMap(clip)[_hips];
+            return c >= 0 ? clip.Rotation(c, 0f, true) : _bindRot[_hips];
         }
 
         // ---------------- Two-handed grip ----------------
@@ -552,9 +795,9 @@ namespace ProjectHymn.Gameplay
             if (weapon == null || !weapon.twoHanded || _offHand == null) return;
             if (_current != null && _current.Move.offHandFree) return;
             if (_loco != null && (_loco.State == LocoState.Hang || _loco.State == LocoState.Climb)) return;   // hands on the ledge
-            if (!_index.TryGetValue("UpperArm.L", out int ua) || !_index.TryGetValue("LowerArm.L", out int la) || !_index.TryGetValue("Hand.L", out int ha)) return;
-            TwoBoneIk(bones[ua], bones[la], bones[ha], _offHand.position);
-            bones[ha].rotation = _offHand.rotation * Quaternion.Euler(-90f, 0f, 0f);
+            if (_armL == null) return;
+            TwoBoneIk(_armL[0], _armL[1], _armL[2], _offHand.position);
+            _armL[2].rotation = _offHand.rotation * Quaternion.Euler(-90f, 0f, 0f);
         }
 
         /// <summary>Analytic two-bone IK (law of cosines), bending in the arm's current plane.</summary>

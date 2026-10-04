@@ -34,5 +34,7 @@ namespace ProjectHymn.Gameplay
         /// <summary>0..1 through a ledge climb.</summary>
         float ClimbProgress { get; }
         bool Grounded { get; }
+        /// <summary>The ledge edge being hung from or climbed (world), for hand IK.</summary>
+        Vector3 LedgePoint { get; }
     }
 }

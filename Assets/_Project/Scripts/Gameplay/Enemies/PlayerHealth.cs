@@ -56,6 +56,7 @@ namespace ProjectHymn.Gameplay
             float dir = transform.position.x >= from.x ? 1f : -1f;
             if (_platformer != null) _platformer.Knockback(dir);
             Hurt?.Invoke(amount);
+            if (!_vit.IsDead) { var anim = GetComponent<RhythmAnimator>(); if (anim != null) anim.PlayHurt(); }
             if (_vit.IsDead)
             {
                 _respawnAt = Time.time + respawnDelay;

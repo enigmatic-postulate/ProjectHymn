@@ -46,6 +46,15 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Art pass (CC0 packs)
+
+The Cliffside builder uses imported art when it finds it, and falls back to the generated placeholders otherwise.
+
+- **Characters (KayKit by Kay Lousberg, CC0):** the hero is the Knight with sword and shield (Tab: greatsword); the shield-knight enemy is the Skeleton Warrior with blade and large shield. Files live in `Art/Imported/KayKit` (Characters, Weapons, Animations).
+- **Animation on the beat:** every attack, the guard, idle, run, jump, fall and land are KayKit clips, baked by the builder into `Data/Clips` (per-bone samples). Each attack's impact frame (measured from the weapon hand's peak speed) is placed exactly on the judged beat: the wind-up is stretched over the beats before it and the follow-through over the beats after, so tempo still sets the speed. Footfalls of the run land on beats. Hanging and climbing use a base pose with the hands placed on the ledge by IK; the double jump still flips. Moves are in `Data/KayKit/Moves` (clip, impact frame, span in beats, damage, reach, trail colour).
+- **Environment (Quaternius Medieval Village MegaKit and Poly Haven boulders, CC0):** textured cliffs (generated meshes with world-space UVs), stone borders, vines, fences, crates, a house and a town gate at the summit, scanned boulders on the beach and as sea stacks. Files in `Art/Imported/Village` and `Art/Imported/Boulders`.
+- Weapons sit on the KayKit hand slots with no offset; if one is held wrongly, rotate it under `handslot.r` / `handslot.l` on the Player.
+
 ## Controls (prototype)
 
 | Action | Keyboard | Gamepad |

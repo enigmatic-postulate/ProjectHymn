@@ -113,3 +113,39 @@ namespace ProjectHymn.Tests
         }
     }
 }
+
+namespace ProjectHymn.Tests
+{
+    public class ClipTimingTests
+    {
+        [Test]
+        public void ImpactFrameLandsOnTheBeat()
+        {
+            Assert.AreEqual(0.4, ProjectHymn.Combat.ClipTiming.Warp(0f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+            Assert.AreEqual(0.0, ProjectHymn.Combat.ClipTiming.Warp(-0.6f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+            Assert.AreEqual(0.2, ProjectHymn.Combat.ClipTiming.Warp(-0.3f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+            Assert.AreEqual(0.7, ProjectHymn.Combat.ClipTiming.Warp(0.4f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+            Assert.AreEqual(1.0, ProjectHymn.Combat.ClipTiming.Warp(5f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+            Assert.AreEqual(0.0, ProjectHymn.Combat.ClipTiming.Warp(-5f, -0.6f, 0.8f, 0f, 0.4f, 1f), 1e-6);
+        }
+
+        [Test]
+        public void SpanFollowsTheClipAtTheReferenceTempo()
+        {
+            // 1 s clip, hit at 0.4: 0.4 s of wind-up = 0.8 beats at 120 BPM, 0.6 s follow-through = 1.2 beats.
+            ProjectHymn.Combat.ClipTiming.Span(1f, 0f, 0.4f, 1f, 0.5, 0.2f, 2f, 0.2f, 2f, out float pre, out float post);
+            Assert.AreEqual(0.8, pre, 1e-5);
+            Assert.AreEqual(1.2, post, 1e-5);
+            ProjectHymn.Combat.ClipTiming.Span(1f, 0f, 0.4f, 1f, 0.5, 0.2f, 0.5f, 0.2f, 1f, out pre, out post);
+            Assert.AreEqual(0.5, pre, 1e-5);
+            Assert.AreEqual(1.0, post, 1e-5);
+        }
+
+        [Test]
+        public void LoopWraps()
+        {
+            Assert.AreEqual(0.184, ProjectHymn.Combat.ClipTiming.Loop(0.5f, 0.684f), 1e-5);
+            Assert.AreEqual(0.684, ProjectHymn.Combat.ClipTiming.Loop(0f, 0.684f), 1e-5);
+        }
+    }
+}

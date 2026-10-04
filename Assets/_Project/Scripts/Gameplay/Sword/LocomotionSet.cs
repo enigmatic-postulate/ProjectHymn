@@ -24,6 +24,21 @@ namespace ProjectHymn.Gameplay
         public MoveKey climbPull = new MoveKey();
         public MoveKey climbOver = new MoveKey();
 
+        [Header("Clips (art pass; used instead of the keys when Run Clip is set)")]
+        public BakedClip runClip;
+        [Tooltip("Normalized time in the run clip where the right foot touches down.")]
+        [Range(0f, 1f)] public float runRightFootDown = 0.684f;
+        public BakedClip jumpClip;
+        public BakedClip airClip;
+        public BakedClip landClip;
+        [Tooltip("Base pose for hanging and climbing; the hands are then placed on the ledge by IK.")]
+        public BakedClip hangClip;
+        [Range(0f, 1f)] public float hangClipTime = 0.5f;
+        [Tooltip("Played (full body, briefly) when the player is hurt.")]
+        public SwordMove hurt;
+
+        public bool UsesClips => runClip != null;
+
         [Header("Timing")]
         [Tooltip("Natural running cadence (steps per second); the beat-locked stride stays close to it.")]
         public float cadence = 2.8f;

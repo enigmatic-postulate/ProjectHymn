@@ -20,6 +20,14 @@ namespace ProjectHymn.Gameplay
         [SerializeField] Transform shieldArm;
         [SerializeField] float cameraYaw = 14f;
 
+        [Header("Clip rig (art pass; replaces the primitive pivots when set)")]
+        [SerializeField] Transform rigRoot;
+        [SerializeField] BakedClip idleClip, guardClip, walkClip, cutClip, flurryAClip, flurryBClip, blockHitClip, staggerClip, deathClip;
+        [Tooltip("Normalized impact frames of the attack clips.")]
+        [SerializeField] float cutHit = 0.54f, flurryAHit = 0.44f, flurryBHit = 0.2f;
+        [Tooltip("Beats of visible wind-up before each hit (the glow and count run the whole bar).")]
+        [SerializeField] float windBeats = 1f;
+
         [Header("Movement")]
         [SerializeField] float walkSpeed = 1.6f;
         [SerializeField] float patrolHalfWidth = 2.5f;
@@ -37,6 +45,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float backstabMultiplier = 1.3f;
 
         int _face = -1;
+        ClipPose _pose;
+        float _lastX, _blockHitT = 9f, _staggerT = 9f;
         int _patrolDir = -1;
         float _behindFor, _shieldKick, _lunge;
         float _armAngle = -30f, _torsoBase;
@@ -50,6 +60,8 @@ namespace ProjectHymn.Gameplay
             }
             base.Awake();
             if (torso != null) _torsoBase = torso.localPosition.y;
+            if (rigRoot != null) _pose = new ClipPose(rigRoot.GetComponentsInChildren<Transform>(true), "root");
+            _lastX = transform.position.x;
             ApplyFacing();
         }
 
@@ -100,6 +112,7 @@ namespace ProjectHymn.Gameplay
 
         void Pose(float dt, AttackPhase phase)
         {
+            if (_pose != null) { ClipPoseUpdate(dt, phase); return; }
             const float Rest = -30f, Raised = -170f, Struck = -40f;
             float target = Rest;
             float lean = 0f;
@@ -152,6 +165,48 @@ namespace ProjectHymn.Gameplay
 
         static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
 
+        static float Loop(BakedClip c) => c == null ? 0f : (float)(Time.timeAsDouble / Mathf.Max(0.1f, c.length));
+
+        /// <summary>
+        /// Clip-driven pose (art pass): a guard stance or walk, each attack clip's impact frame placed exactly on its
+        /// hit beat (the wind-up plays over the beat before it), a shield jolt when blocked and a reel when staggered.
+        /// </summary>
+        void ClipPoseUpdate(float dt, AttackPhase phase)
+        {
+            float x = transform.position.x;
+            bool walking = Mathf.Abs(x - _lastX) > 0.6f * dt;
+            _lastX = x;
+            _blockHitT += dt;
+            _staggerT += dt;
+
+            _pose.Reset();
+            var stance = Aggro && guardClip != null ? guardClip : idleClip;
+            _pose.Layer(walking && walkClip != null ? walkClip : stance, Loop(walking && walkClip != null ? walkClip : stance), 1f, true);
+
+            if (Plan.IsValid && !IsStaggered)
+            {
+                int n = Plan.HitCount;
+                for (int i = 0; i < n; i++)
+                {
+                    var clip = n == 1 ? cutClip : i == 0 ? flurryAClip : flurryBClip;
+                    float hit = n == 1 ? cutHit : i == 0 ? flurryAHit : flurryBHit;
+                    if (clip == null) continue;
+                    float tau = SinceHit(i);
+                    float post = i == n - 1 ? 1.4f : 0.6f;
+                    float pre = i == 0 ? windBeats : 0.7f;
+                    float u = ClipTiming.Warp(tau, -pre, post, 0f, hit, 1f);
+                    float wIn = i == 0 ? Smooth((tau + pre + 0.5f) / 0.5f) : Smooth((tau + pre) / 0.15f);
+                    float wOut = i == n - 1 ? 1f - Smooth((tau - post + 0.5f) / 0.5f) : 1f;
+                    float w = Mathf.Min(wIn, wOut);
+                    if (i == 0 && tau < -pre) { u = 0f; w = Smooth(Windup * 1.2f) * 0.85f; }   // settle into the ready frame through the bar
+                    _pose.Layer(clip, u, w);
+                }
+            }
+            if (blockHitClip != null && _blockHitT < 0.5f) _pose.Layer(blockHitClip, Mathf.Lerp(0.05f, 0.6f, _blockHitT / 0.5f), 1f - Smooth((_blockHitT - 0.3f) / 0.2f));
+            if (staggerClip != null && IsStaggered) _pose.Layer(staggerClip, Mathf.Clamp01(_staggerT / 0.7f), 1f);
+            _pose.Apply();
+        }
+
         bool PlayerInFront => Player != null && Mathf.Sign(Player.position.x - transform.position.x) == _face;
 
         protected override bool InHitRange()
@@ -172,11 +227,12 @@ namespace ProjectHymn.Gameplay
 
         protected override void OnStruck(HitData hit, float scale)
         {
-            if (scale < 0.5f) _shieldKick = 1f;
+            if (scale < 0.5f) { _shieldKick = 1f; _blockHitT = 0f; }
         }
 
         protected override void OnStaggered()
         {
+            _staggerT = 0f;
             if (Player == null) return;
             var p = transform.position;
             p.x = Mathf.Clamp(p.x - _face * 0.5f, bounds.x, bounds.y);
@@ -197,6 +253,22 @@ namespace ProjectHymn.Gameplay
         IEnumerator Fall()
         {
             float t = 0f;
+            if (_pose != null && deathClip != null)
+            {
+                while (t < 1f)
+                {
+                    t += Time.deltaTime / Mathf.Max(0.3f, deathClip.length);
+                    _pose.Reset();
+                    _pose.Layer(deathClip, t);
+                    _pose.Apply();
+                    yield return null;
+                }
+                yield return new WaitForSeconds(1.5f);
+                var start0 = transform.position;
+                for (t = 0f; t < 1f; t += Time.deltaTime / 0.8f) { transform.position = start0 + Vector3.down * 1.2f * t; yield return null; }
+                gameObject.SetActive(false);
+                yield break;
+            }
             var start = body != null ? body.localRotation : Quaternion.identity;
             while (t < 1f)
             {

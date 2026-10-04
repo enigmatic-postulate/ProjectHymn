@@ -54,6 +54,14 @@ namespace ProjectHymn.Gameplay
         public float radius = 0.9f;
         public string effect = "cut";
 
+        [Header("Clip (art pass)")]
+        [Tooltip("Play this authored clip instead of the keyframes; the keys then only set the move's span in beats.")]
+        public BakedClip clip;
+        [Tooltip("Normalized clip time of the impact frame: it is placed exactly on the beat.")]
+        [Range(0f, 1f)] public float clipHit = 0.5f;
+        [Range(0f, 1f)] public float clipStart = 0f;
+        [Range(0f, 1f)] public float clipEnd = 1f;
+
         [Header("Look")]
         public Color trailColor = new Color(1f, 0.88f, 0.55f);
         [Tooltip("Two-handed weapons: release the left hand for this move (the punch).")]
