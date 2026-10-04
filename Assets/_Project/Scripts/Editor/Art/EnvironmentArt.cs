@@ -61,7 +61,7 @@ namespace ProjectHymn.EditorTools.Art
         /// A box with world-space UVs (sides tile every <paramref name="tile"/> metres, the top every
         /// <paramref name="topTile"/>): submesh 0 the four sides, submesh 1 the top. With a box collider.
         /// </summary>
-        public static GameObject Block(Transform parent, string name, Vector3 min, Vector3 max, Material sides, Material top, float tile, float topTile, bool collider)
+        public static GameObject Block(Transform parent, string name, Vector3 min, Vector3 max, Material sides, Material top, float tile, float topTile, bool collider, bool saveAsset = true)
         {
             var verts = new List<Vector3>();
             var norms = new List<Vector3>();
@@ -94,7 +94,7 @@ namespace ProjectHymn.EditorTools.Art
             mesh.SetTriangles(topTris, 1);
             mesh.RecalculateBounds();
             mesh.RecalculateTangents();
-            mesh = SaveMesh(mesh, name);
+            if (saveAsset) mesh = SaveMesh(mesh, name);   // otherwise the mesh is stored in the scene
 
             var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
             go.transform.SetParent(parent, false);
@@ -121,6 +121,61 @@ namespace ProjectHymn.EditorTools.Art
             Object.DestroyImmediate(m);
             EditorUtility.SetDirty(existing);
             return existing;
+        }
+
+        // ---------------- Distant cliffs ----------------
+
+        static readonly Color Fog = new Color(0.62f, 0.69f, 0.84f);
+        static readonly float[] Haze = { 0.3f, 0.52f, 0.72f };
+
+        static Material FarStone(int layer) => ArtLibrary.Textured($"Far_Stone_{layer}", T("T_UnevenBrick_BaseColor"), N("T_UnevenBrick_Normal"),
+            Color.Lerp(new Color(0.88f, 0.82f, 0.76f), Fog, Haze[layer]), 0.02f, 1f);
+        static Material FarGrass(int layer) => ArtLibrary.Textured($"Far_Grass_{layer}", T("T_Noise_Terrain"), null,
+            Color.Lerp(new Color(0.45f, 0.66f, 0.3f), Fog, Haze[layer]), 0.0f, 1f);
+
+        /// <summary>
+        /// A distant cliff in the backdrop: a stone mesa of two or three terraces (each narrower and grass-topped), a
+        /// buttress at its foot, hazier with each layer; the nearest layer sometimes carries a boulder crag.
+        /// </summary>
+        public static void FarMesa(Transform parent, System.Random rng, int layer, float x, float width, float height, float z, float depth, float bottom)
+        {
+            var root = new GameObject("Far Cliff").transform;
+            root.SetParent(parent, false);
+            var stone = FarStone(layer);
+            var grass = FarGrass(layer);
+            float tile = 4f + layer * 3f;
+            float R() => (float)rng.NextDouble();
+            int tiers = height > 14f ? 3 : 2;
+            float x0 = x, x1 = x + width, z0 = z, z1 = z + depth, y = bottom;
+            float h0 = height * (tiers == 3 ? 0.5f + R() * 0.15f : 0.62f + R() * 0.15f);
+            for (int t = 0; t < tiers; t++)
+            {
+                float top = t == tiers - 1 ? height : Mathf.Lerp(y, height, t == 0 ? h0 / height : 0.55f + R() * 0.2f);
+                if (t == 0) top = h0;
+                Block(root, "Tier", new Vector3(x0, y, z0), new Vector3(x1, top, z1), stone, grass, tile, tile * 1.5f, collider: false, saveAsset: false);
+                y = top;
+                float inset = (x1 - x0) * (0.12f + R() * 0.18f);
+                float shift = (R() - 0.5f) * inset;
+                x0 += inset + shift; x1 -= inset - shift;
+                z0 += depth * 0.1f; z1 -= depth * 0.05f;
+                if (x1 - x0 < 2f) break;
+            }
+            // A buttress breaking up the foot of the cliff.
+            float bw = width * (0.15f + R() * 0.2f), bx = x + R() * (width - bw);
+            Block(root, "Buttress", new Vector3(bx, bottom, z - depth * 0.25f), new Vector3(bx + bw, bottom + (h0 - bottom) * (0.35f + R() * 0.3f), z + depth * 0.3f),
+                stone, grass, tile, tile * 1.5f, collider: false, saveAsset: false);
+            if (layer == 0 && ArtLibrary.HasBoulders && R() < 0.45f)
+            {
+                var go = ArtLibrary.Instance($"{ArtLibrary.Boulders}/namaqualand_boulder_03.fbx", root);
+                if (go != null)
+                {
+                    go.transform.SetPositionAndRotation(new Vector3((x0 + x1) * 0.5f, y - 0.3f, (z0 + z1) * 0.5f), Quaternion.Euler(0f, R() * 360f, 0f));
+                    go.transform.localScale = Vector3.one * (2f + R() * 2.5f);
+                    ArtLibrary.Paint(go, ArtLibrary.Textured("Far_Boulder", $"{ArtLibrary.Boulders}/namaqualand_boulder_03_diff_1k.jpg", $"{ArtLibrary.Boulders}/namaqualand_boulder_03_nor_1k.png",
+                        Color.Lerp(new Color(0.95f, 0.9f, 0.86f), Fog, Haze[0]), 0.05f));
+                }
+            }
+            foreach (var r in root.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = layer == 0 ? ShadowCastingMode.On : ShadowCastingMode.Off;
         }
 
         // ---------------- Kit pieces ----------------

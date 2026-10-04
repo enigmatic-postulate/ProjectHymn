@@ -224,7 +224,8 @@ namespace ProjectHymn.EditorTools
                 {
                     float w = layer.w * (0.6f + (float)rng.NextDouble() * 0.9f);
                     float h = layer.min + (float)rng.NextDouble() * (layer.max - layer.min);
-                    Box(root, "Far Cliff", new Vector3(x, Bottom, layer.z), new Vector3(x + w, h, layer.z + layer.w), layer.color, false, 0f);
+                    if (_village) EnvironmentArt.FarMesa(root, rng, System.Array.IndexOf(layers, layer), x, w, h, layer.z, layer.w, Bottom);
+                    else Box(root, "Far Cliff", new Vector3(x, Bottom, layer.z), new Vector3(x + w, h, layer.z + layer.w), layer.color, false, 0f);
                     x += w * (0.7f + (float)rng.NextDouble() * 0.6f);
                 }
             }
