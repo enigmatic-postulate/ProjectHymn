@@ -56,7 +56,8 @@ namespace ProjectHymn.Gameplay
                 body.localRotation = Quaternion.Euler(0f, Mathf.MoveTowardsAngle(cur, yaw, turnSpeed * dt), 0f);
             }
 
-            if (_pose == null || idleClip == null) return;
+            if (idleClip == null || rigRoot == null) return;
+            if (_pose == null || _pose.Rot == null) _pose = new ClipPose(rigRoot.GetComponentsInChildren<Transform>(true), "root");
             _blend = Mathf.MoveTowards(_blend, near && nearClip != null ? 1f : 0f, dt * 3f);
             float t = Time.time + _offset;
             _pose.Reset();

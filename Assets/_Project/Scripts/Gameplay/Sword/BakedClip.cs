@@ -67,8 +67,9 @@ namespace ProjectHymn.Gameplay
     /// <summary>
     /// Samples <see cref="BakedClip"/>s onto a set of bone transforms by name. Keeps a pose buffer
     /// (bind pose + layers blended on top) and writes it in one go. Used by the KayKit enemies.
+    /// Not serializable on purpose: a field of this type must only ever hold one built by the constructor (Unity would
+    /// otherwise fill serialized or hot-reloaded fields with an empty instance whose buffers are null).
     /// </summary>
-    [Serializable]
     public sealed class ClipPose
     {
         readonly Transform[] _bones;
