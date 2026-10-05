@@ -26,16 +26,18 @@ namespace ProjectHymn.EditorTools
         const string VillagePath = SceneDir + "/Village.unity";
         const string TitlePath = SceneDir + "/Title.unity";
         const string CliffsidePath = SceneDir + "/Cliffside.unity";
+        const string BelfryPath = SceneDir + "/Belfry.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
         {
             CliffsideBuilder.Build();
+            CliffsideBuilder.BuildBelfry();
             BuildVillage();
             BuildTitle();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village and Cliffside are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside and Belfry Ridge are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
                       "E drinks the quick item, Q changes it, Esc pauses (Songbook, Items, Settings).");
         }
@@ -134,13 +136,16 @@ namespace ProjectHymn.EditorTools
             var loreLedge = Item("lore_ledge", "Lookout's Note", ItemKind.Lore, 0, "Tucked under a stone on a ledge above the street.", 0x9ab8ff);
             loreLedge.loreText = "Third night the knights in bone walked the tiers. They raise the blade a full bar before they swing. " +
                                  "Wait for it. Guard on the beat and they stagger like drunks.";
-            foreach (var i in new[] { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge }) EditorUtility.SetDirty(i);
+            var loreBelfry = Item("lore_belfry", "The Cantors' Count", ItemKind.Lore, 0, "Scratched on a cairn at the foot of the belfry ridge.", 0x9ab8ff);
+            loreBelfry.loreText = "UP HERE THE BELL COUNTS THREE. THE DEAD STILL DANCE TO IT: ONE, THEY STEP; TWO, THREE, THEY SWAY. " +
+                                  "WHEN THEY RAISE BOTH BLADES, THEY STRIKE ONE-TWO-THREE. WHEN THEY HOLD ON TWO, THEY STRIKE ON THREE.";
+            foreach (var i in new[] { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry }) EditorUtility.SetDirty(i);
 
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>($"{ResourcesDir}/{GameDatabase.ResourcePath}.asset");
             if (db == null) { db = ScriptableObject.CreateInstance<GameDatabase>(); AssetDatabase.CreateAsset(db, $"{ResourcesDir}/{GameDatabase.ResourcePath}.asset"); }
             db.classes = new List<ClassDefinition> { minstrel, fighter, warden, crusader };
             db.weapons = both;
-            db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge };
+            db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry };
             db.shopStock = new List<ItemDefinition> { potion, tonic, power };
             db.startingItems = new List<GameDatabase.ItemCount> { new GameDatabase.ItemCount { id = "potion", count = 1 } };
             db.hubScene = "Village";
@@ -399,12 +404,17 @@ namespace ProjectHymn.EditorTools
                 npc.speaker = t.name; npc.lines = t.lines; npc.givesLore = t.lore; npc.prompt = "Talk";
             }
 
-            // The way out
-            var doorGo = new GameObject("Gate to Cliffside", typeof(SceneDoor));
+            // The way out: the gate opens onto every stage (Belfry Ridge once Cliffside is cleared).
+            var doorGo = new GameObject("Stage Gate", typeof(StageGate));
             doorGo.transform.SetParent(level, false);
             doorGo.transform.position = new Vector3(VillageLayout.GateX, top, 0f);
-            var door = doorGo.GetComponent<SceneDoor>();
-            door.scene = "Cliffside"; door.spawn = "Start"; door.saveOnArrival = false; door.prompt = "To the cliffs"; door.range = 2.2f;
+            var gate = doorGo.GetComponent<StageGate>();
+            gate.prompt = "Leave the village"; gate.range = 2.2f;
+            gate.stages = new List<StageGate.Destination>
+            {
+                new StageGate.Destination { stageId = "Cliffside", scene = "Cliffside", label = "Cliffside", meter = "4/4" },
+                new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
+            };
 
             // Spawns, players, camera, UI
             var spawns = new GameObject("Spawns").transform;
@@ -519,7 +529,7 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, CliffsidePath };
+            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

@@ -1,4 +1,5 @@
 using ProjectHymn.Combat;
+using ProjectHymn.Core;
 using ProjectHymn.Progression;
 using ProjectHymn.UI;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace ProjectHymn.Gameplay
     public class StageDirector : MonoBehaviour
     {
         [SerializeField] string stageId = "Cliffside";
+        [SerializeField] string stageName = "";
         [SerializeField] Vector2Int notesPerEnemy = new Vector2Int(20, 40);
         [SerializeField] SliceGoal goal;
         [SerializeField] string returnSpawn = "FromCliffside";
@@ -60,6 +62,22 @@ namespace ProjectHymn.Gameplay
                 if (_combat != null) { _combat.NoteJudged += OnNote; _combat.SequenceCompleted += OnSequence; }
             }
             ApplyCheckpointRule();
+            AnnounceMeter();
+        }
+
+        /// <summary>Name the stage and its time signature as it starts (and warn a Fighter off-common-time).</summary>
+        void AnnounceMeter()
+        {
+            var conductor = FindAnyObjectByType<Conductor>();
+            var song = conductor != null ? conductor.Song : null;
+            if (song == null || song.sections == null || song.sections.Count == 0) return;
+            var first = song.sections[0];
+            string name = string.IsNullOrEmpty(stageName) ? stageId : stageName;
+            string text = $"{name}  ·  {first.Signature} time";
+            var cls = GameSession.Instance.Class;
+            if (cls != null && cls.commonTimeOnly && first.beatsPerMeasure != 4)
+                text += $"\n{cls.displayName}: sequences only in 4/4. Lone notes still hit here.";
+            GameHud.Toast(text, 3.5f);
         }
 
         void OnDestroy()

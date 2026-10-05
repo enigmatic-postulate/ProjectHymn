@@ -21,7 +21,9 @@ namespace ProjectHymn.EditorTools
     /// </summary>
     public static class CliffsideBuilder
     {
-        const string ScenePath = SceneDir + "/Cliffside.unity";
+        static StageLayout L = StageLayout.Cliffside;
+        static string ScenePath => $"{SceneDir}/{L.Scene}.unity";
+        static bool Waltz => L.Meter == 3;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
         const float BackZ = 7f;
@@ -31,41 +33,52 @@ namespace ProjectHymn.EditorTools
                    Bush = 0x3e6a34, Rope = 0x9a7a48;
 
         [MenuItem("Project Hymn/Build Cliffside Slice", priority = 1)]
-        public static void Build()
+        public static void Build() => BuildStage(StageLayout.Cliffside);
+
+        [MenuItem("Project Hymn/Build Belfry Ridge Slice", priority = 2)]
+        public static void BuildBelfry() => BuildStage(StageLayout.Belfry);
+
+        /// <summary>
+        /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
+        /// bone dancers, dusk light and the belfry). Safe to re-run.
+        /// </summary>
+        public static void BuildStage(StageLayout layout)
         {
+            L = layout;
             PrepareContent();
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();
             _art = ArtLibrary.HasKayKit;
             _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var theme = LoadTheme();
+            var theme = Waltz ? LoadWaltz() : LoadTheme();
             var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
-            BuildLighting();
+            if (Waltz) BuildDuskLighting(); else BuildLighting();
             var level = new GameObject("Level").transform;
-            foreach (var b in CliffsideLayout.Route) BuildBlock(level, b);
-            foreach (var b in CliffsideLayout.Props) BuildBlock(level, b);
+            foreach (var b in L.Route) BuildBlock(level, b);
+            foreach (var b in L.Props) BuildBlock(level, b);
             BuildWaterAndBackdrop(level);
             BuildDressing(level);
-            if (_village) EnvironmentArt.Dress(level, FrontZ);
-            EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
+            if (_village) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
+            if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
+            if (Waltz) BuildBelfry(level);
 
-            foreach (var b in CliffsideLayout.Secrets) BuildBlock(level, b);
+            foreach (var b in L.Secrets) BuildBlock(level, b);
             var conductor = BuildConductor(theme);
 
             // Players: one per class on the platformer controller (the session's class is kept at run time).
             var db = HubBuilder.EnsureDatabase(weapons);
-            var spawn = Marker(CliffsideLayout.MarkerKind.Spawn);
+            var spawn = L.First(CliffsideLayout.MarkerKind.Spawn);
             var spawns = new GameObject("Spawns").transform;
             HubBuilder.Spawn(spawns, "Start", new Vector3(spawn.X, spawn.Y, 0f));
             var player = HubBuilder.BuildPlayers(new Vector3(spawn.X, spawn.Y, 0f), conductor, db, locomotion, additive, _art);
 
             // Checkpoints, targets, pickups, goal, camera zones
             Checkpoint first = null;
-            foreach (var m in CliffsideLayout.Markers)
+            foreach (var m in L.Markers)
             {
                 switch (m.Kind)
                 {
@@ -74,11 +87,12 @@ namespace ProjectHymn.EditorTools
                         if (first == null) { first = cp; SetBool(cp, "startsLit", true); }
                         break;
                     case CliffsideLayout.MarkerKind.Target: BuildKnight(level, m, conductor); break;
+                    case CliffsideLayout.MarkerKind.Dancer: BuildDancer(level, m, conductor); break;
                     case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(level, new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
                     case CliffsideLayout.MarkerKind.Goal: BuildGoal(level, m); break;
                     case CliffsideLayout.MarkerKind.CameraZone: BuildCameraZone(level, m); break;
                     case CliffsideLayout.MarkerKind.Pickup:
-                        HubBuilder.BuildPickup(level, m.Name, new Vector3(m.X, m.Y, 0f), "Cliffside", m.X < 20f ? 40 : m.X < 40f ? 60 : 80);
+                        HubBuilder.BuildPickup(level, m.Name, new Vector3(m.X, m.Y, 0f), L.Id, m.X < 20f ? 40 : m.X < 40f ? 60 : 80);
                         break;
                 }
             }
@@ -93,6 +107,7 @@ namespace ProjectHymn.EditorTools
 
             // Camera, effects, HUD (the minimal HUD builds itself; the old one is the debug HUD)
             var cam = HubBuilder.BuildCamera(player.transform.position);
+            if (Waltz) cam.GetComponent<Camera>().backgroundColor = new Color(0.5f, 0.42f, 0.62f);
             var fx = BuildFx(conductor, null, null, cam, additive);
             fx.AddComponent<DefenseFeedback>();
             var hud = BuildHud(conductor, null);
@@ -103,14 +118,20 @@ namespace ProjectHymn.EditorTools
             var dbg = hud.gameObject.AddComponent<DebugHud>();
             SetList(dbg, "parts", debugParts);
             HubBuilder.BuildGameUi(hub: false);
-            new GameObject("Stage Director", typeof(StageDirector));
+            var director = new GameObject("Stage Director", typeof(StageDirector)).GetComponent<StageDirector>();
+            var dso = new SerializedObject(director);
+            dso.FindProperty("stageId").stringValue = L.Id;
+            dso.FindProperty("stageName").stringValue = L.Name;
+            dso.FindProperty("parSeconds").floatValue = L.ParSeconds;
+            dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
+            dso.ApplyModifiedPropertiesWithoutUndo();
 
-            if (theme == null) Debug.LogError("[Project Hymn] BattleTheme1 asset could not be loaded; assign a Song on the Conductor by hand.");
+            if (theme == null) Debug.LogError($"[Project Hymn] The {(Waltz ? "BelfryWaltz" : "BattleTheme1")} song asset could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath, first: false);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log("[Project Hymn] Cliffside slice built. A/D run, Space jump (again in the air to double jump; hold for height), " +
+            Debug.Log($"[Project Hymn] {L.Name} built ({L.Meter}/4). A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
                       "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
                       "W / Up uses doors, E drinks the quick item, Q changes it, Esc pauses. Shift dodge, R restart, F1-F4 tempos, F9 debug HUD.");
@@ -118,11 +139,7 @@ namespace ProjectHymn.EditorTools
 
         static bool _art, _village;
 
-        static CliffsideLayout.Marker Marker(CliffsideLayout.MarkerKind kind)
-        {
-            foreach (var m in CliffsideLayout.MarkersOf(kind)) return m;
-            return default;
-        }
+
 
         // ---------------- Lighting ----------------
 
@@ -144,6 +161,101 @@ namespace ProjectHymn.EditorTools
             RenderSettings.fogColor = new Color(0.62f, 0.69f, 0.84f);
             RenderSettings.fogStartDistance = 28f;
             RenderSettings.fogEndDistance = 170f;
+        }
+
+        /// <summary>Belfry Ridge: dusk. A low warm sun from the side, violet sky fill and haze.</summary>
+        internal static void BuildDuskLighting()
+        {
+            var sun = new GameObject("Sun", typeof(Light));
+            sun.transform.rotation = Quaternion.Euler(14f, -38f, 0f);
+            var l = sun.GetComponent<Light>();
+            l.type = LightType.Directional; l.intensity = 1.15f; l.color = new Color(1f, 0.66f, 0.42f);
+            l.shadows = LightShadows.Soft; l.shadowStrength = 0.8f;
+            RenderSettings.skybox = null;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.46f, 0.4f, 0.66f);
+            RenderSettings.ambientEquatorColor = new Color(0.56f, 0.42f, 0.48f);
+            RenderSettings.ambientGroundColor = new Color(0.2f, 0.16f, 0.22f);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.58f, 0.48f, 0.66f);
+            RenderSettings.fogStartDistance = 24f;
+            RenderSettings.fogEndDistance = 150f;
+        }
+
+        /// <summary>The cantors' belfry behind the goal: a stone tower with an open bell chamber; the bell swings once a bar.</summary>
+        static void BuildBelfry(Transform level)
+        {
+            var goal = L.First(CliffsideLayout.MarkerKind.Goal);
+            var root = new GameObject("Belfry").transform;
+            root.SetParent(level, false);
+            float x = goal.X, y = goal.Y, z0 = 5f, z1 = 10f;
+            Box(root, "Tower", new Vector3(x - 2.6f, y, z0), new Vector3(x + 2.6f, y + 11f, z1), StoneWarm, false);
+            foreach (var px in new[] { x - 2.6f, x + 2.0f })
+                Box(root, "Post", new Vector3(px, y + 11f, z0), new Vector3(px + 0.6f, y + 15f, z0 + 0.6f), StoneDark, false);
+            Box(root, "Back", new Vector3(x - 2.6f, y + 11f, z1 - 0.6f), new Vector3(x + 2.6f, y + 15f, z1), StoneDark, false);
+            Box(root, "Cornice", new Vector3(x - 3.0f, y + 15f, z0 - 0.4f), new Vector3(x + 3.0f, y + 15.6f, z1 + 0.4f), Stone, false);
+            var roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(roof.GetComponent<Collider>());
+            roof.name = "Roof";
+            roof.transform.SetParent(root, false);
+            roof.transform.position = new Vector3(x, y + 16.9f, (z0 + z1) * 0.5f);
+            roof.transform.rotation = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(0f, 0f, 0f);
+            roof.transform.localScale = new Vector3(4.6f, 2.6f, 4.6f);
+            roof.GetComponent<MeshRenderer>().sharedMaterial = Lit.Lit(0x5a3a4a, 0.1f);
+
+            // The bell hangs from a pivot at the top of the chamber and swings across one bar.
+            var pivot = new GameObject("Bell", typeof(BellSwing)).transform;
+            pivot.SetParent(root, false);
+            pivot.position = new Vector3(x, y + 14.6f, z0 + 0.9f);
+            var bell = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Object.DestroyImmediate(bell.GetComponent<Collider>());
+            bell.name = "Bell Body";
+            bell.transform.SetParent(pivot, false);
+            bell.transform.localPosition = new Vector3(0f, -1.3f, 0f);
+            bell.transform.localScale = new Vector3(1.7f, 0.9f, 1.7f);
+            bell.GetComponent<MeshRenderer>().sharedMaterial = Lit.Lit(0xc89a40, 0.75f, 0.6f);
+            var crown = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.DestroyImmediate(crown.GetComponent<Collider>());
+            crown.name = "Crown";
+            crown.transform.SetParent(pivot, false);
+            crown.transform.localPosition = new Vector3(0f, -0.45f, 0f);
+            crown.transform.localScale = new Vector3(1.3f, 1.0f, 1.3f);
+            crown.GetComponent<MeshRenderer>().sharedMaterial = Lit.Lit(0xc89a40, 0.75f, 0.6f);
+            var lampGo = new GameObject("Bell Light", typeof(Light));
+            lampGo.transform.SetParent(root, false);
+            lampGo.transform.position = new Vector3(x, y + 13f, z0 - 1.5f);
+            var lamp = lampGo.GetComponent<Light>();
+            lamp.type = LightType.Point; lamp.range = 9f; lamp.intensity = 1.4f; lamp.color = new Color(1f, 0.8f, 0.5f);
+
+            // Lanterns on posts along the route, for the dusk.
+            foreach (var b in L.Route)
+            {
+                if (b.Kind != CliffsideLayout.Kind.Cliff) continue;
+                var post = new GameObject("Lantern").transform;
+                post.SetParent(root, false);
+                Box(post, "Pole", new Vector3(b.XMax - 1.4f, b.Top, 2.0f), new Vector3(b.XMax - 1.2f, b.Top + 2.4f, 2.2f), StoneDark, false);
+                var glow = Box(post, "Glass", new Vector3(b.XMax - 1.5f, b.Top + 2.4f, 1.9f), new Vector3(b.XMax - 1.1f, b.Top + 2.85f, 2.3f), 0xffd890, false, 0.9f);
+                var gm = glow.GetComponent<MeshRenderer>().sharedMaterial;
+                gm.EnableKeyword("_EMISSION");
+                gm.SetColor("_EmissionColor", new Color(1f, 0.75f, 0.4f) * 1.5f);
+                var lg = new GameObject("Lantern Light", typeof(Light));
+                lg.transform.SetParent(post, false);
+                lg.transform.position = new Vector3(b.XMax - 1.3f, b.Top + 2.6f, 1.6f);
+                var ll = lg.GetComponent<Light>();
+                ll.type = LightType.Point; ll.range = 5f; ll.intensity = 0.9f; ll.color = new Color(1f, 0.75f, 0.45f);
+            }
+        }
+
+        /// <summary>A bone dancer waltzes along the ledge it stands on; the lead dancer is tougher.</summary>
+        static void BuildDancer(Transform level, CliffsideLayout.Marker m, Conductor conductor)
+        {
+            var ledge = L.BlockAt(m.X);
+            var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
+            float hp = m.Name.StartsWith("Lead") ? 230f : 150f;
+            var pos = new Vector3(m.X, m.Y, 0f);
+            if (_art && ArtLibrary.HasSkeleton) KayKitBuilder.BuildSkeletonDancer(level, m.Name, pos, bounds, conductor, hp);
+            else EnemyBuilder.BuildDancer(level, m.Name, pos, bounds, conductor, hp);
         }
 
         // ---------------- Geometry ----------------
@@ -233,7 +345,7 @@ namespace ProjectHymn.EditorTools
             var root = new GameObject("Dressing").transform;
             root.SetParent(level, false);
             var rng = new System.Random(11);
-            foreach (var b in CliffsideLayout.Route)
+            foreach (var b in L.Route)
             {
                 if (b.Width < 4f) continue;
                 for (float x = b.XMin + 1.5f; x < b.XMax - 1.5f; x += 3f + (float)rng.NextDouble() * 4f)
@@ -302,7 +414,7 @@ namespace ProjectHymn.EditorTools
         static void BuildKnight(Transform level, CliffsideLayout.Marker m, Conductor conductor)
         {
             var ledge = default(CliffsideLayout.Block);
-            foreach (var b in CliffsideLayout.Route) if (m.X > b.XMin && m.X < b.XMax) ledge = b;
+            foreach (var b in L.Route) if (m.X > b.XMin && m.X < b.XMax) ledge = b;
             var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
             if (_art && ArtLibrary.HasSkeleton) KayKitBuilder.BuildSkeletonKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
             else EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);

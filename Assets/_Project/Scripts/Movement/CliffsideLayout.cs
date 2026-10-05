@@ -24,7 +24,7 @@ namespace ProjectHymn.Movement
             public float CenterX => (XMin + XMax) * 0.5f;
         }
 
-        public enum MarkerKind { Spawn, Checkpoint, Target, FloatingTarget, Goal, CameraZone, Pickup }
+        public enum MarkerKind { Spawn, Checkpoint, Target, FloatingTarget, Goal, CameraZone, Pickup, Dancer }
 
         public readonly struct Marker
         {
@@ -93,5 +93,13 @@ namespace ProjectHymn.Movement
         {
             foreach (var m in Markers) if (m.Kind == kind) yield return m;
         }
+
+        /// <summary>Cliffside as a stage the builder and the tests can treat like any other.</summary>
+        public static StageLayout Stage => new StageLayout
+        {
+            Id = "Cliffside", Name = "Cliffside", Scene = "Cliffside", Meter = 4,
+            ParSeconds = 75f, PerfectAttacks = 14,
+            Route = Route, Props = Props, Secrets = Secrets, Markers = Markers,
+        };
     }
 }

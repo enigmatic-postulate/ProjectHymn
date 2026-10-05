@@ -101,6 +101,7 @@ namespace ProjectHymn.EditorTools
             CreateSong("BattleTheme1", "https://www.youtube.com/watch?v=Z3l0ehUm4lM", new TempoSection(112, 130f, 4));
             CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
                 new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8));
+            EnsureWaltz();
             Sword.SwordContent.Ensure();
             Sword.SwordContent.EnsureLocomotion();
             Sword.SwordsmanBuilder.BuildSwordsman();
@@ -109,6 +110,38 @@ namespace ProjectHymn.EditorTools
         }
 
         internal static SongData LoadTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BattleTheme1.asset");
+
+        /// <summary>VS-2's music: an original placeholder battle waltz rendered by Tools/compose_waltz.py.</summary>
+        internal const string WaltzClipPath = Root + "/Audio/Generated/Waltz_of_the_Belfry.wav";
+        internal static SongData LoadWaltz() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BelfryWaltz.asset");
+
+        /// <summary>
+        /// "Waltz of the Belfry": 32 bars of 3/4 at 168 BPM in D minor, exactly one tempo map long (beat 0 = sample 0),
+        /// looping. The clip imports as uncompressed PCM so the loop stays sample-exact on the beat grid.
+        /// </summary>
+        static void EnsureWaltz()
+        {
+            if (AssetImporter.GetAtPath(WaltzClipPath) is AudioImporter ai)
+            {
+                var ss = ai.defaultSampleSettings;
+                if (ss.compressionFormat != AudioCompressionFormat.PCM || ss.loadType != AudioClipLoadType.DecompressOnLoad)
+                {
+                    ss.compressionFormat = AudioCompressionFormat.PCM;
+                    ss.loadType = AudioClipLoadType.DecompressOnLoad;
+                    ai.defaultSampleSettings = ss;
+                    ai.SaveAndReimport();
+                }
+            }
+            var song = CreateSong("BelfryWaltz", "Tools/compose_waltz.py (original placeholder)", new TempoSection(32, 168f, 3));
+            if (song.clip == null) song.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(WaltzClipPath);
+            song.sections = new List<TempoSection> { new TempoSection(32, 168f, 3) };
+            song.loop = true;
+            song.firstBeatOffset = 0.0;
+            song.keyRoot = 2;
+            song.minorKey = true;
+            EditorUtility.SetDirty(song);
+            if (song.clip == null) Debug.LogWarning($"[Project Hymn] {WaltzClipPath} is missing: Belfry Ridge will run on the metronome alone.");
+        }
 
         internal static List<WeaponSet> LoadWeapons() => new List<WeaponSet>
         {

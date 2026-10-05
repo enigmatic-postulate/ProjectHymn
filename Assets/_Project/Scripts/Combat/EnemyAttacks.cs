@@ -39,11 +39,11 @@ namespace ProjectHymn.Combat
         public readonly double LastHitBeat;
         public readonly double EndBeat;          // recovery over
 
-        public PlannedAttack(EnemyAttackPattern pattern, double firstHitBeat)
+        public PlannedAttack(EnemyAttackPattern pattern, double firstHitBeat, int leadBeats = -1)
         {
             Pattern = pattern;
             FirstHitBeat = firstHitBeat;
-            TelegraphBeat = firstHitBeat - Math.Max(0, pattern.LeadBeats);
+            TelegraphBeat = firstHitBeat - Math.Max(0, leadBeats >= 0 ? leadBeats : pattern.LeadBeats);
             LastHitBeat = firstHitBeat + pattern.Span;
             EndBeat = LastHitBeat + Math.Max(0, pattern.RecoverBeats);
         }
@@ -83,17 +83,21 @@ namespace ProjectHymn.Combat
         /// <summary>
         /// Plan <paramref name="pattern"/> so its whole telegraph lies at or after <paramref name="nowBeat"/> and its
         /// wind-up does not start before <paramref name="notBeforeBeat"/> (recovery, stagger). The first hit lands on a
-        /// whole beat (a downbeat if the pattern asks for one).
+        /// whole beat (a downbeat if the pattern asks for one). With <paramref name="oneBarLead"/> the telegraph is one
+        /// bar of the meter the hit lands in (3 beats in 3/4, 4 in 4/4) instead of the pattern's own lead.
         /// </summary>
-        public static PlannedAttack Plan(TempoMap map, EnemyAttackPattern pattern, double nowBeat, double notBeforeBeat)
+        public static PlannedAttack Plan(TempoMap map, EnemyAttackPattern pattern, double nowBeat, double notBeforeBeat, bool oneBarLead = false)
         {
-            double earliest = Math.Max(nowBeat, notBeforeBeat) + Math.Max(0, pattern.LeadBeats);
+            int lead = Math.Max(0, pattern.LeadBeats);
+            if (oneBarLead) lead = map.GetBeat((long)Math.Ceiling(Math.Max(nowBeat, notBeforeBeat) - 1e-6)).BeatsPerMeasure;
+            double earliest = Math.Max(nowBeat, notBeforeBeat) + lead;
             long b = (long)Math.Ceiling(earliest - 1e-6);
             if (pattern.OnDownbeat)
             {
                 for (int guard = 0; guard < 64 && !map.GetBeat(b).IsDownbeat; guard++) b++;
             }
-            return new PlannedAttack(pattern, b);
+            if (oneBarLead) lead = map.GetBeat(b).BeatsPerMeasure;
+            return new PlannedAttack(pattern, b, lead);
         }
     }
 

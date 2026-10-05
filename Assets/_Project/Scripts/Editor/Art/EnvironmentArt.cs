@@ -202,12 +202,15 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         /// <summary>Stone borders along cliff lips, vines down the faces, fences, crates, a house and props.</summary>
-        public static void Dress(Transform level, float frontZ)
+        public static void Dress(Transform level, float frontZ) => Dress(level, frontZ, CliffsideLayout.Route, true);
+
+        /// <summary>Borders and vines along any stage's cliffs; the fences, crates, house and wagon only on Cliffside.</summary>
+        public static void Dress(Transform level, float frontZ, CliffsideLayout.Block[] route, bool cliffsideProps)
         {
             var root = new GameObject("Village Dressing").transform;
             root.SetParent(level, false);
             var rng = new System.Random(5);
-            foreach (var b in CliffsideLayout.Route)
+            foreach (var b in route)
             {
                 if (b.Kind != CliffsideLayout.Kind.Cliff) continue;
                 for (float x = b.XMin + 1f; x <= b.XMax - 1f + 1e-3f; x += 2f)
@@ -220,6 +223,7 @@ namespace ProjectHymn.EditorTools.Art
                 }
             }
 
+            if (!cliffsideProps) return;
             var t1 = CliffsideLayout.Route[1];
             for (float x = t1.XMin + 1.5f; x < t1.XMax - 1f; x += 2.06f) Piece(root, "Prop_WoodenFence_Single", new Vector3(x, t1.Top, 4.6f), 0f);
             Piece(root, "Prop_Crate", new Vector3(23.4f, t1.Top, 2.3f), 10f);

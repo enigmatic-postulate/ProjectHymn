@@ -26,6 +26,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] protected float aggroRange = 7f;
         [SerializeField] protected float aggroHeight = 2.5f;
         [SerializeField] protected float leashRange = 14f;
+        [Tooltip("Telegraph each attack for one bar of the current meter (3 beats in 3/4) instead of the pattern's lead.")]
+        [SerializeField] protected bool oneBarCountIn = true;
         [Header("Stagger")]
         [SerializeField] protected int staggerBeats = 2;
         [SerializeField] protected float staggerDamageMultiplier = 1.5f;
@@ -129,7 +131,7 @@ namespace ProjectHymn.Gameplay
             {
                 var pattern = patterns[_patternIndex % patterns.Count];
                 _patternIndex++;
-                Plan = EnemyScheduler.Plan(conductor.Map, pattern, BeatNow, _notBeforeBeat);
+                Plan = EnemyScheduler.Plan(conductor.Map, pattern, BeatNow, _notBeforeBeat, oneBarCountIn);
                 _hitsDone = 0;
                 _hitStarted = false;
                 for (int i = 0; i < Plan.HitCount; i++)

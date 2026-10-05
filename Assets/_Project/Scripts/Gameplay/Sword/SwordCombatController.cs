@@ -111,7 +111,7 @@ namespace ProjectHymn.Gameplay
         {
             int known = 0;
             if (Weapon != null) foreach (var s in Weapon.sequences) if (s != null && Knows(s)) known++;
-            if (known != _chain.Sequences.Count) RefreshSequences();
+            if (!_meterLocked && known != _chain.Sequences.Count) RefreshSequences();
         }
 
         static bool Knows(SwordSequence s) => !GameSession.Exists || GameSession.Instance.FreePlay || GameSession.Instance.Data.Knows(s.key);
@@ -136,17 +136,28 @@ namespace ProjectHymn.Gameplay
             _pending.Clear();
         }
 
+        /// <summary>Sequences only in common time (4/4): the Fighter's limit (Rank &amp; Class). Lone notes still hit.</summary>
+        public bool CommonTimeOnly { get; set; }
+        bool _meterLocked;
+
         public void SelectWeapon(int index)
         {
             if (weapons.Count == 0) return;
             _weaponIndex = ((index % weapons.Count) + weapons.Count) % weapons.Count;
             var w = Weapon;
-            var patterns = new List<SequencePattern>();
-            foreach (var s in w.sequences) if (s != null && s.IsValid && Knows(s)) patterns.Add(s.ToPattern());
-            _chain.SetSequences(patterns);
+            RebuildSequences();
             _pending.Clear();
             if (animator != null) animator.SetWeapon(w);
             WeaponChanged?.Invoke(w);
+        }
+
+        void RebuildSequences()
+        {
+            var w = Weapon;
+            var patterns = new List<SequencePattern>();
+            if (w != null && !_meterLocked)
+                foreach (var s in w.sequences) if (s != null && s.IsValid && Knows(s)) patterns.Add(s.ToPattern());
+            _chain.SetSequences(patterns);
         }
 
         void Update()
@@ -168,6 +179,8 @@ namespace ProjectHymn.Gameplay
             if (w == null || animator == null) return;
             var map = conductor.Map;
             var judge = BeatJudge.Judge(map, pressTime, windows);
+            bool locked = CommonTimeOnly && judge.Beat.BeatsPerMeasure != 4;
+            if (locked != _meterLocked) { _meterLocked = locked; RebuildSequences(); }
             var step = _chain.Register(judge.Beat.Index, button, judge.IsOnBeat);
 
             SwordSequence seq = step.Sequence >= 0 && step.Sequence < _chain.Sequences.Count

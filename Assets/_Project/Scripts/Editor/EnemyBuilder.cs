@@ -76,6 +76,43 @@ namespace ProjectHymn.EditorTools
             return k;
         }
 
+        /// <summary>VS-2's bone dancer as placeholder primitives: a pale figure with a blade in each hand (it spins on its hits).</summary>
+        public static BoneDancer BuildDancer(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            const uint Bone = 0xe8e0cc, BoneDark = 0x9a9080, Sash = 0x6a2a8a;
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneDancer));
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var cap = root.GetComponent<CapsuleCollider>();
+            cap.radius = 0.4f; cap.height = 2.0f; cap.center = new Vector3(0f, 1.0f, 0f);
+            var renderers = new List<Renderer>();
+            var body = Pivot("Body", root.transform, Vector3.zero);
+            var dancer = Pivot("Dancer", body, Vector3.zero);
+            foreach (var x in new[] { -0.13f, 0.13f })
+                renderers.Add(Part(PrimitiveType.Cylinder, "Leg", dancer, new Vector3(x, 0.47f, 0f), new Vector3(0.13f, 0.45f, 0.13f), BoneDark));
+            renderers.Add(Part(PrimitiveType.Cube, "Ribs", dancer, new Vector3(0f, 1.25f, 0f), new Vector3(0.44f, 0.5f, 0.28f), Bone));
+            renderers.Add(Part(PrimitiveType.Cube, "Sash", dancer, new Vector3(0f, 0.98f, 0f), new Vector3(0.48f, 0.12f, 0.32f), Sash));
+            renderers.Add(Part(PrimitiveType.Sphere, "Skull", dancer, new Vector3(0f, 1.72f, 0f), new Vector3(0.32f, 0.36f, 0.32f), Bone));
+            foreach (var x in new[] { -0.32f, 0.32f })
+            {
+                renderers.Add(Part(PrimitiveType.Cylinder, "Arm", dancer, new Vector3(x, 1.2f, 0.12f), new Vector3(0.1f, 0.3f, 0.1f), BoneDark));
+                renderers.Add(Part(PrimitiveType.Cube, "Blade", dancer, new Vector3(x * 1.6f, 1.05f, 0.45f), new Vector3(0.05f, 0.04f, 0.9f), 0xe4e8f0, 0.8f));
+            }
+            var d = root.GetComponent<BoneDancer>();
+            SetRef(d, "conductor", conductor);
+            SetRef(d, "body", body);
+            SetArray(d, "flashRenderers", renderers.ToArray());
+            var so = new SerializedObject(d);
+            so.FindProperty("displayName").stringValue = name;
+            so.FindProperty("maxHp").floatValue = maxHp;
+            so.FindProperty("aggroRange").floatValue = 7f;
+            so.FindProperty("barHeight").floatValue = 2.4f;
+            so.FindProperty("bounds").vector2Value = bounds;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            body.rotation = Quaternion.Euler(0f, -90f + 14f, 0f);
+            return d;
+        }
+
         public static Wisp BuildWisp(Transform parent, Vector3 position, Conductor conductor, Material additive)
         {
             var root = new GameObject("Wisp", typeof(SphereCollider), typeof(Wisp));

@@ -421,5 +421,66 @@ namespace ProjectHymn.EditorTools.Art
             body.rotation = Quaternion.Euler(0f, -90f + 14f, 0f);
             return k;
         }
+
+        /// <summary>
+        /// VS-2's bone dancer: the KayKit skeleton rogue (the warrior if the rogue isn't imported) with a blade in each
+        /// hand. Its waltz is the dual-wield slice, stab and chop on beats one, two and three; the turn is the two-handed
+        /// spin; the hesitation is chop and slice on one and three.
+        /// </summary>
+        public static BoneDancer BuildSkeletonDancer(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneDancer));
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var cap = root.GetComponent<CapsuleCollider>();
+            cap.radius = 0.42f; cap.height = 2.0f; cap.center = new Vector3(0f, 1.0f, 0f);
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            var mat = Mat("KayKit_Skeleton", "skeleton_texture.png");
+            string fbx = File.Exists(ArtLibrary.SkeletonRogueFbx) ? ArtLibrary.SkeletonRogueFbx : ArtLibrary.SkeletonFbx;
+            var (fit, rigRoot, model) = Place(fbx, body, 2.0f, mat);
+            string W(string f) => $"{ArtLibrary.KayKit}/Weapons/{f}";
+            Attach(W("Skeleton_Blade.fbx"), ArtLibrary.FindDeep(rigRoot, "handslot.r"), "Blade R", mat);
+            Attach(W("Skeleton_Blade.fbx"), ArtLibrary.FindDeep(rigRoot, "handslot.l"), "Blade L", mat);
+
+            var d = root.GetComponent<BoneDancer>();
+            SetRef(d, "conductor", conductor);
+            SetRef(d, "body", body);
+            SetRef(d, "rigRoot", rigRoot);
+            SetArray(d, "flashRenderers", root.GetComponentsInChildren<Renderer>(true));
+            SetRef(d, "idleClip", ArtLibrary.Clip("Skeletons_Idle"));
+            SetRef(d, "stepClip", ArtLibrary.Clip("Skeletons_Walking"));
+            SetRef(d, "staggerClip", ArtLibrary.Clip("Hit_B"));
+            SetRef(d, "deathClip", ArtLibrary.Clip("Skeletons_Death"));
+            SetRef(d, "tauntClip", ArtLibrary.Clip("Skeletons_Taunt"));
+            var so = new SerializedObject(d);
+            so.FindProperty("displayName").stringValue = name;
+            so.FindProperty("maxHp").floatValue = maxHp;
+            so.FindProperty("aggroRange").floatValue = 7f;
+            so.FindProperty("barHeight").floatValue = 2.35f;
+            so.FindProperty("bounds").vector2Value = bounds;
+            var clips = new[]
+            {
+                new[] { ("Melee_Dualwield_Attack_Slice", 0.482f), ("Melee_Dualwield_Attack_Stab", 0.25f), ("Melee_Dualwield_Attack_Chop", 0.45f) },
+                new[] { ("Melee_2H_Attack_Spin", 0.482f) },
+                new[] { ("Melee_Dualwield_Attack_Chop", 0.45f), ("Melee_Dualwield_Attack_Slice", 0.482f) },
+            };
+            var list = so.FindProperty("patternClips");
+            list.arraySize = clips.Length;
+            for (int p = 0; p < clips.Length; p++)
+            {
+                var hits = list.GetArrayElementAtIndex(p).FindPropertyRelative("hits");
+                hits.arraySize = clips[p].Length;
+                for (int i = 0; i < clips[p].Length; i++)
+                {
+                    var e = hits.GetArrayElementAtIndex(i);
+                    e.FindPropertyRelative("clip").objectReferenceValue = ArtLibrary.Clip(clips[p][i].Item1);
+                    e.FindPropertyRelative("hit").floatValue = clips[p][i].Item2;
+                }
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            body.rotation = Quaternion.Euler(0f, -90f + 14f, 0f);
+            return d;
+        }
     }
 }

@@ -42,6 +42,36 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
+        public void OneBarCountInInWaltzTimeIsThreeBeats()
+        {
+            var a = EnemyScheduler.Plan(Map34(), Cut, 0.5, 0, oneBarLead: true);
+            Assert.AreEqual(6.0, a.FirstHitBeat, 1e-9);           // 0.5 + 3 = 3.5 → next downbeat: 6
+            Assert.AreEqual(3.0, a.TelegraphBeat, 1e-9);          // the count-in is the bar before: 3-2-1
+            var b = EnemyScheduler.Plan(Map34(), Cut, 0.0, 0, oneBarLead: true);
+            Assert.AreEqual(3.0, b.FirstHitBeat, 1e-9);
+            Assert.AreEqual(0.0, b.TelegraphBeat, 1e-9);
+        }
+
+        [Test]
+        public void OneBarCountInInCommonTimeMatchesTheOldLead()
+        {
+            var a = EnemyScheduler.Plan(Map44(), Cut, 1.3, 0, oneBarLead: true);
+            var b = EnemyScheduler.Plan(Map44(), Cut, 1.3, 0);
+            Assert.AreEqual(b.FirstHitBeat, a.FirstHitBeat, 1e-9);
+            Assert.AreEqual(b.TelegraphBeat, a.TelegraphBeat, 1e-9);
+        }
+
+        [Test]
+        public void WaltzPatternHitsEveryBeatOfTheBar()
+        {
+            var waltz = new EnemyAttackPattern("Waltz", new[] { 0.0, 1.0, 2.0 }, 3, 3, 1);
+            var a = EnemyScheduler.Plan(Map34(), waltz, 0.2, 0, oneBarLead: true);
+            Assert.AreEqual(6.0, a.FirstHitBeat, 1e-9);
+            Assert.AreEqual(8.0, a.LastHitBeat, 1e-9);           // 1-2-3 of one bar
+            Assert.AreEqual(11.0, a.EndBeat, 1e-9);              // a bar of recovery
+        }
+
+        [Test]
         public void FlurryPhasesAndCountIn()
         {
             var a = EnemyScheduler.Plan(Map44(), Flurry, 0, 0);

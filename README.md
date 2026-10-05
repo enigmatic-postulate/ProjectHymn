@@ -57,6 +57,18 @@ Rebuild with **Project Hymn → Build Hub & Loop**, then play Cliffside (from th
 - **No checkpoints:** dying or falling into the sea restarts the whole stage, timer included. **R** restarts too. For tuning, **F7** (or Settings → Checkpoints) brings the old checkpoints back.
 - **Stage timer and tally:** Cliffside's par is 1:15. Reaching the gate shows a results screen: time and time rank, the rank after its gates, hits by judgement, parries (count as Perfect), blocks and dodges (count as Great), hits taken, enemies, efficiency (14 attacks for a perfect run, a placeholder) and the mastery score. Since Rank & Class the clear also counts toward progress (below).
 
+## Belfry Ridge (vertical slice milestone VS-2: the second stage, in 3/4)
+
+Built by **Project Hymn → Build Hub & Loop** (or **Build Belfry Ridge Slice** alone). Scene `Scenes/Belfry.unity`; layout data in `Movement/BelfryLayout.cs` (stages share `StageLayout`, and the reach tests run on every stage).
+
+- **The road:** the village gate is now a stage select ("Where to?"): Cliffside (4/4) and Belfry Ridge (3/4), each with your best rank. Belfry Ridge opens once Cliffside is cleared (free play opens both).
+- **The stage:** a dusk climb up the ridge to the old cantors' belfry: two steps, the bell wall (double jump and grab), a broken span with a wisp over it, two rope posts and the belfry yard. Par 1:25, 20 attacks for a perfect run (placeholders). The bell swings once a bar, so it rings on every downbeat. A lore cairn at the foot ("The Cantors' Count") explains the dancers.
+- **The music:** "Waltz of the Belfry", an original placeholder battle waltz (3/4, 168 BPM, D minor, 32 bars, loops exactly on the beat grid). It's rendered by `Tools/compose_waltz.py` into `Audio/Generated/` (no samples; regenerate with `python3 Tools/compose_waltz.py Assets/_Project/Audio/Generated/Waltz_of_the_Belfry.wav`). Song asset `Data/Songs/BelfryWaltz`.
+- **Bone dancers** (`BoneDancer`, KayKit Skeleton Rogue with two blades): between attacks they glide one step on each downbeat and sway on two and three, so they count the bar. Every attack is telegraphed for one bar (3-2-1). Three attacks: **Waltz** (hits on one, two, three), **Hesitation** (one and three, holding on two) and **Turn** (a heavy spin on the downbeat that reaches behind it too). No shield, but they take only 75% damage until they recover after an attack. The lead dancer in the belfry yard has more health.
+- **Count-ins follow the meter:** every enemy's telegraph is now one bar of the current meter (4 beats in 4/4 as before, 3 in 3/4).
+- **The Fighter** plays no sequences in 3/4 (lone notes still hit); the stage says so as it starts. Every stage now opens with its name and time signature.
+- **Art:** copy `Skeleton_Rogue.fbx` from the KayKit Skeletons pack into `Art/Imported/KayKit/Characters` (a companion asset commit does this); without it the dancers use the skeleton warrior, and without KayKit, placeholder primitives.
+
 ## Rank & Class slice (vertical slice milestone VS-1)
 
 Ranks now count. Rebuild with **Project Hymn → Build Hub & Loop** (the database gains four classes and the scenes one player per weapon). All numbers are placeholders in `Progression/ClassProgression.cs` (`ProgressionRules`) and the class assets.
@@ -80,7 +92,7 @@ Menu **Project Hymn → Build Hub & Loop**. It builds the game database and thre
 
 - **Title:** New Game (starts as the Minstrel), Continue (the save), Settings, Quit. The battle theme plays under it.
 - **Players:** every scene holds one player per weapon; *Players* (PlayerSpawner) keeps the save's weapon, applies the class (hearts, damage, perks) and places it at the spawn point it arrived at. (Until Rank & Class the weapon was the class: Knight and Barbarian.)
-- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), armsmaster (weapons), three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate to the cliffs. No music clock runs here, so swords are inert.
+- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), armsmaster (weapons), three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate (stage select: Cliffside, Belfry Ridge). No music clock runs here, so swords are inert.
 - **Cliffside** now has Notes caches on the beach, tier 1 and the far ledge, a lore cairn on the beach, and the **Tempest scroll** on a high ledge over tier 3 (double jump). Enemies drop 20–40 Notes. Reaching the summit clears the stage and returns you to the village (saving); the path at the west end of the beach and the pause menu go back too.
 - **Sequences are learned:** a new game knows Crossing Cuts only. Scrolls (bought or found) teach Powerslice and Tempest; the Songbook in the pause menu lists what you know and the lore you have found.
 - **Items:** the quick slot (bottom left) holds a potion (heals 2) or a tonic (×1.25 damage for 16 beats). **E** uses it, **Q** changes it, or pick one under Items in the pause menu. Stacks hold 9.
