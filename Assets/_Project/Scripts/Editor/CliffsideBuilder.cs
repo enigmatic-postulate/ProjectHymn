@@ -51,6 +51,7 @@ namespace ProjectHymn.EditorTools
         {
             L = layout;
             _boss = null;
+            EnvironmentArt.MeshScope = L.Scene;
             PrepareContent();
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();

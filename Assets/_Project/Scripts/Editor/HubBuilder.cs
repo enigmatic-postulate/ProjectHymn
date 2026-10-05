@@ -320,6 +320,7 @@ namespace ProjectHymn.EditorTools
 
         public static void BuildVillage()
         {
+            EnvironmentArt.MeshScope = "Village";
             PrepareContent();
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();
@@ -483,6 +484,7 @@ namespace ProjectHymn.EditorTools
 
         public static void BuildTitle()
         {
+            EnvironmentArt.MeshScope = "Title";
             PrepareContent();
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();

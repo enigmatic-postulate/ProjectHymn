@@ -110,11 +110,19 @@ namespace ProjectHymn.EditorTools.Art
             return go;
         }
 
+        /// <summary>
+        /// The scene being built (Cliffside, Belfry, Summit, Village, Title). Block meshes are saved per scene: their
+        /// vertices are in world space, so two scenes with a block of the same name (every stage has an "East Wall")
+        /// must not share one mesh asset, or the last scene built moves the other scenes' walls.
+        /// </summary>
+        public static string MeshScope = "Shared";
+
         static Mesh SaveMesh(Mesh m, string name)
         {
-            Directory.CreateDirectory(ArtLibrary.MeshDir + "/Cliffs");
+            string dir = $"{ArtLibrary.MeshDir}/Cliffs/{(string.IsNullOrEmpty(MeshScope) ? "Shared" : MeshScope)}";
+            Directory.CreateDirectory(dir);
             string safe = name.Replace(' ', '_').Replace('/', '_');
-            string path = $"{ArtLibrary.MeshDir}/Cliffs/{safe}.asset";
+            string path = $"{dir}/{safe}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing == null) { AssetDatabase.CreateAsset(m, path); return m; }
             EditorUtility.CopySerialized(m, existing);
