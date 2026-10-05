@@ -18,12 +18,16 @@ namespace ProjectHymn.Combat
         public int Damage = 1;
         /// <summary>Land the first hit on a downbeat (otherwise on any beat).</summary>
         public bool OnDownbeat = true;
+        /// <summary>A guard can't stop it (a ground shockwave): only a dodge, or being out of range (a jump), avoids it.</summary>
+        public bool Unblockable;
 
         public EnemyAttackPattern() { }
         public EnemyAttackPattern(string name, double[] hits, int leadBeats, int recoverBeats, int damage, bool onDownbeat = true)
         {
             Name = name; Hits = hits; LeadBeats = leadBeats; RecoverBeats = recoverBeats; Damage = damage; OnDownbeat = onDownbeat;
         }
+
+        public EnemyAttackPattern WithUnblockable() { Unblockable = true; return this; }
 
         public double Span => Hits == null || Hits.Length == 0 ? 0.0 : Hits[Hits.Length - 1];
     }

@@ -57,6 +57,21 @@ Rebuild with **Project Hymn → Build Hub & Loop**, then play Cliffside (from th
 - **No checkpoints:** dying or falling into the sea restarts the whole stage, timer included. **R** restarts too. For tuning, **F7** (or Settings → Checkpoints) brings the old checkpoints back.
 - **Stage timer and tally:** Cliffside's par is 1:15. Reaching the gate shows a results screen: time and time rank, the rank after its gates, hits by judgement, parries (count as Perfect), blocks and dodges (count as Great), hits taken, enemies, efficiency (14 attacks for a perfect run, a placeholder) and the mastery score. Since Rank & Class the clear also counts toward progress (below).
 
+## The Summit (vertical slice milestone VS-3: the boss)
+
+Built by **Project Hymn → Build Hub & Loop** (or **Build Summit Boss Slice** alone). Scene `Scenes/Summit.unity`; layout `Movement/SummitLayout.cs`. The third road at the village gate opens once Belfry Ridge is cleared.
+
+- **The stage:** a short stair to the crown of the headland at night, then a wide arena ringed by standing stones, with braziers that pulse on the beat. The way down (the goal) stays sealed until the boss falls. Par 1:40, 40 attacks for a perfect run (placeholders); the clear is ranked like any stage (the boss counts as its one enemy).
+- **The music:** "Hymn of the Summit", an original placeholder boss theme that changes meter: 8 bars of 4/4 and 8 of 3/4 at 150 BPM, then 8 of 7/8 (eighth = 300, grouped 2+2+3), looping (33.6 s, exact on the beat grid). Rendered by `Tools/compose_summit.py`; song asset `Data/Songs/SummitTheme`.
+- **Meter changes are telegraphed a bar ahead:** the current time signature sits in the top-right corner on every stage, and through the bar before a change a big "next bar: 7/8" counts down the beats. The boss raises his staff and conducts through that bar instead of attacking.
+- **The Bone Cantor** (`BoneCantor`, a 3.4 m KayKit skeleton mage with a staff; 700 health): every attack is counted in for one bar of the meter it lands in and never straddles a meter change (`Combat/BossPlanner.cs`). He fights in the meter the music is in:
+  - 4/4: **Gavel** (one heavy slam), **Down-Up** (one and three), later **Four on the Floor** (every beat).
+  - 3/4: **Waltz** (one-two-three), later **Hesitation** (one and three).
+  - 7/8: **Limp** (the group starts: 1, 3, 5 of the eighths), last verse **Limp Run** (1, 3, 5, 7).
+  - **Shockwave** (from the second verse, any meter): a jump slam whose ring runs 7 m along the ground. No guard stops it; jump it (be off the ground on the beat) or dodge through it. Its count shows "JUMP".
+- **Three verses (phases) by health,** marked on the boss bar at the bottom of the screen; each change holds him for a bar and names what's coming. He takes 70% damage until he recovers after an attack (full damage in recovery, ×1.5 staggered). Parries stagger him as usual.
+- **Art:** copy `Skeleton_Mage.fbx` (Characters) and the Unity-variant `Skeleton_Staff.fbx` (Weapons) from the KayKit Skeletons pack (a companion asset commit does this). Without them he's the skeleton warrior with a blade; without KayKit, placeholder primitives.
+
 ## Belfry Ridge (vertical slice milestone VS-2: the second stage, in 3/4)
 
 Built by **Project Hymn → Build Hub & Loop** (or **Build Belfry Ridge Slice** alone). Scene `Scenes/Belfry.unity`; layout data in `Movement/BelfryLayout.cs` (stages share `StageLayout`, and the reach tests run on every stage).
@@ -92,7 +107,7 @@ Menu **Project Hymn → Build Hub & Loop**. It builds the game database and thre
 
 - **Title:** New Game (starts as the Minstrel), Continue (the save), Settings, Quit. The battle theme plays under it.
 - **Players:** every scene holds one player per weapon; *Players* (PlayerSpawner) keeps the save's weapon, applies the class (hearts, damage, perks) and places it at the spawn point it arrived at. (Until Rank & Class the weapon was the class: Knight and Barbarian.)
-- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), armsmaster (weapons), three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate (stage select: Cliffside, Belfry Ridge). No music clock runs here, so swords are inert.
+- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), armsmaster (weapons), three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate (stage select: Cliffside, Belfry Ridge, the Summit). No music clock runs here, so swords are inert.
 - **Cliffside** now has Notes caches on the beach, tier 1 and the far ledge, a lore cairn on the beach, and the **Tempest scroll** on a high ledge over tier 3 (double jump). Enemies drop 20–40 Notes. Reaching the summit clears the stage and returns you to the village (saving); the path at the west end of the beach and the pause menu go back too.
 - **Sequences are learned:** a new game knows Crossing Cuts only. Scrolls (bought or found) teach Powerslice and Tempest; the Songbook in the pause menu lists what you know and the lore you have found.
 - **Items:** the quick slot (bottom left) holds a potion (heals 2) or a tonic (×1.25 damage for 16 beats). **E** uses it, **Q** changes it, or pick one under Items in the pause menu. Stacks hold 9.

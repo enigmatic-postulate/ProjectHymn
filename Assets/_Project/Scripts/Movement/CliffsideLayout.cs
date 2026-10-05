@@ -24,7 +24,7 @@ namespace ProjectHymn.Movement
             public float CenterX => (XMin + XMax) * 0.5f;
         }
 
-        public enum MarkerKind { Spawn, Checkpoint, Target, FloatingTarget, Goal, CameraZone, Pickup, Dancer }
+        public enum MarkerKind { Spawn, Checkpoint, Target, FloatingTarget, Goal, CameraZone, Pickup, Dancer, Boss }
 
         public readonly struct Marker
         {

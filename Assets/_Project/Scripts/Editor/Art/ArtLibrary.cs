@@ -25,6 +25,7 @@ namespace ProjectHymn.EditorTools.Art
         public static string KnightFbx => $"{KayKit}/Characters/Knight.fbx";
         public static string SkeletonFbx => $"{KayKit}/Characters/Skeleton_Warrior.fbx";
         public static string SkeletonRogueFbx => $"{KayKit}/Characters/Skeleton_Rogue.fbx";
+        public static string SkeletonMageFbx => $"{KayKit}/Characters/Skeleton_Mage.fbx";
         public static readonly string[] AnimationFbx =
         {
             $"{KayKit}/Animations/Rig_Medium_CombatMelee.fbx",

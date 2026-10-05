@@ -27,17 +27,19 @@ namespace ProjectHymn.EditorTools
         const string TitlePath = SceneDir + "/Title.unity";
         const string CliffsidePath = SceneDir + "/Cliffside.unity";
         const string BelfryPath = SceneDir + "/Belfry.unity";
+        const string SummitPath = SceneDir + "/Summit.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
         {
             CliffsideBuilder.Build();
             CliffsideBuilder.BuildBelfry();
+            CliffsideBuilder.BuildSummit();
             BuildVillage();
             BuildTitle();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside and Belfry Ridge are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside, Belfry Ridge and the Summit are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
                       "E drinks the quick item, Q changes it, Esc pauses (Songbook, Items, Settings).");
         }
@@ -139,13 +141,16 @@ namespace ProjectHymn.EditorTools
             var loreBelfry = Item("lore_belfry", "The Cantors' Count", ItemKind.Lore, 0, "Scratched on a cairn at the foot of the belfry ridge.", 0x9ab8ff);
             loreBelfry.loreText = "UP HERE THE BELL COUNTS THREE. THE DEAD STILL DANCE TO IT: ONE, THEY STEP; TWO, THREE, THEY SWAY. " +
                                   "WHEN THEY RAISE BOTH BLADES, THEY STRIKE ONE-TWO-THREE. WHEN THEY HOLD ON TWO, THEY STRIKE ON THREE.";
-            foreach (var i in new[] { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry }) EditorUtility.SetDirty(i);
+            var loreSummit = Item("lore_summit", "The Last Cantor", ItemKind.Lore, 0, "Cut into the first step of the summit path.", 0x9ab8ff);
+            loreSummit.loreText = "THE LAST CANTOR WOULD NOT STOP COUNTING. HE COUNTS FOUR, THEN THREE, THEN SEVEN, AND RAISES HIS STAFF A BAR BEFORE HE CHANGES. " +
+                                  "WHEN HE LEAPS, THE GROUND ITSELF STRIKES: NO BLADE TURNS IT. LEAVE THE GROUND.";
+            foreach (var i in new[] { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit }) EditorUtility.SetDirty(i);
 
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>($"{ResourcesDir}/{GameDatabase.ResourcePath}.asset");
             if (db == null) { db = ScriptableObject.CreateInstance<GameDatabase>(); AssetDatabase.CreateAsset(db, $"{ResourcesDir}/{GameDatabase.ResourcePath}.asset"); }
             db.classes = new List<ClassDefinition> { minstrel, fighter, warden, crusader };
             db.weapons = both;
-            db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry };
+            db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit };
             db.shopStock = new List<ItemDefinition> { potion, tonic, power };
             db.startingItems = new List<GameDatabase.ItemCount> { new GameDatabase.ItemCount { id = "potion", count = 1 } };
             db.hubScene = "Village";
@@ -414,6 +419,7 @@ namespace ProjectHymn.EditorTools
             {
                 new StageGate.Destination { stageId = "Cliffside", scene = "Cliffside", label = "Cliffside", meter = "4/4" },
                 new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
+                new StageGate.Destination { stageId = "Summit", scene = "Summit", label = "The Summit (boss)", meter = "4/4 · 3/4 · 7/8", requires = "Belfry" },
             };
 
             // Spawns, players, camera, UI
@@ -529,7 +535,7 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath };
+            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath, SummitPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

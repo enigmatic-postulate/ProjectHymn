@@ -127,11 +127,11 @@ namespace ProjectHymn.Gameplay
             if (!Aggro && Mathf.Abs(p.x - me.x) <= aggroRange && dy <= aggroHeight) Aggro = true;
             else if (Aggro && (dx > leashRange || dy > aggroHeight * 2f)) { Aggro = false; CancelPlan(); }
 
-            if (Aggro && !Plan.IsValid && patterns.Count > 0 && BeatNow >= _staggerUntilBeat)
+            if (Aggro && !Plan.IsValid && BeatNow >= _staggerUntilBeat && CanPlan)
             {
-                var pattern = patterns[_patternIndex % patterns.Count];
-                _patternIndex++;
-                Plan = EnemyScheduler.Plan(conductor.Map, pattern, BeatNow, _notBeforeBeat, oneBarCountIn);
+                Plan = NextPlan(BeatNow, _notBeforeBeat);
+                if (!Plan.IsValid) { Tick(true); UpdateOverhead(); return; }
+                var pattern = Plan.Pattern;
                 _hitsDone = 0;
                 _hitStarted = false;
                 for (int i = 0; i < Plan.HitCount; i++)
@@ -160,7 +160,7 @@ namespace ProjectHymn.Gameplay
                 }
                 if (_guard != null && now < ParryJudge.ResolveTime(hitTime, _guard.Windows)) break;
 
-                var result = _guard != null ? _guard.Defend(_hitInRange, hitTime, HitOrigin)
+                var result = _guard != null ? _guard.Defend(_hitInRange, hitTime, HitOrigin, Plan.Pattern.Unblockable)
                                             : _hitInRange ? DefenseResult.Hit : DefenseResult.OutOfRange;
                 EnemyThreats.Remove(this, (long)Math.Round(hitBeat));
                 if (result == DefenseResult.Hit && _health != null) _health.Damage(Plan.Pattern.Damage, HitOrigin);
@@ -259,6 +259,25 @@ namespace ProjectHymn.Gameplay
         }
 
         // ---------------- For subclasses ----------------
+
+        /// <summary>The next attack, placed on the beat grid. Default: the patterns in turn, with the count-in rule.</summary>
+        protected virtual PlannedAttack NextPlan(double nowBeat, double notBeforeBeat)
+        {
+            if (patterns.Count == 0) return default;
+            var pattern = patterns[_patternIndex % patterns.Count];
+            _patternIndex++;
+            return EnemyScheduler.Plan(conductor.Map, pattern, nowBeat, notBeforeBeat, oneBarCountIn);
+        }
+
+        /// <summary>False holds attacks (a boss mid-transition).</summary>
+        protected virtual bool CanPlan => true;
+        protected TempoMap Map => conductor != null ? conductor.Map : null;
+        /// <summary>Cancel the current attack and wait <paramref name="beats"/> before the next (a phase change).</summary>
+        protected void Hold(double beats)
+        {
+            CancelPlan();
+            _notBeforeBeat = BeatNow + beats;
+        }
 
         /// <summary>Move and pose the body each frame. <paramref name="live"/> is false while the music is stopped.</summary>
         protected abstract void Tick(bool live);
@@ -387,7 +406,8 @@ namespace ProjectHymn.Gameplay
                 {
                     int n = Plan.BeatsUntilNextHit(BeatNow);
                     if (n >= 1 && n <= 3) { text = n.ToString(); color = Color.Lerp(new Color(1f, 0.85f, 0.4f), warnColor, (3 - n) / 2f); }
-                    else if (n == 0 || ph == AttackPhase.Active) { text = "!"; color = warnColor; }
+                    else if (n == 0 || ph == AttackPhase.Active) { text = Plan.Pattern.Unblockable ? "JUMP" : "!"; color = warnColor; }
+                    if (Plan.Pattern.Unblockable && text != "JUMP" && text != "") color = new Color(0.75f, 0.55f, 1f);
                     scale = 1f + 0.35f * Mathf.Exp(-BeatPhase * 6f);
                 }
             }

@@ -374,6 +374,13 @@ namespace ProjectHymn.Gameplay
             if (goal != null) goal.Reach(this);
         }
 
+        /// <summary>A sealed goal (boss stage) opens while the player stands in it.</summary>
+        void OnTriggerStay(Collider other)
+        {
+            var goal = other.GetComponentInParent<SliceGoal>();
+            if (goal != null && !goal.Done && goal.Open) goal.Reach(this);
+        }
+
         public void SetRespawn(Vector3 point) { _respawn = point; _checkpoint = null; }
 
         public void Respawn()

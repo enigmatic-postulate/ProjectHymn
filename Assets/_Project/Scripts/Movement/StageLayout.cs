@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace ProjectHymn.Movement
 {
     /// <summary>
-    /// One stage as plain data (Cliffside, Belfry Ridge): the route along the lane, props, secrets, markers, and what the
+    /// One stage as plain data (Cliffside, Belfry Ridge, the Summit): the route along the lane, props, secrets, markers, and what the
     /// stage asks for (par, perfect-run attacks, the meter its music is in). The stage builder turns one into a scene;
     /// the tests check every route against the jump arcs.
     /// </summary>
@@ -45,13 +45,14 @@ namespace ProjectHymn.Movement
                 int n = 0;
                 foreach (var m in Markers)
                     if (m.Kind == CliffsideLayout.MarkerKind.Target || m.Kind == CliffsideLayout.MarkerKind.FloatingTarget ||
-                        m.Kind == CliffsideLayout.MarkerKind.Dancer) n++;
+                        m.Kind == CliffsideLayout.MarkerKind.Dancer || m.Kind == CliffsideLayout.MarkerKind.Boss) n++;
                 return n;
             }
         }
 
         public static StageLayout Cliffside => CliffsideLayout.Stage;
         public static StageLayout Belfry => BelfryLayout.Stage;
-        public static IReadOnlyList<StageLayout> All => new[] { Cliffside, Belfry };
+        public static StageLayout Summit => SummitLayout.Stage;
+        public static IReadOnlyList<StageLayout> All => new[] { Cliffside, Belfry, Summit };
     }
 }

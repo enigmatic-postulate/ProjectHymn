@@ -102,6 +102,7 @@ namespace ProjectHymn.EditorTools
             CreateSong("BattleTheme2", "https://www.youtube.com/watch?v=fGCFGbvfNCQ",
                 new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8));
             EnsureWaltz();
+            EnsureSummitTheme();
             Sword.SwordContent.Ensure();
             Sword.SwordContent.EnsureLocomotion();
             Sword.SwordsmanBuilder.BuildSwordsman();
@@ -115,13 +116,27 @@ namespace ProjectHymn.EditorTools
         internal const string WaltzClipPath = Root + "/Audio/Generated/Waltz_of_the_Belfry.wav";
         internal static SongData LoadWaltz() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/BelfryWaltz.asset");
 
+        /// <summary>VS-3's boss theme (4/4, 3/4, 7/8), rendered by Tools/compose_summit.py.</summary>
+        internal const string SummitClipPath = Root + "/Audio/Generated/Hymn_of_the_Summit.wav";
+        internal static SongData LoadSummitTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/SummitTheme.asset");
+
+        /// <summary>"Waltz of the Belfry": 32 bars of 3/4 at 168 BPM in D minor.</summary>
+        static void EnsureWaltz() =>
+            EnsureGeneratedSong("BelfryWaltz", WaltzClipPath, "Tools/compose_waltz.py (original placeholder)", 2, true,
+                new TempoSection(32, 168f, 3));
+
+        /// <summary>"Hymn of the Summit": 8 bars of 4/4 and 8 of 3/4 at 150 BPM, then 8 of 7/8 at eighth = 300, in C minor.</summary>
+        static void EnsureSummitTheme() =>
+            EnsureGeneratedSong("SummitTheme", SummitClipPath, "Tools/compose_summit.py (original placeholder)", 0, true,
+                new TempoSection(8, 150f, 4), new TempoSection(8, 150f, 3), new TempoSection(8, 300f, 7, 8));
+
         /// <summary>
-        /// "Waltz of the Belfry": 32 bars of 3/4 at 168 BPM in D minor, exactly one tempo map long (beat 0 = sample 0),
-        /// looping. The clip imports as uncompressed PCM so the loop stays sample-exact on the beat grid.
+        /// A song whose clip was rendered to be exactly one tempo map long (beat 0 = sample 0), looping. The clip imports
+        /// as uncompressed PCM so the loop stays sample-exact on the beat grid.
         /// </summary>
-        static void EnsureWaltz()
+        static void EnsureGeneratedSong(string asset, string clipPath, string source, int keyRoot, bool minor, params TempoSection[] sections)
         {
-            if (AssetImporter.GetAtPath(WaltzClipPath) is AudioImporter ai)
+            if (AssetImporter.GetAtPath(clipPath) is AudioImporter ai)
             {
                 var ss = ai.defaultSampleSettings;
                 if (ss.compressionFormat != AudioCompressionFormat.PCM || ss.loadType != AudioClipLoadType.DecompressOnLoad)
@@ -132,15 +147,15 @@ namespace ProjectHymn.EditorTools
                     ai.SaveAndReimport();
                 }
             }
-            var song = CreateSong("BelfryWaltz", "Tools/compose_waltz.py (original placeholder)", new TempoSection(32, 168f, 3));
-            if (song.clip == null) song.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(WaltzClipPath);
-            song.sections = new List<TempoSection> { new TempoSection(32, 168f, 3) };
+            var song = CreateSong(asset, source, sections);
+            if (song.clip == null) song.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+            song.sections = new List<TempoSection>(sections);
             song.loop = true;
             song.firstBeatOffset = 0.0;
-            song.keyRoot = 2;
-            song.minorKey = true;
+            song.keyRoot = keyRoot;
+            song.minorKey = minor;
             EditorUtility.SetDirty(song);
-            if (song.clip == null) Debug.LogWarning($"[Project Hymn] {WaltzClipPath} is missing: Belfry Ridge will run on the metronome alone.");
+            if (song.clip == null) Debug.LogWarning($"[Project Hymn] {clipPath} is missing: {asset} will run on the metronome alone.");
         }
 
         internal static List<WeaponSet> LoadWeapons() => new List<WeaponSet>

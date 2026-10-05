@@ -482,5 +482,77 @@ namespace ProjectHymn.EditorTools.Art
             body.rotation = Quaternion.Euler(0f, -90f + 14f, 0f);
             return d;
         }
+
+        /// <summary>
+        /// VS-3's summit boss: the KayKit skeleton mage (the warrior if the mage isn't imported), 3.4 m tall, with a staff
+        /// (a blade if the staff isn't imported). One-handed clips for his cuts, the jump chop for the shockwave, the taunt
+        /// for conducting.
+        /// </summary>
+        public static BoneCantor BuildSkeletonCantor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneCantor));
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var cap = root.GetComponent<CapsuleCollider>();
+            cap.radius = 0.7f; cap.height = 3.4f; cap.center = new Vector3(0f, 1.7f, 0f);
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            var mat = Mat("KayKit_Skeleton", "skeleton_texture.png");
+            string fbx = File.Exists(ArtLibrary.SkeletonMageFbx) ? ArtLibrary.SkeletonMageFbx : ArtLibrary.SkeletonFbx;
+            var (fit, rigRoot, model) = Place(fbx, body, 3.4f, mat);
+            string W(string f) => $"{ArtLibrary.KayKit}/Weapons/{f}";
+            string staff = File.Exists(W("Skeleton_Staff.fbx")) ? W("Skeleton_Staff.fbx") : W("Skeleton_Blade.fbx");
+            Attach(staff, ArtLibrary.FindDeep(rigRoot, "handslot.r"), "Staff", mat);
+
+            var b = root.GetComponent<BoneCantor>();
+            SetRef(b, "conductor", conductor);
+            SetRef(b, "body", body);
+            SetRef(b, "rigRoot", rigRoot);
+            SetArray(b, "flashRenderers", root.GetComponentsInChildren<Renderer>(true));
+            SetRef(b, "idleClip", ArtLibrary.Clip("Skeletons_Idle"));
+            SetRef(b, "walkClip", ArtLibrary.Clip("Skeletons_Walking"));
+            SetRef(b, "staggerClip", ArtLibrary.Clip("Hit_B"));
+            SetRef(b, "deathClip", ArtLibrary.Clip("Skeletons_Death"));
+            SetRef(b, "conductClip", ArtLibrary.Clip("Skeletons_Taunt"));
+            var so = new SerializedObject(b);
+            so.FindProperty("displayName").stringValue = name;
+            so.FindProperty("maxHp").floatValue = maxHp;
+            so.FindProperty("aggroRange").floatValue = 16f;
+            so.FindProperty("aggroHeight").floatValue = 4f;
+            so.FindProperty("leashRange").floatValue = 40f;
+            so.FindProperty("barHeight").floatValue = 3.9f;
+            so.FindProperty("bounds").vector2Value = bounds;
+            const string Diag = "Melee_1H_Attack_Slice_Diagonal", Horiz = "Melee_1H_Attack_Slice_Horizontal",
+                         Chop = "Melee_1H_Attack_Chop", Stab = "Melee_1H_Attack_Stab", Jump = "Melee_1H_Attack_Jump_Chop";
+            var clips = new (string pattern, string[] hits)[]
+            {
+                ("Gavel", new[] { Chop }),
+                ("Down-Up", new[] { Diag, Horiz }),
+                ("Waltz", new[] { Diag, Horiz, Chop }),
+                ("Limp", new[] { Diag, Horiz, Stab }),
+                ("Four on the Floor", new[] { Diag, Horiz, Diag, Chop }),
+                ("Hesitation", new[] { Chop, Diag }),
+                ("Shockwave", new[] { Jump }),
+                ("Limp Run", new[] { Diag, Horiz, Diag, Stab }),
+            };
+            var list = so.FindProperty("attackClips");
+            list.arraySize = clips.Length;
+            for (int p = 0; p < clips.Length; p++)
+            {
+                var e = list.GetArrayElementAtIndex(p);
+                e.FindPropertyRelative("pattern").stringValue = clips[p].pattern;
+                var hits = e.FindPropertyRelative("hits");
+                hits.arraySize = clips[p].hits.Length;
+                for (int i = 0; i < clips[p].hits.Length; i++)
+                {
+                    var h = hits.GetArrayElementAtIndex(i);
+                    h.FindPropertyRelative("clip").objectReferenceValue = ArtLibrary.Clip(clips[p].hits[i]);
+                    h.FindPropertyRelative("hit").floatValue = Hit.TryGetValue(clips[p].hits[i], out var f) ? f : 0.45f;
+                }
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            body.rotation = Quaternion.Euler(0f, -90f + 16f, 0f);
+            return b;
+        }
     }
 }

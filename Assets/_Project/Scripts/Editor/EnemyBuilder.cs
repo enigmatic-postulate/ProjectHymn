@@ -113,6 +113,41 @@ namespace ProjectHymn.EditorTools
             return d;
         }
 
+        /// <summary>VS-3's summit boss as placeholder primitives: a robed giant with a staff (he leans and slams on his hits).</summary>
+        public static BoneCantor BuildCantor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            const uint Bone = 0xe8e0cc, Robe = 0x3a2a5a, Trim = 0xd8a840;
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneCantor));
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var cap = root.GetComponent<CapsuleCollider>();
+            cap.radius = 0.7f; cap.height = 3.4f; cap.center = new Vector3(0f, 1.7f, 0f);
+            var renderers = new List<Renderer>();
+            var body = Pivot("Body", root.transform, Vector3.zero);
+            var torso = Pivot("Cantor", body, Vector3.zero);
+            renderers.Add(Part(PrimitiveType.Cylinder, "Robe", torso, new Vector3(0f, 1.1f, 0f), new Vector3(1.1f, 1.1f, 1.1f), Robe));
+            renderers.Add(Part(PrimitiveType.Cube, "Chest", torso, new Vector3(0f, 2.45f, 0f), new Vector3(0.9f, 0.8f, 0.6f), Bone));
+            renderers.Add(Part(PrimitiveType.Sphere, "Skull", torso, new Vector3(0f, 3.1f, 0f), new Vector3(0.55f, 0.6f, 0.55f), Bone));
+            renderers.Add(Part(PrimitiveType.Cube, "Stole", torso, new Vector3(0f, 2.2f, 0.32f), new Vector3(0.3f, 1.3f, 0.04f), Trim));
+            renderers.Add(Part(PrimitiveType.Cylinder, "Staff", torso, new Vector3(0.7f, 1.9f, 0.35f), new Vector3(0.08f, 1.6f, 0.08f), 0x6a4a2a));
+            renderers.Add(Part(PrimitiveType.Sphere, "Orb", torso, new Vector3(0.7f, 3.55f, 0.35f), new Vector3(0.3f, 0.3f, 0.3f), 0xb0a0ff, 0.9f));
+            var b = root.GetComponent<BoneCantor>();
+            SetRef(b, "conductor", conductor);
+            SetRef(b, "body", body);
+            SetArray(b, "flashRenderers", renderers.ToArray());
+            var so = new SerializedObject(b);
+            so.FindProperty("displayName").stringValue = name;
+            so.FindProperty("maxHp").floatValue = maxHp;
+            so.FindProperty("aggroRange").floatValue = 16f;
+            so.FindProperty("aggroHeight").floatValue = 4f;
+            so.FindProperty("leashRange").floatValue = 40f;
+            so.FindProperty("barHeight").floatValue = 4.0f;
+            so.FindProperty("bounds").vector2Value = bounds;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            body.rotation = Quaternion.Euler(0f, -90f + 16f, 0f);
+            return b;
+        }
+
         public static Wisp BuildWisp(Transform parent, Vector3 position, Conductor conductor, Material additive)
         {
             var root = new GameObject("Wisp", typeof(SphereCollider), typeof(Wisp));

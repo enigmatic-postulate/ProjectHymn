@@ -87,9 +87,10 @@ namespace ProjectHymn.Gameplay
         }
 
         /// <summary>Called by an enemy once a hit's parry window has closed.</summary>
-        public DefenseResult Defend(bool inRange, double hitTime, Vector3 from)
+        public DefenseResult Defend(bool inRange, double hitTime, Vector3 from, bool unblockable = false)
         {
-            var r = ParryJudge.Resolve(inRange, LastPressTime, hitTime, Windows, LastDodgeTime, dodgeInvulnerable, blockBonus);
+            // An unblockable hit (a shockwave) ignores the guard: only a dodge, or being out of its reach, avoids it.
+            var r = ParryJudge.Resolve(inRange, unblockable ? double.NaN : LastPressTime, hitTime, Windows, LastDodgeTime, dodgeInvulnerable, blockBonus);
             if (r == DefenseResult.Parried || r == DefenseResult.Blocked) LastPressTime = double.NaN;
             if (r != DefenseResult.OutOfRange) Defended?.Invoke(r, from);
             return r;

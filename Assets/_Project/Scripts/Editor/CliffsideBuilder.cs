@@ -23,7 +23,9 @@ namespace ProjectHymn.EditorTools
     {
         static StageLayout L = StageLayout.Cliffside;
         static string ScenePath => $"{SceneDir}/{L.Scene}.unity";
-        static bool Waltz => L.Meter == 3;
+        static bool Waltz => L.Id == "Belfry";
+        static bool Boss => L.Id == "Summit";
+        static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
         const float BackZ = 7f;
@@ -38,6 +40,9 @@ namespace ProjectHymn.EditorTools
         [MenuItem("Project Hymn/Build Belfry Ridge Slice", priority = 2)]
         public static void BuildBelfry() => BuildStage(StageLayout.Belfry);
 
+        [MenuItem("Project Hymn/Build Summit Boss Slice", priority = 3)]
+        public static void BuildSummit() => BuildStage(StageLayout.Summit);
+
         /// <summary>
         /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
         /// bone dancers, dusk light and the belfry). Safe to re-run.
@@ -45,18 +50,19 @@ namespace ProjectHymn.EditorTools
         public static void BuildStage(StageLayout layout)
         {
             L = layout;
+            _boss = null;
             PrepareContent();
             ArtLibrary.EnsureImportSettings();
             AssetDatabase.Refresh();
             _art = ArtLibrary.HasKayKit;
             _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var theme = Waltz ? LoadWaltz() : LoadTheme();
+            var theme = Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : LoadTheme();
             var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
-            if (Waltz) BuildDuskLighting(); else BuildLighting();
+            if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else BuildLighting();
             var level = new GameObject("Level").transform;
             foreach (var b in L.Route) BuildBlock(level, b);
             foreach (var b in L.Props) BuildBlock(level, b);
@@ -65,6 +71,7 @@ namespace ProjectHymn.EditorTools
             if (_village) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
+            if (Boss) BuildArena(level);
 
             foreach (var b in L.Secrets) BuildBlock(level, b);
             var conductor = BuildConductor(theme);
@@ -88,6 +95,7 @@ namespace ProjectHymn.EditorTools
                         break;
                     case CliffsideLayout.MarkerKind.Target: BuildKnight(level, m, conductor); break;
                     case CliffsideLayout.MarkerKind.Dancer: BuildDancer(level, m, conductor); break;
+                    case CliffsideLayout.MarkerKind.Boss: _boss = BuildBoss(level, m, conductor); break;
                     case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(level, new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
                     case CliffsideLayout.MarkerKind.Goal: BuildGoal(level, m); break;
                     case CliffsideLayout.MarkerKind.CameraZone: BuildCameraZone(level, m); break;
@@ -108,6 +116,8 @@ namespace ProjectHymn.EditorTools
             // Camera, effects, HUD (the minimal HUD builds itself; the old one is the debug HUD)
             var cam = HubBuilder.BuildCamera(player.transform.position);
             if (Waltz) cam.GetComponent<Camera>().backgroundColor = new Color(0.5f, 0.42f, 0.62f);
+            if (Boss) cam.GetComponent<Camera>().backgroundColor = new Color(0.16f, 0.13f, 0.26f);
+            new GameObject("Meter Banner", typeof(MeterBanner));
             var fx = BuildFx(conductor, null, null, cam, additive);
             fx.AddComponent<DefenseFeedback>();
             var hud = BuildHud(conductor, null);
@@ -245,6 +255,71 @@ namespace ProjectHymn.EditorTools
                 var ll = lg.GetComponent<Light>();
                 ll.type = LightType.Point; ll.range = 5f; ll.intensity = 0.9f; ll.color = new Color(1f, 0.75f, 0.45f);
             }
+        }
+
+        /// <summary>The Summit: night, storm-violet sky, a cold moon from behind the camera, braziers for warmth.</summary>
+        internal static void BuildNightLighting()
+        {
+            var moon = new GameObject("Moon", typeof(Light));
+            moon.transform.rotation = Quaternion.Euler(38f, 18f, 0f);
+            var l = moon.GetComponent<Light>();
+            l.type = LightType.Directional; l.intensity = 0.85f; l.color = new Color(0.7f, 0.76f, 1f);
+            l.shadows = LightShadows.Soft; l.shadowStrength = 0.85f;
+            RenderSettings.skybox = null;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.3f, 0.28f, 0.5f);
+            RenderSettings.ambientEquatorColor = new Color(0.3f, 0.24f, 0.36f);
+            RenderSettings.ambientGroundColor = new Color(0.12f, 0.1f, 0.16f);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.2f, 0.17f, 0.32f);
+            RenderSettings.fogStartDistance = 22f;
+            RenderSettings.fogEndDistance = 130f;
+        }
+
+        /// <summary>The crown of the headland: standing stones in a ring behind the arena and braziers that pulse on the beat.</summary>
+        static void BuildArena(Transform level)
+        {
+            var root = new GameObject("Arena").transform;
+            root.SetParent(level, false);
+            float top = SummitLayout.ArenaTop, x0 = SummitLayout.ArenaXMin, x1 = SummitLayout.ArenaXMax;
+            var rng = new System.Random(21);
+            for (float x = x0 + 3f; x < x1 - 2f; x += 4.5f)
+            {
+                float h = 3.5f + (float)rng.NextDouble() * 3f;
+                float z = 4.5f + (float)rng.NextDouble() * 2.5f;
+                Box(root, "Standing Stone", new Vector3(x - 0.6f, top, z), new Vector3(x + 0.6f, top + h, z + 0.9f), StoneDark, false);
+            }
+            foreach (var bx in new[] { x0 + 2f, (x0 + x1) * 0.5f, x1 - 6f })
+            {
+                Box(root, "Brazier", new Vector3(bx - 0.4f, top, 2.4f), new Vector3(bx + 0.4f, top + 1.1f, 3.2f), StoneWarm, false);
+                var fire = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Object.DestroyImmediate(fire.GetComponent<Collider>());
+                fire.name = "Fire";
+                fire.transform.SetParent(root, false);
+                fire.transform.position = new Vector3(bx, top + 1.35f, 2.8f);
+                fire.transform.localScale = new Vector3(0.6f, 0.5f, 0.6f);
+                var fm = Lit.Lit(0xffa040, 0.2f);
+                fm.EnableKeyword("_EMISSION");
+                fm.SetColor("_EmissionColor", new Color(1f, 0.55f, 0.2f) * 2f);
+                fire.GetComponent<MeshRenderer>().sharedMaterial = fm;
+                fire.AddComponent<BeatPulse>();
+                var lg = new GameObject("Fire Light", typeof(Light));
+                lg.transform.SetParent(fire.transform, false);
+                lg.transform.localPosition = new Vector3(0f, 0.6f, -1f);
+                var ll = lg.GetComponent<Light>();
+                ll.type = LightType.Point; ll.range = 9f; ll.intensity = 1.6f; ll.color = new Color(1f, 0.6f, 0.3f);
+            }
+        }
+
+        /// <summary>The Bone Cantor holds the arena (it never leaves the crown).</summary>
+        static BeatEnemy BuildBoss(Transform level, CliffsideLayout.Marker m, Conductor conductor)
+        {
+            var bounds = new Vector2(SummitLayout.ArenaXMin + 3f, SummitLayout.ArenaXMax - 1.5f);
+            var pos = new Vector3(m.X, m.Y, 0f);
+            const float Hp = 700f;
+            if (_art && ArtLibrary.HasSkeleton) return KayKitBuilder.BuildSkeletonCantor(level, m.Name, pos, bounds, conductor, Hp);
+            return EnemyBuilder.BuildCantor(level, m.Name, pos, bounds, conductor, Hp);
         }
 
         /// <summary>A bone dancer waltzes along the ledge it stands on; the lead dancer is tougher.</summary>
@@ -447,6 +522,7 @@ namespace ProjectHymn.EditorTools
             spin.transform.localScale = Vector3.one * 0.55f;
             spin.GetComponent<MeshRenderer>().sharedMaterial = Lit.Lit(0xf0d070, 0.9f, 0.3f);
             SetRef(go.GetComponent<SliceGoal>(), "spin", spin.transform);
+            if (_boss != null) SetRef(go.GetComponent<SliceGoal>(), "requires", _boss);
         }
 
         static void BuildCameraZone(Transform level, CliffsideLayout.Marker m)
