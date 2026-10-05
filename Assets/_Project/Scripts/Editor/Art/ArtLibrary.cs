@@ -106,7 +106,10 @@ namespace ProjectHymn.EditorTools.Art
             var existing = AssetDatabase.LoadAssetAtPath<BakedClip>(path);
             if (existing != null && !rebake && existing.frameCount > 1) return existing;
             AnimationClip clip = null;
-            foreach (var fbx in AnimationFbx)
+            // The required files first, then any other KayKit animation file in the folder (e.g. MovementAdvanced: the dodges).
+            var files = AnimationFbx.Concat(Directory.Exists($"{KayKit}/Animations")
+                ? Directory.GetFiles($"{KayKit}/Animations", "*.fbx").Select(Norm) : Enumerable.Empty<string>()).Distinct();
+            foreach (var fbx in files)
             {
                 clip = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<AnimationClip>()
                     .FirstOrDefault(c => !c.name.StartsWith("__preview__") && (c.name == name || c.name.EndsWith("|" + name)));
