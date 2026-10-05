@@ -166,13 +166,30 @@ namespace ProjectHymn.Gameplay
                 OnHitResolved(_hitsDone, result);
                 _hitsDone++;
                 _hitStarted = false;
+                if (_guard != null) Counter(result);
+                if (IsDead) return;
                 if (result == DefenseResult.Parried) { Stagger(); return; }
+                if (result == DefenseResult.Blocked && _guard != null && _guard.BlockSkipsNote && _hitsDone < Plan.HitCount)
+                {
+                    EnemyThreats.Remove(this, (long)Math.Round(Plan.HitBeat(_hitsDone)));      // the Warden's block: skip a note
+                    _hitsDone++;
+                    if (_popups != null) _popups.Show(transform.position + Vector3.up * 2.4f, "SKIP", new Color(0.7f, 0.85f, 1f), 0.8f);
+                }
             }
             if (Plan.IsValid && Plan.PhaseAt(BeatNow) == AttackPhase.Done)
             {
                 _notBeforeBeat = Plan.EndBeat;
                 Plan = default;
             }
+        }
+
+        /// <summary>Class perks: a block or parry that hits back (Fighter, Warden).</summary>
+        void Counter(DefenseResult result)
+        {
+            float dmg = result == DefenseResult.Parried ? _guard.ParryDamage : result == DefenseResult.Blocked ? _guard.BlockDamage : 0f;
+            if (dmg <= 0f) return;
+            var dir = Player != null ? (Vector2)(new Vector2(transform.position.x - Player.position.x, 0f)).normalized : Vector2.right;
+            TakeHit(new HitData(dmg, dir, "counter", false, transform.position + Vector3.up * 1.4f));
         }
 
         void Stagger()
@@ -196,7 +213,7 @@ namespace ProjectHymn.Gameplay
         public void TakeHit(HitData hit)
         {
             if (IsDead) return;
-            float scale = DamageScale(hit);
+            float scale = hit.EffectId == "counter" ? 1f : DamageScale(hit);       // a class counter goes round the shield
             float dmg = hit.Damage * scale * (IsStaggered ? staggerDamageMultiplier : 1f);
             OnStruck(hit, scale);
             if (_popups != null)

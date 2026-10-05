@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// Esc / Start: pauses the music on its clock and the world, with Resume, Songbook (the sequences you know and the
-    /// lore you found), Items (pick the quick-slot item), Settings, Return to the village and Quit to the title.
+    /// Esc / Start: pauses the music on its clock and the world, with Resume, Character (class, level, weapons, stage
+    /// ranks), Songbook (the sequences you know and the lore you found), Items (pick the quick-slot item), Settings, Return to the village and Quit to the title.
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
@@ -80,6 +80,7 @@ namespace ProjectHymn.UI
             var col = Page();
             UiKit.Line(col, "PAUSED", 46, UiKit.Gold, 70f);
             var resume = UiKit.Button(col, "Resume", Close);
+            UiKit.Button(col, "Character", Character);
             UiKit.Button(col, "Songbook", Songbook);
             UiKit.Button(col, "Items", Items);
             UiKit.Button(col, "Settings", Settings);
@@ -92,18 +93,59 @@ namespace ProjectHymn.UI
             UiKit.Select(resume);
         }
 
+        void Character()
+        {
+            _onMain = false;
+            var col = Page();
+            UiKit.Line(col, "CHARACTER", 40, UiKit.Gold, 60f);
+            var s = GameSession.Instance;
+            var d = s.Data;
+            var rules = s.Db != null ? s.Db.Rules : Progression.ProgressionRules.Default;
+            var cls = s.Class;
+            var sb = new StringBuilder();
+            int next = d.level + 1;
+            while (!rules.IsCheckLevel(next) && next < d.level + 100) next++;
+            sb.Append($"<size=34><color=#ffd56a>{(cls != null ? cls.displayName : d.classId)}</color></size>   level {d.level}   ");
+            sb.Append($"<color=#8a84a0>{d.xp} / {rules.XpToNext(d.level)} experience</color>\n");
+            if (cls != null) sb.Append($"{cls.description}\n<color=#b8b2c8>Perks: {cls.PerksText()}</color>\n");
+            sb.Append($"Next class check at level {next}: an S or A lets your class rise, a B holds it, a C costs it.\n\n");
+            sb.Append($"Weapon  <color=#ffd56a>{(s.Weapon != null ? s.Weapon.displayName : d.weaponId)}</color>");
+            if (s.Db != null)
+            {
+                var others = new System.Collections.Generic.List<string>();
+                foreach (var w in s.Db.weapons)
+                    if (w != null && w.id != d.weaponId) others.Add(d.HasWeapon(w.id) ? w.displayName : $"<color=#6a6478>{w.displayName} (locked)</color>");
+                if (others.Count > 0) sb.Append($"   also: {string.Join(", ", others)}");
+            }
+            sb.Append("   <color=#8a84a0>(change at the armsmaster)</color>\n\nStages\n");
+            if (d.stageRecords.Count == 0) sb.Append("<color=#8a84a0>None cleared yet.</color>");
+            foreach (var r in d.stageRecords)
+                sb.Append($"{r.stage}   best <color=#ffd56a>{r.bestRank}</color> in {(int)(r.bestSeconds / 60.0)}:{r.bestSeconds % 60.0:00.0}   cleared {r.clears}×\n");
+            UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
+            var back = UiKit.Button(col, "Back", Main);
+            // Playtest shortcut: the next clear reaches the next class check (so the checks can be tried in one run).
+            UiKit.Button(col, $"Playtest: next clear reaches level {next}", () =>
+            {
+                d.level = Mathf.Max(1, next - 1);
+                d.xp = Mathf.Max(0, rules.XpToNext(d.level) - 1);
+                s.NotifyChanged();
+                Character();
+            }, 22, 44f);
+            UiKit.Select(back);
+        }
+
         void Songbook()
         {
             _onMain = false;
             var col = Page();
             UiKit.Line(col, "SONGBOOK", 40, UiKit.Gold, 60f);
             var s = GameSession.Instance;
-            var cls = s.Class;
+            var weapon = s.Weapon;
             var sb = new StringBuilder();
-            if (cls != null && cls.weapon != null)
+            if (weapon != null)
             {
-                sb.Append($"<color=#8a84a0>{cls.displayName} — play notes on consecutive beats; 1 = light (J / X), 2 = heavy (K / Y)</color>\n\n");
-                foreach (var q in cls.weapon.sequences)
+                sb.Append($"<color=#8a84a0>{weapon.displayName} — play notes on consecutive beats; 1 = light (J / X), 2 = heavy (K / Y)</color>\n\n");
+                foreach (var q in weapon.sequences)
                 {
                     if (q == null) continue;
                     if (s.FreePlay || s.Data.Knows(q.key))

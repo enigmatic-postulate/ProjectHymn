@@ -55,28 +55,45 @@ Rebuild with **Project Hymn → Build Hub & Loop**, then play Cliffside (from th
 - **No Easy mode.** Windows are the same for everyone.
 - **Guard:** only Perfect timing parries (stagger, ×1.5 damage); Great and Good block. **Dodge** (Left Shift / RT) replaces the dash: a roll with 0.25 s of invulnerability; a hit those frames cover is dodged ("DODGE"). The roll animation is KayKit's `Dodge_Forward` from `Rig_Medium_MovementAdvanced.fbx` (Character Animations 1.1, in `Art/Imported/KayKit/Animations`).
 - **No checkpoints:** dying or falling into the sea restarts the whole stage, timer included. **R** restarts too. For tuning, **F7** (or Settings → Checkpoints) brings the old checkpoints back.
-- **Stage timer and tally:** Cliffside's par is 1:15. Reaching the gate shows a results screen: time and time rank, the rank after its gates, hits by judgement, parries (count as Perfect), blocks and dodges (count as Great), hits taken, enemies, efficiency (14 attacks for a perfect run, a placeholder) and the mastery score. It's a debug screen: nothing affects progress until Rank & Class.
+- **Stage timer and tally:** Cliffside's par is 1:15. Reaching the gate shows a results screen: time and time rank, the rank after its gates, hits by judgement, parries (count as Perfect), blocks and dodges (count as Great), hits taken, enemies, efficiency (14 attacks for a perfect run, a placeholder) and the mastery score. Since Rank & Class the clear also counts toward progress (below).
+
+## Rank & Class slice (vertical slice milestone VS-1)
+
+Ranks now count. Rebuild with **Project Hymn → Build Hub & Loop** (the database gains four classes and the scenes one player per weapon). All numbers are placeholders in `Progression/ClassProgression.cs` (`ProgressionRules`) and the class assets.
+
+- **Start:** New Game starts everyone as the **Minstrel** with the sword, at level 1. No class menu.
+- **Experience:** a clear earns 500 / 400 / 300 / 200 for S / A / B / C, plus 20 per enemy. Level *n* needs 100 × *n*.
+- **Level-downs:** losing 3+ hearts in the run, or 40%+ of attacks off the beat (with 6+ attacks), each drop one level. Experience is never lost, and that run earns none. Dropping below a class's minimum level (6 for Warden and Crusader) costs the class.
+- **Class checks** at levels 6, 8 and 10 (then every 5), judged on the clear that reached the level:
+  - **S or A** lets a class rise. Mastery 70+ offers the high class that fits how you defended (mostly parries and blocks: Warden; mostly dodges: Crusader); 85+ offers both. You choose (or keep your class). A Fighter can also move back up to Minstrel.
+  - **B** holds the class. A Minstrel who reaches level 10 without rising becomes a Fighter.
+  - **C** costs one: a Minstrel becomes a Fighter, a Warden or Crusader falls back to the Minstrel. A Fighter stays a Fighter.
+- **Classes:** Minstrel (base: 5 hearts, sword or greatsword). Fighter (D rank: 6 hearts, a +40 ms block window, blocks deal 6 and parries 12 damage, common time only). Warden (6 hearts, sword and shield only; parries deal 20 damage, a block makes the enemy skip its next note). Crusader (4 hearts, ×1.15 damage, 350 ms dodge invulnerability instead of 250; the brandish and new attack animations are still to come). Counters go round the knight's shield.
+- **Weapons** are separate from classes, each with its own moveset: the sword and shield, and the greatsword (×1.3 damage), which unlocks with your first **B or better**. Classes list the weapons they can equip. The village **armsmaster** (the old class trainer) changes weapons.
+- **Results screen:** after the tally it shows experience and levels, level-downs and why, the class check's verdict, unlocks and a new best. When a check offers a choice, **Choose your class** opens the offer (the class that fits how you fought is marked).
+- **Pause → Character:** class, perks, level and experience, the next class check, weapons, and each stage's best rank and time. *Playtest: next clear reaches level N* sets your experience so the next clear hits the next class check.
+- **Save:** version 2 adds level, experience, weapon, unlocked weapons and stage records. Older saves load as a Minstrel holding their old weapon (a Barbarian keeps the greatsword).
 
 ## Hub & Loop slice (title, village, stage and back)
 
-Menu **Project Hymn → Build Hub & Loop**. It builds the game database and three scenes, puts them first in the build list (Title, Village, Cliffside), and opens Title. Press **Play** in Title for the whole loop. Pressing Play in any other scene starts **free play** (Knight, every sequence known, nothing saved).
+Menu **Project Hymn → Build Hub & Loop**. It builds the game database and three scenes, puts them first in the build list (Title, Village, Cliffside), and opens Title. Press **Play** in Title for the whole loop. Pressing Play in any other scene starts **free play** (Minstrel, every weapon and sequence, nothing saved).
 
-- **Title:** New Game (choose Knight or Barbarian), Continue (the save), Settings, Quit. The battle theme plays under it.
-- **Classes (the weapon is the class):** the **Knight** has sword and shield, 5 hearts, and Good-timed guards parry too. The **Barbarian** has the greatsword, 6 hearts and ×1.3 damage, but only Perfect and Great guards parry. Every scene holds one player per class; *Players* (PlayerSpawner) keeps the save's class and places it at the spawn point it arrived at. The class trainer in the village switches class.
-- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), class trainer, three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate to the cliffs. No music clock runs here, so swords are inert.
+- **Title:** New Game (starts as the Minstrel), Continue (the save), Settings, Quit. The battle theme plays under it.
+- **Players:** every scene holds one player per weapon; *Players* (PlayerSpawner) keeps the save's weapon, applies the class (hearts, damage, perks) and places it at the spawn point it arrived at. (Until Rank & Class the weapon was the class: Knight and Barbarian.)
+- **Village (Saltmere):** one street between two walls. Inn (rest to full hearts and **save**), shop (potions, battle tonics, the Powerslice scroll), armsmaster (weapons), three villagers (the elder hands over a lore piece), a ledge over the east end with a lore note (double jump), and the gate to the cliffs. No music clock runs here, so swords are inert.
 - **Cliffside** now has Notes caches on the beach, tier 1 and the far ledge, a lore cairn on the beach, and the **Tempest scroll** on a high ledge over tier 3 (double jump). Enemies drop 20–40 Notes. Reaching the summit clears the stage and returns you to the village (saving); the path at the west end of the beach and the pause menu go back too.
 - **Sequences are learned:** a new game knows Crossing Cuts only. Scrolls (bought or found) teach Powerslice and Tempest; the Songbook in the pause menu lists what you know and the lore you have found.
 - **Items:** the quick slot (bottom left) holds a potion (heals 2) or a tonic (×1.25 damage for 16 beats). **E** uses it, **Q** changes it, or pick one under Items in the pause menu. Stacks hold 9.
 - **HUD:** hearts and Notes (top left), the quick item, sequence banners and toasts. Judgement and chain stay on screen; the rest of the prototype rhythm HUD is the debug HUD (Settings, or **F9**).
 - **Pause (Esc / Start):** stops the music and the world. Songbook, Items, Settings (volume, easy timing for wider windows, animation offset, debug HUD, latency calibration), Return to the village, Quit to title.
-- **Save:** `hymn_save.json` in Unity's persistent data folder (class, Notes, items, known sequences, lore, collected pickups, cleared stages, where you rested). Delete it to start over.
+- **Save:** `hymn_save.json` in Unity's persistent data folder (class, level, experience, weapon and unlocked weapons, Notes, items, known sequences, lore, collected pickups, cleared stages and best ranks, where you rested). Delete it to start over.
 - **Data:** classes and items are assets in `Data/Game` (`Resources/HymnDatabase` lists them and the shop's stock); the village layout is `Movement/VillageLayout.cs`; pickups in Cliffside are markers in `CliffsideLayout.cs` (the name says what they are).
 
 ## Art pass (CC0 packs)
 
 The Cliffside builder uses imported art when it finds it, and falls back to the generated placeholders otherwise.
 
-- **Characters (KayKit by Kay Lousberg, CC0):** the Knight (sword and shield) and the Barbarian (greatsword) are the two classes; villagers are the Mage, Rogue, hooded Rogue and Ranger, looping idle clips and turning to face you; the shield-knight enemy is the Skeleton Warrior with blade and large shield. Files live in `Art/Imported/KayKit` (Characters, Weapons, Animations).
+- **Characters (KayKit by Kay Lousberg, CC0):** the Knight model holds the sword and shield and the Barbarian model the greatsword (one per weapon; art TBD); villagers are the Mage, Rogue, hooded Rogue and Ranger, looping idle clips and turning to face you; the shield-knight enemy is the Skeleton Warrior with blade and large shield. Files live in `Art/Imported/KayKit` (Characters, Weapons, Animations).
 - **Animation on the beat:** every attack, the guard, idle, run, jump, fall and land are KayKit clips, baked by the builder into `Data/Clips` (per-bone samples). Each attack's impact frame (measured from the weapon hand's peak speed) is placed exactly on the judged beat: the wind-up is stretched over the beats before it and the follow-through over the beats after, so tempo still sets the speed. Footfalls of the run land on beats. Hanging and climbing use a base pose with the hands placed on the ledge by IK; the double jump still flips. Moves are in `Data/KayKit/Moves` (clip, impact frame, span in beats, damage, reach, trail colour).
 - **Environment (Quaternius Medieval Village MegaKit and Poly Haven boulders, CC0):** textured cliffs (generated meshes with world-space UVs), stone borders, vines, fences, crates, a house and a town gate at the summit, scanned boulders on the beach and as sea stacks. Files in `Art/Imported/Village` and `Art/Imported/Boulders`.
 - Weapons sit on the KayKit hand slots with no offset; if one is held wrongly, rotate it under `handslot.r` / `handslot.l` on the Player.

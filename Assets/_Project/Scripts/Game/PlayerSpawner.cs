@@ -4,21 +4,21 @@ using UnityEngine;
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// Every gameplay scene holds one player per class, built by the scene builder. Before anything else wakes,
-    /// this keeps the session's class, switches the others off, applies the class's hearts, damage and guard,
-    /// and puts the player at the spawn point the session asked for.
+    /// Every gameplay scene holds one player per weapon (each weapon has its own model and moveset), built by the scene
+    /// builder. Before anything else wakes, this keeps the session's weapon, switches the others off, applies the
+    /// class's hearts, damage and perks, and puts the player at the spawn point the session asked for.
     /// </summary>
     [DefaultExecutionOrder(-1000)]
     public class PlayerSpawner : MonoBehaviour
     {
         [System.Serializable]
-        public class ClassPlayer
+        public class WeaponPlayer
         {
-            public string classId;
+            public string weaponId;
             public GameObject player;
         }
 
-        [SerializeField] List<ClassPlayer> players = new List<ClassPlayer>();
+        [SerializeField] List<WeaponPlayer> players = new List<WeaponPlayer>();
         [SerializeField] string defaultSpawn = "Start";
 
         public GameObject Active { get; private set; }
@@ -26,11 +26,11 @@ namespace ProjectHymn.Gameplay
         void Awake()
         {
             var session = GameSession.Instance;
-            string cls = session.Data.classId;
-            ClassPlayer chosen = players.Find(p => p.player != null && p.classId == cls) ?? players.Find(p => p.player != null);
+            string weapon = session.Data.weaponId;
+            WeaponPlayer chosen = players.Find(p => p.player != null && p.weaponId == weapon) ?? players.Find(p => p.player != null);
             if (chosen == null)
             {
-                Debug.LogError("[Project Hymn] This scene has no player for any class. Rebuild it (Project Hymn ▸ Build Hub & Loop).");
+                Debug.LogError("[Project Hymn] This scene has no player for any weapon. Rebuild it (Project Hymn ▸ Build Hub & Loop).");
                 return;
             }
             foreach (var p in players) if (p.player != null && p != chosen) p.player.SetActive(false);
@@ -46,13 +46,15 @@ namespace ProjectHymn.Gameplay
             if (body != null) body.SetRespawn(Active.transform.position);
             Physics.SyncTransforms();
 
-            var def = session.Db != null ? session.Db.Class(chosen.classId) : null;
+            var def = session.Class;
             if (def != null)
             {
                 var health = Active.GetComponent<PlayerHealth>();
                 if (health != null) health.SetMaxHearts(def.hearts);
                 var combat = Active.GetComponent<SwordCombatController>();
                 if (combat != null) combat.DamageMultiplier = def.damage;
+                var guard = Active.GetComponent<PlayerGuard>();
+                if (guard != null) guard.ApplyClass(def);
             }
             session.PendingSpawn = null;
             var hud = ProjectHymn.UI.GameHud.Instance;      // hearts, Notes and the quick item from the first frame

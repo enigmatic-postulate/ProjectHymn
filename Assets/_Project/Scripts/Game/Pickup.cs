@@ -82,19 +82,19 @@ namespace ProjectHymn.Gameplay
         }
     }
 
-    /// <summary>Looks up a sequence by key in the current class's weapon (for names in toasts and menus).</summary>
+    /// <summary>Looks up a sequence by key in the equipped weapon (for names in toasts and menus).</summary>
     public static class SequenceInfo
     {
         public static SwordSequence Find(string key)
         {
             var s = GameSession.Instance;
-            var cls = s.Class;
-            if (cls != null && cls.weapon != null)
-                foreach (var q in cls.weapon.sequences) if (q != null && q.key == key) return q;
+            var weapon = s.Weapon;
+            if (weapon != null)
+                foreach (var q in weapon.sequences) if (q != null && q.key == key) return q;
             if (s.Db != null)
-                foreach (var c in s.Db.classes)
-                    if (c != null && c.weapon != null)
-                        foreach (var q in c.weapon.sequences) if (q != null && q.key == key) return q;
+                foreach (var w in s.Db.weapons)
+                    if (w != null)
+                        foreach (var q in w.sequences) if (q != null && q.key == key) return q;
             return null;
         }
     }

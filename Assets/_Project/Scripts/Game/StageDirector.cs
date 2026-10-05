@@ -8,8 +8,9 @@ namespace ProjectHymn.Gameplay
     /// <summary>
     /// Stage rules. Defeated enemies drop Notes. The stage keeps a timer against its par and a playstyle log (the GDD's
     /// attack tally). There are no checkpoints: dying or falling restarts the whole stage, timer included (test
-    /// checkpoints bring the old respawns back, F7 or Settings). Reaching the goal shows the results, clears the stage
-    /// and walks the player back into the village (which autosaves).
+    /// checkpoints bring the old respawns back, F7 or Settings). Reaching the goal ranks the run, applies it to the save
+    /// (experience, level-downs, the class check, weapon unlocks), shows the results, offers the class choice when a
+    /// class check gives one, and walks the player back into the village (which autosaves).
     /// </summary>
     public class StageDirector : MonoBehaviour
     {
@@ -146,11 +147,27 @@ namespace ProjectHymn.Gameplay
             var targets = Targets;
             var result = StageScoring.Score(Seconds, Log, targets);
             var s = GameSession.Instance;
-            s.Data.ClearStage(stageId);
-            StageResultsPanel.Show(stageId, result, Log, targets, () =>
+            var outcome = s.RecordClear(stageId, result, Log);
+            StageResultsPanel.Show(stageId, result, Log, targets, outcome, () =>
             {
-                if (s.Db != null) s.Travel(s.Db.hubScene, returnSpawn, saveOnArrival: true);
+                if (outcome.Offer != null)
+                {
+                    string current = s.Data.classId;
+                    var options = ClassMenu.ClassOptions(outcome.Offer.Choices, current, outcome.Offer.Recommended);
+                    ClassMenu.Open($"Level {outcome.Offer.Level}: class check", outcome.Offer.Reason, options, outcome.Offer.Recommended, id =>
+                    {
+                        if (id != current) s.SetClass(id);
+                        ReturnToHub();
+                    });
+                }
+                else ReturnToHub();
             });
+        }
+
+        void ReturnToHub()
+        {
+            var s = GameSession.Instance;
+            if (s.Db != null) s.Travel(s.Db.hubScene, returnSpawn, saveOnArrival: true);
         }
     }
 }

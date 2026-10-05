@@ -32,11 +32,28 @@ namespace ProjectHymn.Gameplay
         public double LastDodgeTime { get; private set; } = double.NaN;
         public float DodgeInvulnerable { get => dodgeInvulnerable; set => dodgeInvulnerable = value; }
         public float BlockBonus { get => blockBonus; set => blockBonus = value; }
+        /// <summary>Damage a block deals back to the attacker (class perk; 0 = none).</summary>
+        public float BlockDamage { get; set; }
+        /// <summary>Damage a parry deals back to the attacker (class perk; 0 = none).</summary>
+        public float ParryDamage { get; set; }
+        /// <summary>A block makes the enemy skip its next note (class perk).</summary>
+        public bool BlockSkipsNote { get; set; }
         public event Action Dodged;
 
         /// <summary>An enemy hit was resolved against the guard. Args: result, where the hit came from.</summary>
         public event Action<DefenseResult, Vector3> Defended;
         public event Action Raised;
+
+        /// <summary>Take the class's guard and dodge perks.</summary>
+        public void ApplyClass(ClassDefinition c)
+        {
+            if (c == null) return;
+            blockBonus = Mathf.Max(0f, c.blockBonus);
+            dodgeInvulnerable = c.dodgeInvulnerable > 0f ? c.dodgeInvulnerable : 0.25f;
+            BlockDamage = c.blockDamage;
+            ParryDamage = c.parryDamage;
+            BlockSkipsNote = c.blockSkipsNote;
+        }
 
         void Awake()
         {

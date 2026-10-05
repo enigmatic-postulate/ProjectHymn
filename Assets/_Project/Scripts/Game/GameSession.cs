@@ -45,6 +45,7 @@ namespace ProjectHymn.Gameplay
         public static string SavePath => Path.Combine(Application.persistentDataPath, SaveFile);
         public static bool HasSave => File.Exists(SavePath);
         public ClassDefinition Class => Db != null ? Db.Class(Data.classId) : null;
+        public WeaponSet Weapon => Db != null ? Db.Weapon(Data.weaponId) : null;
         public string SceneName => SceneManager.GetActiveScene().name;
 
         static void Create(bool freePlay)
@@ -69,12 +70,14 @@ namespace ProjectHymn.Gameplay
 
         SaveData FreePlayData()
         {
-            var first = Db != null && Db.classes.Count > 0 ? Db.classes[0] : null;
-            var s = SaveData.NewGame(first != null ? first.id : "knight", null);
+            var s = SaveData.NewGame(ProgressionRules.Minstrel, null);
             if (Db != null)
-                foreach (var c in Db.classes)
-                    if (c != null && c.weapon != null)
-                        foreach (var q in c.weapon.sequences) if (q != null) s.Learn(q.key);
+                foreach (var w in Db.weapons)
+                {
+                    if (w == null) continue;
+                    s.UnlockWeapon(w.id);
+                    foreach (var q in w.sequences) if (q != null) s.Learn(q.key);
+                }
             return s;
         }
 
@@ -85,10 +88,12 @@ namespace ProjectHymn.Gameplay
 
         // ---------------- Game flow ----------------
 
-        public void NewGame(string classId)
+        /// <summary>A new game: everyone starts as the Minstrel with the sword, at level 1.</summary>
+        public void NewGame()
         {
-            var cls = Db != null ? Db.Class(classId) : null;
-            Data = SaveData.NewGame(cls != null ? cls.id : classId, cls != null ? cls.startingSequences : null);
+            var cls = Db != null ? Db.Class(ProgressionRules.Minstrel) : null;
+            Data = SaveData.NewGame(ProgressionRules.Minstrel, cls != null ? cls.startingSequences : null);
+            Data.weaponId = ProgressionRules.Sword;
             if (Db != null) foreach (var it in Db.startingItems) Data.AddItem(it.id, it.count);
             FreePlay = false;
             Travel(Db != null ? Db.hubScene : "Village", "Start", saveOnArrival: true);
@@ -105,12 +110,34 @@ namespace ProjectHymn.Gameplay
 
         public void ToTitle() => Travel(Db != null ? Db.titleScene : "Title", "");
 
+        /// <summary>Change class (a class check's choice); keeps a weapon the class can hold.</summary>
         public void SetClass(string classId)
         {
-            Data.classId = classId;
+            ProgressionRules.SetClass(Data, classId, Db != null ? Db.ClassSpecs() : null);
             var cls = Class;
             if (cls != null) foreach (var q in cls.startingSequences) Data.Learn(q);
             Changed?.Invoke();
+        }
+
+        /// <summary>Equip an unlocked weapon the class can hold. Takes effect when the scene next loads.</summary>
+        public bool SetWeapon(string weaponId)
+        {
+            var cls = Class;
+            if (!Data.HasWeapon(weaponId) || (cls != null && !cls.CanEquip(weaponId))) return false;
+            Data.weaponId = weaponId;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>A stage clear: best rank, the greatsword unlock, experience, level-downs and the class check.</summary>
+        public RunOutcome RecordClear(string stage, StageResult result, PlaystyleLog log)
+        {
+            var rules = Db != null ? Db.Rules : ProgressionRules.Default;
+            var outcome = rules.Apply(Data, stage, result, log, Db != null ? Db.ClassSpecs() : null);
+            var cls = Class;
+            if (cls != null) foreach (var q in cls.startingSequences) Data.Learn(q);
+            Changed?.Invoke();
+            return outcome;
         }
 
         // ---------------- Changes that the HUD shows ----------------

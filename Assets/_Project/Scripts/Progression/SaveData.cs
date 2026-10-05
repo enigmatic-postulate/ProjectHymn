@@ -14,15 +14,26 @@ namespace ProjectHymn.Progression
 
     public enum PurchaseResult { Bought, TooPoor, AlreadyKnown, Invalid }
 
+    /// <summary>A stage's best clear (rank letter and time) and how often it was cleared.</summary>
+    [Serializable]
+    public class StageRecord
+    {
+        public string stage;
+        public string bestRank = "";
+        public double bestSeconds;
+        public int clears;
+    }
+
     /// <summary>
-    /// Everything a save file holds (Hub &amp; Loop slice), and the rules for changing it: Notes, items and the quick
-    /// slot, learned sequences, lore found, pickups collected and stages cleared. Plain C# with public fields so
+    /// Everything a save file holds, and the rules for changing it: Notes, items and the quick slot, learned
+    /// sequences, lore found, pickups collected and stages cleared (Hub &amp; Loop); level, experience, class, weapon,
+    /// unlocked weapons and each stage's best rank (Rank &amp; Class, version 2). Plain C# with public fields so
     /// Unity's JsonUtility writes it as is; unit-tested.
     /// </summary>
     [Serializable]
     public class SaveData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         public const int MaxStack = 9;
 
         public int version = CurrentVersion;
@@ -37,10 +48,17 @@ namespace ProjectHymn.Progression
         public string scene = "";
         public string spawn = "";
         public double playSeconds;
+        public int level = 1;
+        /// <summary>Experience into the current level (a level-down keeps it).</summary>
+        public int xp;
+        public string weaponId = ProgressionRules.Sword;
+        public List<string> weapons = new List<string> { ProgressionRules.Sword };
+        public List<StageRecord> stageRecords = new List<StageRecord>();
 
         public static SaveData NewGame(string classId, IEnumerable<string> startingSequences, IEnumerable<ItemCount> startingItems = null)
         {
             var s = new SaveData { classId = classId };
+            s.level = 1;
             if (startingSequences != null) foreach (var q in startingSequences) s.Learn(q);
             if (startingItems != null) foreach (var it in startingItems) s.AddItem(it.id, it.count);
             return s;
@@ -135,6 +153,43 @@ namespace ProjectHymn.Progression
 
         public void ClearStage(string stage) { if (!string.IsNullOrEmpty(stage) && !stagesCleared.Contains(stage)) stagesCleared.Add(stage); }
 
+        // ---------------- Weapons and stage records ----------------
+
+        public bool HasWeapon(string id) => !string.IsNullOrEmpty(id) && weapons.Contains(id);
+
+        public bool UnlockWeapon(string id)
+        {
+            if (string.IsNullOrEmpty(id) || weapons.Contains(id)) return false;
+            weapons.Add(id);
+            return true;
+        }
+
+        public StageRecord Record(string stage)
+        {
+            foreach (var r in stageRecords) if (r.stage == stage) return r;
+            return null;
+        }
+
+        public bool TryBestRank(string stage, out StageRank rank)
+        {
+            rank = StageRank.C;
+            var r = Record(stage);
+            return r != null && Enum.TryParse(r.bestRank, out rank);
+        }
+
+        /// <summary>Count a clear; returns true when it beats the stage's best rank (or time at the same rank).</summary>
+        public bool RecordStage(string stage, StageRank rank, double seconds)
+        {
+            if (string.IsNullOrEmpty(stage)) return false;
+            ClearStage(stage);
+            var r = Record(stage);
+            if (r == null) { r = new StageRecord { stage = stage }; stageRecords.Add(r); }
+            r.clears++;
+            bool better = !Enum.TryParse(r.bestRank, out StageRank best) || rank < best || (rank == best && seconds < r.bestSeconds);
+            if (better) { r.bestRank = rank.ToString(); r.bestSeconds = seconds; }
+            return better;
+        }
+
         // ---------------- Shop ----------------
 
         /// <summary>
@@ -159,6 +214,21 @@ namespace ProjectHymn.Progression
             if (lore == null) lore = new List<string>();
             if (collected == null) collected = new List<string>();
             if (stagesCleared == null) stagesCleared = new List<string>();
+            if (weapons == null) weapons = new List<string>();
+            if (stageRecords == null) stageRecords = new List<StageRecord>();
+            stageRecords.RemoveAll(r => r == null || string.IsNullOrEmpty(r.stage));
+            if (version < 2)
+            {
+                // Hub & Loop saves: the Knight and the Barbarian become the Minstrel with their weapon.
+                if (classId == "barbarian") { UnlockWeapon(ProgressionRules.Greatsword); weaponId = ProgressionRules.Greatsword; }
+                else weaponId = ProgressionRules.Sword;
+                classId = ProgressionRules.Minstrel;
+            }
+            if (string.IsNullOrEmpty(classId)) classId = ProgressionRules.Minstrel;
+            UnlockWeapon(ProgressionRules.Sword);
+            if (!HasWeapon(weaponId)) weaponId = ProgressionRules.Sword;
+            if (level < 1) level = 1;
+            if (xp < 0) xp = 0;
             items.RemoveAll(it => it == null || string.IsNullOrEmpty(it.id) || it.count <= 0);
             foreach (var it in items) it.count = Math.Min(it.count, MaxStack);
             if (notes < 0) notes = 0;

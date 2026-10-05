@@ -5,6 +5,7 @@ using ProjectHymn.Gameplay;
 using ProjectHymn.Movement;
 using ProjectHymn.UI;
 using ProjectHymn.EditorTools.Art;
+using ProjectHymn.Progression;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,7 +15,7 @@ using Lit = ProjectHymn.EditorTools.Sword.SwordsmanBuilder;
 namespace ProjectHymn.EditorTools
 {
     /// <summary>
-    /// Hub &amp; Loop slice: the game database (classes, items, shop), the shared two-class player rig, and the Title and
+    /// Hub &amp; Loop slice: the game database (weapons, classes, items, shop), the player rig (one per weapon), and the Title and
     /// Village scenes. Menu: Project Hymn ▸ Build Hub &amp; Loop builds the database and all three scenes (Title, Village,
     /// Cliffside) and puts them first in the build list. Safe to re-run.
     /// </summary>
@@ -58,9 +59,23 @@ namespace ProjectHymn.EditorTools
             return i;
         }
 
+        static ClassDefinition Class(string id, string name, string description, ClassBracket bracket, int minLevel, PlayLean lean,
+                                     int hearts, float damage, List<WeaponSet> weapons)
+        {
+            var c = Asset<ClassDefinition>($"{DataDir}/Classes/{name}.asset");
+            c.id = id; c.displayName = name; c.description = description;
+            c.bracket = bracket; c.minLevel = minLevel; c.lean = lean;
+            c.hearts = hearts; c.damage = damage;
+            c.weapons = weapons;
+            c.startingSequences = new List<string> { "CrossingCuts" };
+            c.blockBonus = 0f; c.blockDamage = 0f; c.parryDamage = 0f; c.blockSkipsNote = false;
+            c.dodgeInvulnerable = 0.25f; c.commonTimeOnly = false;
+            return c;
+        }
+
         /// <summary>
-        /// Resources/HymnDatabase: the Knight (sword and shield; Good-timed guards parry) and the Barbarian (greatsword;
-        /// more hearts, heavier blows), the items, the shop's stock and what a new game starts with.
+        /// Resources/HymnDatabase: the weapons (sword and shield, greatsword), the four slice classes (Minstrel, Fighter,
+        /// Warden, Crusader; placeholder numbers), the items, the shop's stock and what a new game starts with.
         /// </summary>
         public static GameDatabase EnsureDatabase(List<WeaponSet> weapons)
         {
@@ -69,21 +84,39 @@ namespace ProjectHymn.EditorTools
             Directory.CreateDirectory(ResourcesDir);
             AssetDatabase.Refresh();
 
-            var knight = Asset<ClassDefinition>($"{DataDir}/Classes/Knight.asset");
-            knight.id = "knight"; knight.displayName = "Knight";
-            knight.description = "Sword and shield. Quick cuts and a steady guard.";
-            knight.hearts = 5; knight.damage = 1f;
-            knight.weapon = weapons.Count > 0 ? weapons[0] : null;
-            knight.startingSequences = new List<string> { "CrossingCuts" };
-            EditorUtility.SetDirty(knight);
+            // Weapons are separate from classes: give them the ids the save and the classes use.
+            var sword = weapons.Count > 0 ? weapons[0] : null;
+            var great = weapons.Count > 1 ? weapons[1] : null;
+            if (sword != null) { sword.id = ProgressionRules.Sword; EditorUtility.SetDirty(sword); }
+            if (great != null) { great.id = ProgressionRules.Greatsword; EditorUtility.SetDirty(great); }
+            var both = new List<WeaponSet>(); if (sword != null) both.Add(sword); if (great != null) both.Add(great);
+            var swordOnly = new List<WeaponSet>(); if (sword != null) swordOnly.Add(sword);
 
-            var barbarian = Asset<ClassDefinition>($"{DataDir}/Classes/Barbarian.asset");
-            barbarian.id = "barbarian"; barbarian.displayName = "Barbarian";
-            barbarian.description = "Greatsword. Heavier blows and a sixth heart.";
-            barbarian.hearts = 6; barbarian.damage = 1.3f;
-            barbarian.weapon = weapons.Count > 1 ? weapons[1] : knight.weapon;
-            barbarian.startingSequences = new List<string> { "CrossingCuts" };
-            EditorUtility.SetDirty(barbarian);
+            // The Hub & Loop classes are gone (the weapon was the class then).
+            foreach (var old in new[] { "Knight", "Barbarian" })
+                if (AssetDatabase.LoadAssetAtPath<ClassDefinition>($"{DataDir}/Classes/{old}.asset") != null)
+                    AssetDatabase.DeleteAsset($"{DataDir}/Classes/{old}.asset");
+
+            var minstrel = Class(ProgressionRules.Minstrel, "Minstrel",
+                "Everyone starts here: a wandering player who fights to the beat. What you become depends on how you play.",
+                ClassBracket.Base, 0, PlayLean.Balanced, 5, 1f, both);
+            var fighter = Class(ProgressionRules.Fighter, "Fighter",
+                "The D-rank brawler. Common time only and a wider block window, and blocks hit back. Only an S or A clear moves a Fighter up.",
+                ClassBracket.Low, 0, PlayLean.Balanced, 6, 1f, both);
+            fighter.blockBonus = 0.04f;           // about 2–3 frames at 60 fps either side; parry timing is unchanged
+            fighter.blockDamage = 6f;
+            fighter.parryDamage = 12f;
+            fighter.commonTimeOnly = true;
+            var warden = Class(ProgressionRules.Warden, "Warden",
+                "Earned by mastery that leans on the guard. A parry cuts the attacker; a block makes it skip a note.",
+                ClassBracket.High, 6, PlayLean.Guard, 6, 1f, swordOnly);
+            warden.parryDamage = 20f;
+            warden.blockSkipsNote = true;
+            var crusader = Class(ProgressionRules.Crusader, "Crusader",
+                "Earned by mastery that rarely blocks and prefers to dodge. Longer dodge frames and heavier blows, fewer hearts. (Brandish to come.)",
+                ClassBracket.High, 6, PlayLean.Dodge, 4, 1.15f, both);
+            crusader.dodgeInvulnerable = 0.35f;
+            foreach (var c in new[] { minstrel, fighter, warden, crusader }) EditorUtility.SetDirty(c);
 
             var potion = Item("potion", "Potion", ItemKind.Potion, 60, "Restores 2 hearts.", 0xff6a5a);
             potion.heal = 2;
@@ -105,7 +138,8 @@ namespace ProjectHymn.EditorTools
 
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>($"{ResourcesDir}/{GameDatabase.ResourcePath}.asset");
             if (db == null) { db = ScriptableObject.CreateInstance<GameDatabase>(); AssetDatabase.CreateAsset(db, $"{ResourcesDir}/{GameDatabase.ResourcePath}.asset"); }
-            db.classes = new List<ClassDefinition> { knight, barbarian };
+            db.classes = new List<ClassDefinition> { minstrel, fighter, warden, crusader };
+            db.weapons = both;
             db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge };
             db.shopStock = new List<ItemDefinition> { potion, tonic, power };
             db.startingItems = new List<GameDatabase.ItemCount> { new GameDatabase.ItemCount { id = "potion", count = 1 } };
@@ -119,8 +153,8 @@ namespace ProjectHymn.EditorTools
         // ---------------- Players ----------------
 
         /// <summary>
-        /// One player per class at <paramref name="at"/> (the first active, the rest switched off) and a PlayerSpawner that
-        /// keeps the session's class at run time. Nothing else in the scene may point at a player: everything that needs
+        /// One player per weapon at <paramref name="at"/> (the first active, the rest switched off) and a PlayerSpawner that
+        /// keeps the session's weapon and applies its class at run time. Nothing else in the scene may point at a player: everything that needs
         /// one finds the active player when it wakes. Returns the first (active) player.
         /// </summary>
         public static GameObject BuildPlayers(Vector3 at, Conductor conductor, GameDatabase db, LocomotionSet locomotion, Material additive, bool art)
@@ -128,10 +162,12 @@ namespace ProjectHymn.EditorTools
             var spawnerGo = new GameObject("Players", typeof(PlayerSpawner));
             GameObject first = null;
             var entries = new List<(string id, GameObject go)>();
-            foreach (var cls in db.classes)
+            foreach (var weapon in db.weapons)
             {
-                if (cls == null || cls.weapon == null) continue;
-                var player = new GameObject($"Player ({cls.displayName})", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
+                if (weapon == null) continue;
+                // The KayKit hero for the weapon: the knight with sword and shield, the barbarian with the greatsword.
+                string character = weapon.id == ProgressionRules.Greatsword ? "Barbarian" : "Knight";
+                var player = new GameObject($"Player ({weapon.displayName})", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
                     typeof(RhythmAnimator), typeof(SwordCombatController), typeof(PlayerGuard), typeof(PlayerHealth),
                     typeof(PlayerInteractor), typeof(QuickItems));
                 player.transform.SetParent(spawnerGo.transform, false);
@@ -142,10 +178,10 @@ namespace ProjectHymn.EditorTools
                 var visual = new GameObject("Visual").transform;
                 visual.SetParent(player.transform, false);
                 SetRef(player.GetComponent<PlatformerController>(), "visual", visual);
-                var weapons = new List<WeaponSet> { cls.weapon };
+                var weapons = new List<WeaponSet> { weapon };
                 if (art)
                 {
-                    KayKitBuilder.RigHero(player, visual, conductor, weapons, locomotion, additive, out float hangDrop, cls.displayName);
+                    KayKitBuilder.RigHero(player, visual, conductor, weapons, locomotion, additive, out float hangDrop, character);
                     var pso = new SerializedObject(player.GetComponent<PlatformerController>());
                     pso.FindProperty("hangDrop").floatValue = hangDrop;
                     pso.ApplyModifiedPropertiesWithoutUndo();
@@ -154,19 +190,19 @@ namespace ProjectHymn.EditorTools
                 SetRef(player.GetComponent<PlayerGuard>(), "conductor", conductor);
                 SetRef(player.GetComponent<PlayerGuard>(), "animator", player.GetComponent<RhythmAnimator>());
                 if (first == null) first = player; else player.SetActive(false);
-                entries.Add((cls.id, player));
+                entries.Add((weapon.id, player));
             }
 
             if (entries.Count == 0)
-                Debug.LogError("[Project Hymn] No player was built: the game database has no class with a weapon. " +
-                               "Check Resources/HymnDatabase and Data/Game/Classes, then build again.");
+                Debug.LogError("[Project Hymn] No player was built: the game database has no weapons. " +
+                               "Check Resources/HymnDatabase, then build again.");
             var so = new SerializedObject(spawnerGo.GetComponent<PlayerSpawner>());
             var list = so.FindProperty("players");
             list.arraySize = entries.Count;
             for (int i = 0; i < entries.Count; i++)
             {
                 var e = list.GetArrayElementAtIndex(i);
-                e.FindPropertyRelative("classId").stringValue = entries[i].id;
+                e.FindPropertyRelative("weaponId").stringValue = entries[i].id;
                 e.FindPropertyRelative("player").objectReferenceValue = entries[i].go;
             }
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -336,7 +372,7 @@ namespace ProjectHymn.EditorTools
             var shop = Figure(people, "Merchant", "Ranger", new Vector3(VillageLayout.ShopX + 1.2f, top, npcZ), art).AddComponent<ShopKeeper>();
             shop.prompt = "Shop";
             var trainer = Figure(people, "Trainer", "Rogue_Hooded", new Vector3(VillageLayout.TrainerX + 1.5f, top, npcZ), art).AddComponent<ClassTrainer>();
-            trainer.prompt = "Change class";
+            trainer.prompt = "Weapon rack";
             var talk = new (string name, string model, string[] lines, string lore)[]
             {
                 ("Elder", "Mage", new[]
@@ -449,7 +485,7 @@ namespace ProjectHymn.EditorTools
             }
             BuildVillageBackdrop(set, village);
 
-            // The two classes, posed on the right of the frame (the menu sits on the left).
+            // The hero with each weapon, posed on the right of the frame (the menu sits on the left).
             if (art)
             {
                 KayKitBuilder.BuildFigure(set, "Knight", "Knight", new Vector3(3.2f, 0f, 0.4f), 200f, "Idle_A", null, 1.85f, "Sword", "Shield");

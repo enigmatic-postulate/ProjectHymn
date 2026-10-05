@@ -11,6 +11,8 @@ namespace ProjectHymn.Gameplay
     [CreateAssetMenu(menuName = "Project Hymn/Weapon Set", fileName = "NewWeaponSet")]
     public class WeaponSet : ScriptableObject
     {
+        [Tooltip("Stable id the save and the classes use (sword, greatsword).")]
+        public string id = "sword";
         public string displayName = "Saber";
         [Tooltip("Name of the sword model under the hand's Grip to show for this weapon.")]
         public string swordObject = "Saber";

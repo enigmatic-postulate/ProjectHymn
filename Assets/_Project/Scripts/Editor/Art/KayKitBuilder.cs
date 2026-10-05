@@ -65,7 +65,8 @@ namespace ProjectHymn.EditorTools.Art
                 light: ("Diagonal", "Horizontal"), heavy: "Chop", guard: "Guard",
                 crossing: new[] { "Diagonal", "Chop", "Horizontal" }, powerslice: new[] { "ShieldBash", "LeapChop" },
                 tempest: new[] { "Diagonal", "Horizontal", "Diagonal", "Kick", "Horizontal", "Diagonal", "Stab" });
-            // Heft 1.0: the Barbarian class's damage multiplier (1.3) supplies the greatsword's weight.
+            // Heft 1.0 on the moves; the weapon's damage scale (1.3) gives the greatsword its weight (weapons are
+            // separate from classes since Rank & Class).
             var great = Weapon("Greatsword", "Greatsword", "Greatsword", "", "Melee_2H_Idle", 1f,
                 new[]
                 {
@@ -80,6 +81,11 @@ namespace ProjectHymn.EditorTools.Art
                 light: ("Slice", "Stab"), heavy: "Chop", guard: "Guard",
                 crossing: new[] { "Slice", "Chop", "Stab" }, powerslice: new[] { "Whirl", "Chop" },
                 tempest: new[] { "Slice", "Stab", "Slice", "Kick", "Stab", "Slice", "Spin" });
+            sword.id = "sword";
+            great.id = "greatsword";
+            great.damageScale = 1.3f;
+            EditorUtility.SetDirty(sword);
+            EditorUtility.SetDirty(great);
             AssetDatabase.SaveAssets();
             return new List<WeaponSet> { sword, great };
         }

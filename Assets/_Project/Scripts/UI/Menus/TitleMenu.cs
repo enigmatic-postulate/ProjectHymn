@@ -42,7 +42,7 @@ namespace ProjectHymn.UI
         }
 
         void NewGame() =>
-            ClassMenu.Open("Choose your class", "", id => _session.NewGame(id), Main);
+            _session.NewGame();
 
         void Settings()
         {

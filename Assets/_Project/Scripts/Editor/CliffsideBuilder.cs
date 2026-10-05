@@ -113,7 +113,7 @@ namespace ProjectHymn.EditorTools
             Debug.Log("[Project Hymn] Cliffside slice built. A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
                       "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
-                      "W / Up uses doors, E drinks the quick item, Q changes it, Esc pauses. Shift dash, R restart, F1-F4 tempos, F9 debug HUD.");
+                      "W / Up uses doors, E drinks the quick item, Q changes it, Esc pauses. Shift dodge, R restart, F1-F4 tempos, F9 debug HUD.");
         }
 
         static bool _art, _village;
