@@ -338,8 +338,11 @@ namespace ProjectHymn.EditorTools
             // Street, end walls, and the open ground behind the lane that the houses stand on.
             float x0 = VillageLayout.XMin, x1 = VillageLayout.XMax, top = VillageLayout.GroundTop;
             Slab(level, "Street", new Vector3(x0 - 2f, -8f, LaneFront), new Vector3(x1 + 2f, top, 40f), village, ground: true);
-            Slab(level, "West Wall", new Vector3(x0 - 3f, -8f, LaneFront), new Vector3(x0, 12f, 12f), village, ground: false);
-            Slab(level, "East Wall", new Vector3(x1, -8f, LaneFront), new Vector3(x1 + 3f, 12f, 12f), village, ground: false);
+            // The end walls overlap the street's ends; their camera faces sit a few centimetres in front of the street's,
+            // or the two coplanar faces z-fight (the flickering stones under the grass at each end of the village).
+            const float WallProud = 0.04f;
+            Slab(level, "West Wall", new Vector3(x0 - 3f, -8f, LaneFront - WallProud), new Vector3(x0, 12f, 12f), village, ground: false);
+            Slab(level, "East Wall", new Vector3(x1, -8f, LaneFront - WallProud), new Vector3(x1 + 3f, 12f, 12f), village, ground: false);
             Slab(level, "High Ledge", new Vector3(VillageLayout.LedgeXMin, VillageLayout.LedgeTop - VillageLayout.LedgeThickness, -1.4f),
                  new Vector3(VillageLayout.LedgeXMax, VillageLayout.LedgeTop, 1.4f), village, ground: false);
             BuildPickup(level, "Lore lore_ledge", new Vector3((VillageLayout.LedgeXMin + VillageLayout.LedgeXMax) * 0.5f, VillageLayout.LedgeTop, 0f), "Village");
