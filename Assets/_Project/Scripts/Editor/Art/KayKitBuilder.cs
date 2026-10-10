@@ -265,7 +265,17 @@ namespace ProjectHymn.EditorTools.Art
 
         public static string CharacterFbx(string character) => $"{ArtLibrary.KayKit}/Characters/{character}.fbx";
         public static bool HasCharacter(string character) => File.Exists(CharacterFbx(character));
-        static Material CharacterMat(string character) => Mat($"KayKit_{character}", $"{character.ToLowerInvariant()}_texture.png");
+        /// <summary>
+        /// The character's texture atlas. Variants share their base character's atlas (Rogue_Hooded uses
+        /// rogue_texture.png): without this fallback the hooded rogue (the armsmaster) came out untextured white.
+        /// </summary>
+        static Material CharacterMat(string character)
+        {
+            string own = $"{character.ToLowerInvariant()}_texture.png";
+            if (File.Exists($"{ArtLibrary.KayKit}/Characters/{own}")) return Mat($"KayKit_{character}", own);
+            string baseName = character.Split('_')[0];
+            return Mat($"KayKit_{baseName}", $"{baseName.ToLowerInvariant()}_texture.png");
+        }
         /// <summary>The weapons share the knight's texture atlas, whoever holds them.</summary>
         static Material WeaponMat => Mat("KayKit_Knight", "knight_texture.png");
 

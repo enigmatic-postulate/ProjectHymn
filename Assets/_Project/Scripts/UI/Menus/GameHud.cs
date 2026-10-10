@@ -14,7 +14,10 @@ namespace ProjectHymn.UI
     {
         static GameHud _instance;
 
-        Text _hearts, _notes, _item, _banner, _toast, _prompt, _boost;
+        Text _notes, _item, _banner, _toast, _prompt, _boost;
+        RectTransform _heartRow;
+        readonly System.Collections.Generic.List<Image> _hearts = new System.Collections.Generic.List<Image>();
+        static readonly Color HeartFull = new Color(1f, 0.35f, 0.29f), HeartEmpty = new Color(0.24f, 0.2f, 0.28f, 0.9f);
         float _bannerTime, _toastTime;
         PlayerHealth _health;
         SwordCombatController _combat;
@@ -40,7 +43,11 @@ namespace ProjectHymn.UI
             _instance = this;
             var c = UiKit.Canvas("HUD Canvas", 50, transform);
             var t = c.transform;
-            _hearts = Fixed(t, new Vector2(0f, 1f), new Vector2(40f, -40f), new Vector2(700f, 60f), 46, TextAnchor.UpperLeft);
+            // Hearts are drawn sprites, not a ♥ glyph: web builds have no system fonts to fall back on.
+            _heartRow = UiKit.Rect("Hearts", t, new Vector2(0f, 1f), new Vector2(0f, 1f));
+            _heartRow.pivot = new Vector2(0f, 1f);
+            _heartRow.anchoredPosition = new Vector2(40f, -40f);
+            _heartRow.sizeDelta = new Vector2(700f, 52f);
             _notes = Fixed(t, new Vector2(0f, 1f), new Vector2(42f, -100f), new Vector2(500f, 44f), 32, TextAnchor.UpperLeft);
             _notes.color = UiKit.Gold;
             _boost = Fixed(t, new Vector2(0f, 1f), new Vector2(42f, -146f), new Vector2(500f, 36f), 24, TextAnchor.UpperLeft);
@@ -50,11 +57,35 @@ namespace ProjectHymn.UI
             _toast = Fixed(t, new Vector2(0.5f, 0.5f), new Vector2(0f, 170f), new Vector2(1400f, 60f), 38, TextAnchor.MiddleCenter);
             _toast.color = UiKit.Gold;
             _prompt = Fixed(t, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500f, 44f), 30, TextAnchor.MiddleCenter);
-            foreach (var x in new[] { _hearts, _notes, _item, _banner, _toast, _prompt, _boost })
+            foreach (var x in new[] { _notes, _item, _banner, _toast, _prompt, _boost })
             {
                 var o = x.gameObject.AddComponent<Outline>();
                 o.effectColor = new Color(0f, 0f, 0f, 0.75f);
                 o.effectDistance = new Vector2(2f, -2f);
+            }
+        }
+
+        void SetHearts(int hp, int max)
+        {
+            while (_hearts.Count < max)
+            {
+                var rt = UiKit.Rect("Heart", _heartRow, new Vector2(0f, 1f), new Vector2(0f, 1f));
+                rt.pivot = new Vector2(0f, 1f);
+                rt.sizeDelta = new Vector2(46f, 46f);
+                rt.anchoredPosition = new Vector2(_hearts.Count * 52f, 0f);
+                var img = rt.gameObject.AddComponent<Image>();
+                img.sprite = ProceduralSprites.Heart;
+                img.raycastTarget = false;
+                var sh = rt.gameObject.AddComponent<Shadow>();
+                sh.effectColor = new Color(0f, 0f, 0f, 0.6f);
+                sh.effectDistance = new Vector2(2f, -2f);
+                _hearts.Add(img);
+            }
+            for (int i = 0; i < _hearts.Count; i++)
+            {
+                bool show = i < max;
+                if (_hearts[i].gameObject.activeSelf != show) _hearts[i].gameObject.SetActive(show);
+                if (show) _hearts[i].color = i < hp ? HeartFull : HeartEmpty;
             }
         }
 
@@ -96,11 +127,9 @@ namespace ProjectHymn.UI
             var session = GameSession.Instance;
             if (_health != null)
             {
-                var sb = new StringBuilder();
-                for (int i = 0; i < _health.MaxHp; i++) sb.Append(i < _health.Hp ? "<color=#ff5a4a>♥</color>" : "<color=#3c3448>♥</color>");
-                _hearts.text = sb.ToString();
+                SetHearts(_health.Hp, _health.MaxHp);
             }
-            else _hearts.text = "";
+            else SetHearts(0, 0);
             _notes.text = $"♪ {session.Data.notes}";
             var item = session.Db != null ? session.Db.Item(session.Data.quickItem) : null;
             _item.text = item != null ? $"<color=#ffd56a>[E]</color> {item.displayName} ×{session.Data.Count(item.id)}   <color=#8a84a0>[Q] next</color>" : "<color=#8a84a0>No item</color>";

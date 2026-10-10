@@ -205,21 +205,15 @@ namespace ProjectHymn.Gameplay
 
         void BuildRing()
         {
-            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(ring.GetComponent<Collider>());
-            ring.name = "Shockwave";
+            // A sprite lying on the ground (the built-in sprite shader is in every build; a shader found by name isn't).
+            var ring = new GameObject("Shockwave", typeof(SpriteRenderer));
             ring.transform.SetParent(transform, false);
-            ring.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-            ring.transform.localScale = new Vector3(0.1f, 0.02f, 0.1f);
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
-            if (shader != null)
-            {
-                var m = new Material(shader) { color = new Color(0.75f, 0.55f, 1f) };
-                int baseId = Shader.PropertyToID("_BaseColor");
-                if (m.HasProperty(baseId)) m.SetColor(baseId, m.color);
-                ring.GetComponent<MeshRenderer>().sharedMaterial = m;
-            }
-            ring.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ring.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+            ring.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            var sr = ring.GetComponent<SpriteRenderer>();
+            sr.sprite = ProceduralSprites.Ring;
+            sr.color = new Color(0.8f, 0.6f, 1f, 0.9f);
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             ring.SetActive(false);
             _ring = ring.transform;
         }
@@ -235,7 +229,7 @@ namespace ProjectHymn.Gameplay
             if (!on) return;
             float k = _ringT / 0.45f;
             float d = Mathf.Lerp(0.5f, shockReach * 2f, Smooth(k));
-            _ring.localScale = new Vector3(d, 0.02f, Mathf.Min(d, 3f));
+            _ring.localScale = new Vector3(d, Mathf.Min(d, 3f), 1f);
         }
 
         protected override void OnHitLanded(int index)

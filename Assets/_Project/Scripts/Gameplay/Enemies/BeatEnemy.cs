@@ -356,24 +356,19 @@ namespace ProjectHymn.Gameplay
             _barRoot = new GameObject("HP Bar").transform;
             _barRoot.SetParent(transform, false);
             _barRoot.localPosition = Vector3.up * barHeight;
-            var back = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            Destroy(back.GetComponent<Collider>());
+            // Sprites, not quads with a shader looked up by name: a shader only referenced from code is stripped from
+            // builds (the bars rendered magenta on the web). Sprites use the built-in sprite shader every build includes.
+            var back = new GameObject("Back", typeof(SpriteRenderer));
             back.transform.SetParent(_barRoot, false);
             back.transform.localScale = new Vector3(1.0f, 0.09f, 1f);
-            var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            Destroy(fill.GetComponent<Collider>());
+            var bsr = back.GetComponent<SpriteRenderer>();
+            bsr.sprite = UI.ProceduralSprites.White; bsr.color = new Color(0.08f, 0.06f, 0.1f); bsr.sortingOrder = 10;
+            var fill = new GameObject("Fill", typeof(SpriteRenderer));
             fill.transform.SetParent(_barRoot, false);
             fill.transform.localPosition = new Vector3(0f, 0f, -0.01f);
             _barFill = fill.transform;
-            var unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
-            if (unlit != null)
-            {
-                var bm = new Material(unlit); bm.color = new Color(0.08f, 0.06f, 0.1f); SetBase(bm, bm.color);
-                var fm = new Material(unlit); fm.color = new Color(0.95f, 0.3f, 0.25f); SetBase(fm, fm.color);
-                back.GetComponent<MeshRenderer>().sharedMaterial = bm;
-                fill.GetComponent<MeshRenderer>().sharedMaterial = fm;
-            }
-            foreach (var r in _barRoot.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var fsr = fill.GetComponent<SpriteRenderer>();
+            fsr.sprite = UI.ProceduralSprites.White; fsr.color = new Color(0.95f, 0.3f, 0.25f); fsr.sortingOrder = 11;
             _barRoot.gameObject.SetActive(false);
         }
 
