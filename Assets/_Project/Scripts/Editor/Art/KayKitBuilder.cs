@@ -63,8 +63,22 @@ namespace ProjectHymn.EditorTools.Art
                     new M("Guard", "Guard", "Melee_Block", 0f, 0xffffff, "guard"),
                 },
                 light: ("Diagonal", "Horizontal"), heavy: "Chop", guard: "Guard",
-                crossing: new[] { "Diagonal", "Chop", "Horizontal" }, powerslice: new[] { "ShieldBash", "LeapChop" },
-                tempest: new[] { "Diagonal", "Horizontal", "Diagonal", "Kick", "Horizontal", "Diagonal", "Stab" });
+                sequences: new Dictionary<string, string[]>
+                {
+                    ["CrossingCuts"] = new[] { "Diagonal", "Chop", "Horizontal" },
+                    ["Powerslice"] = new[] { "ShieldBash", "LeapChop" },
+                    ["RisingVerse"] = new[] { "Diagonal", "Horizontal", "ShieldBash" },          // the bash lifts them
+                    ["Drill"] = new[] { "Diagonal", "Horizontal", "Diagonal", "Stab" },
+                    ["Hammerfall"] = new[] { "Chop", "Chop", "LeapChop" },
+                    ["IronCount"] = new[] { "Chop", "Diagonal", "Chop", "Horizontal" },
+                    ["Bulwark"] = new[] { "Chop", "Diagonal", "ShieldBash" },                    // the bash pushes
+                    ["Counterpoint"] = new[] { "Diagonal", "Chop", "LeapChop", "Stab" },
+                    ["LanternStep"] = new[] { "Horizontal", "Chop", "LeapChop" },
+                    ["Brandish"] = new[] { "Chop", "Stab" },
+                    ["Judgement"] = new[] { "Chop", "LeapChop", "Diagonal", "Chop" },
+                    ["Crusade"] = new[] { "Chop", "Diagonal", "Chop", "Horizontal", "LeapChop", "Diagonal", "Stab" },
+                    ["Tempest"] = new[] { "Diagonal", "Horizontal", "Diagonal", "Kick", "Horizontal", "Diagonal", "Stab" },
+                });
             // Heft 1.0 on the moves; the weapon's damage scale (1.3) gives the greatsword its weight (weapons are
             // separate from classes since Rank & Class).
             var great = Weapon("Greatsword", "Greatsword", "Greatsword", "", "Melee_2H_Idle", 1f,
@@ -79,8 +93,22 @@ namespace ProjectHymn.EditorTools.Art
                     new M("Guard", "Guard", "Melee_Block", 0f, 0xffffff, "guard"),
                 },
                 light: ("Slice", "Stab"), heavy: "Chop", guard: "Guard",
-                crossing: new[] { "Slice", "Chop", "Stab" }, powerslice: new[] { "Whirl", "Chop" },
-                tempest: new[] { "Slice", "Stab", "Slice", "Kick", "Stab", "Slice", "Spin" });
+                sequences: new Dictionary<string, string[]>
+                {
+                    ["CrossingCuts"] = new[] { "Slice", "Chop", "Stab" },
+                    ["Powerslice"] = new[] { "Whirl", "Chop" },
+                    ["RisingVerse"] = new[] { "Slice", "Stab", "Whirl" },
+                    ["Drill"] = new[] { "Slice", "Stab", "Slice", "Stab" },
+                    ["Hammerfall"] = new[] { "Chop", "Whirl", "Chop" },
+                    ["IronCount"] = new[] { "Chop", "Slice", "Chop", "Stab" },
+                    ["Bulwark"] = new[] { "Chop", "Slice", "Kick" },                              // the kick pushes
+                    ["Counterpoint"] = new[] { "Slice", "Chop", "Whirl", "Stab" },
+                    ["LanternStep"] = new[] { "Stab", "Whirl", "Chop" },
+                    ["Brandish"] = new[] { "Whirl", "Stab" },
+                    ["Judgement"] = new[] { "Chop", "Whirl", "Slice", "Chop" },
+                    ["Crusade"] = new[] { "Chop", "Slice", "Chop", "Stab", "Whirl", "Slice", "Spin" },
+                    ["Tempest"] = new[] { "Slice", "Stab", "Slice", "Kick", "Stab", "Slice", "Spin" },
+                });
             sword.id = "sword";
             great.id = "greatsword";
             great.damageScale = 1.3f;
@@ -91,7 +119,7 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         static WeaponSet Weapon(string id, string name, string swordObject, string offHand, string idleClip, float heft, M[] moves,
-                                (string, string) light, string heavy, string guard, string[] crossing, string[] powerslice, string[] tempest)
+                                (string, string) light, string heavy, string guard, Dictionary<string, string[]> sequences)
         {
             var built = new Dictionary<string, SwordMove>();
             foreach (var m in moves) built[m.Id] = Move(id, m, heft);
@@ -110,12 +138,17 @@ namespace ProjectHymn.EditorTools.Art
             w.heavy = built[heavy];
             w.guard = built[guard];
             w.damageScale = 1f;
-            w.sequences = new List<SwordSequence>
+            // The whole sequence library (Combat.SequenceLibrary): every weapon plays every sequence with its own moves.
+            w.sequences = new List<SwordSequence>();
+            foreach (var e in SequenceLibrary.All)
             {
-                Sequence(id, "CrossingCuts", "Crossing Cuts", new[] { 1, 2, 1 }, crossing, built, 1.8f, 0xffd27a),
-                Sequence(id, "Powerslice", "Powerslice", new[] { 2, 2 }, powerslice, built, 1.6f, 0xff7a5a),
-                Sequence(id, "Tempest", "Tempest", new[] { 1, 1, 1, 2, 1, 1, 1 }, tempest, built, 2.5f, 0x7affc8),
-            };
+                if (!sequences.TryGetValue(e.Key, out var steps) || steps.Length != e.Length)
+                {
+                    Debug.LogWarning($"[Project Hymn] {name}: no moves for {e.Name} ({e.NotesText}); left out.");
+                    continue;
+                }
+                w.sequences.Add(Sequence(id, e, steps, built));
+            }
             if (fresh) AssetDatabase.CreateAsset(w, wpath); else EditorUtility.SetDirty(w);
             return w;
         }
@@ -147,17 +180,21 @@ namespace ProjectHymn.EditorTools.Art
             return a;
         }
 
-        static SwordSequence Sequence(string weaponId, string id, string name, int[] notes, string[] moves, Dictionary<string, SwordMove> built, float mult, uint color)
+        static SwordSequence Sequence(string weaponId, SequenceEntry e, string[] moves, Dictionary<string, SwordMove> built)
         {
-            string path = $"{DataDir}/Sequences/{weaponId}_{id}.asset";
+            string path = $"{DataDir}/Sequences/{weaponId}_{e.Key}.asset";
             var s = AssetDatabase.LoadAssetAtPath<SwordSequence>(path);
             bool fresh = s == null;
             if (fresh) s = ScriptableObject.CreateInstance<SwordSequence>();
-            s.displayName = name;
-            s.notes = notes.Select(n => (NoteButton)n).ToList();
+            s.displayName = e.Name;
+            s.key = e.Key;
+            s.notes = e.Notes.ToList();
             s.moves = moves.Select(m => built[m]).ToList();
-            s.finisherMultiplier = mult;
-            s.color = new Color(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f);
+            s.finisherMultiplier = e.Finisher;
+            s.meter = e.Meter;
+            s.tree = e.Tree;
+            s.effect = e.Effect;
+            s.color = new Color(((e.Color >> 16) & 255) / 255f, ((e.Color >> 8) & 255) / 255f, (e.Color & 255) / 255f);
             if (fresh) AssetDatabase.CreateAsset(s, path); else EditorUtility.SetDirty(s);
             return s;
         }

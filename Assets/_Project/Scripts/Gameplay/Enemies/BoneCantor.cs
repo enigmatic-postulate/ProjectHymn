@@ -246,6 +246,9 @@ namespace ProjectHymn.Gameplay
         protected override float DamageScale(HitData hit) => Phase == AttackPhase.Recover || IsStaggered ? 1f : frontShare;
 
         protected override void OnStaggered() => _staggerT = 0f;
+        // A launch doesn't lift a 3.4 m boss, and a push only costs him a beat (he stands his ground).
+        protected override bool CanBeLaunched => false;
+        protected override void Shove(float dx) { }
 
         protected override void OnReset()
         {

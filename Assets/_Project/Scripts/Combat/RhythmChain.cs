@@ -12,11 +12,15 @@ namespace ProjectHymn.Combat
         public readonly string Name;
         public readonly NoteButton[] Notes;
         public readonly object Source; // the SwordSequence asset, when there is one
+        /// <summary>Home meter ("4/4", "3/4", "7/8"): the sequence only plays in it. Empty = any meter.</summary>
+        public readonly string Meter;
 
-        public SequencePattern(string name, NoteButton[] notes, object source = null)
+        public SequencePattern(string name, NoteButton[] notes, object source = null, string meter = "")
         {
-            Name = name; Notes = notes; Source = source;
+            Name = name; Notes = notes; Source = source; Meter = meter ?? "";
         }
+
+        public bool PlaysIn(string meter) => string.IsNullOrEmpty(Meter) || string.IsNullOrEmpty(meter) || Meter == meter;
 
         public int Length => Notes?.Length ?? 0;
     }
@@ -51,7 +55,10 @@ namespace ProjectHymn.Combat
     /// - Every note deals damage (GDD update 3); rhythm decides the combo, not whether a note hits.
     /// - The chain's most recent notes are matched against the sequences (1-2-1, 2-2, 1-1-1-2-1-1-1...): the longest
     ///   tail of the chain that is the start of a sequence decides which move plays. Finishing a sequence completes it;
-    ///   the chain keeps going and the next note starts matching afresh.
+    ///   the chain keeps going and the next note starts matching afresh, unless a longer sequence carries on from the
+    ///   one just finished (Brandish 2-1 into Iron Count 2-1-2-1): then the longer one keeps going, so the longest
+    ///   match wins without a choice (each finisher pays as it lands).
+    /// - Home meters (GDD update 18): a sequence only plays in its meter. A meter change starts the matching afresh.
     /// - <see cref="Predict"/> tells the animator which move is most likely next, so it can wind up in time.
     /// </summary>
     public sealed class RhythmChain
@@ -59,8 +66,11 @@ namespace ProjectHymn.Combat
         readonly List<SequencePattern> _sequences = new List<SequencePattern>();
         readonly List<NoteButton> _tail = new List<NoteButton>(); // notes since the last completed sequence (or chain start)
         long _lastBeat = long.MinValue;
+        string _meter = "";
 
         public IReadOnlyList<SequencePattern> Sequences => _sequences;
+        /// <summary>The meter of the last note ("" until one is given).</summary>
+        public string Meter => _meter;
         public int ChainLength { get; private set; }
         public long LastBeat => _lastBeat;
         /// <summary>Notes the current sequence match is built from.</summary>
@@ -83,12 +93,15 @@ namespace ProjectHymn.Combat
             _tail.Clear();
             ChainLength = 0;
             _lastBeat = long.MinValue;
+            _meter = "";
             CurrentSequence = CurrentStep = -1;
         }
 
-        /// <summary>Register a note judged on <paramref name="beatIndex"/>.</summary>
-        public ChainStep Register(long beatIndex, NoteButton button, bool onBeat)
+        /// <summary>Register a note judged on <paramref name="beatIndex"/>, in <paramref name="meter"/> ("4/4"; null = any).</summary>
+        public ChainStep Register(long beatIndex, NoteButton button, bool onBeat, string meter = null)
         {
+            meter = meter ?? "";
+            if (meter != _meter) { _tail.Clear(); _meter = meter; }
             if (!onBeat || beatIndex == _lastBeat)
             {
                 Reset();
@@ -117,7 +130,7 @@ namespace ProjectHymn.Combat
             if (completed)
             {
                 SequenceCompleted?.Invoke(_sequences[seq]);
-                _tail.Clear();
+                if (!ExtendsFurther(_tail)) _tail.Clear();
             }
             return result;
         }
@@ -135,7 +148,7 @@ namespace ProjectHymn.Combat
             for (int i = 0; i < _sequences.Count; i++)
             {
                 var s = _sequences[i];
-                if (s.Length <= _tail.Count || !StartsWith(s, _tail)) continue;
+                if (!s.PlaysIn(_meter) || s.Length <= _tail.Count || !StartsWith(s, _tail)) continue;
                 if (best < 0 || s.Length < _sequences[best].Length) best = i;
             }
             if (best < 0) return false;
@@ -149,7 +162,7 @@ namespace ProjectHymn.Combat
         public int Progress(int sequence)
         {
             var s = _sequences[sequence];
-            return _tail.Count <= s.Length && StartsWith(s, _tail) ? _tail.Count : 0;
+            return s.PlaysIn(_meter) && _tail.Count <= s.Length && StartsWith(s, _tail) ? _tail.Count : 0;
         }
 
         /// <summary>A sequence starting with exactly these notes: prefer one that this note completes, then the shortest.</summary>
@@ -159,13 +172,21 @@ namespace ProjectHymn.Combat
             for (int i = 0; i < _sequences.Count; i++)
             {
                 var s = _sequences[i];
-                if (s.Length < notes.Count || !StartsWith(s, notes)) continue;
+                if (!s.PlaysIn(_meter) || s.Length < notes.Count || !StartsWith(s, notes)) continue;
                 if (best < 0) { best = i; continue; }
                 bool completes = s.Length == notes.Count, bestCompletes = _sequences[best].Length == notes.Count;
                 if (completes && !bestCompletes) best = i;
                 else if (completes == bestCompletes && s.Length < _sequences[best].Length) best = i;
             }
             return best;
+        }
+
+        /// <summary>A longer sequence in this meter starts with these notes.</summary>
+        bool ExtendsFurther(List<NoteButton> notes)
+        {
+            foreach (var s in _sequences)
+                if (s.PlaysIn(_meter) && s.Length > notes.Count && StartsWith(s, notes)) return true;
+            return false;
         }
 
         static bool StartsWith(SequencePattern s, List<NoteButton> notes)

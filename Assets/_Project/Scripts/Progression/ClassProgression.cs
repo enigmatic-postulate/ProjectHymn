@@ -65,6 +65,8 @@ namespace ProjectHymn.Progression
         /// <summary>A level-up's class change, when there is more than one class to pick from.</summary>
         public ClassOffer Offer;
         public readonly List<string> ClassesUnlocked = new List<string>();
+        /// <summary>Sequences learned from a class taken this run (the Fighter fallback's tree).</summary>
+        public readonly List<string> SequencesLearned = new List<string>();
         /// <summary>Weapons this run made available in the shop.</summary>
         public readonly List<string> WeaponsUnlocked = new List<string>();
         public int XpIntoLevel, XpToNext;
@@ -84,6 +86,8 @@ namespace ProjectHymn.Progression
     /// beat. Rank doesn't gate class.</item>
     /// <item>From level 6, every level-up offers a change to any unlocked class (or keeping yours). A Minstrel who levels
     /// past 5 with neither the Warden nor the Crusader unlocked becomes a Fighter automatically.</item>
+    /// <item>Taking a class learns its sequence tree (see Combat.SequenceLibrary); a learned sequence works for every
+    /// class.</item>
     /// <item>The first B or better puts the greatsword in the shop. Choosing a class that can't hold any weapon you own
     /// (the Crusader before you bought the greatsword) gives you its weapon.</item>
     /// </list>
@@ -137,14 +141,21 @@ namespace ProjectHymn.Progression
             return null;
         }
 
+        /// <summary>Learn a class's tree (taking a class teaches its sequences, for every class); returns the new keys.</summary>
+        public static List<string> Learned(SaveData s, string classId) => s.LearnTree(classId);
+
         /// <summary>
-        /// Set the class and a weapon it can hold. If it can hold none you own (the Crusader before the greatsword), it
-        /// gives you its first weapon. Returns the weapon granted, or null.
+        /// Set the class, learn its sequence tree, and pick a weapon it can hold. If it can hold none you own (the
+        /// Crusader before the greatsword), it gives you its first weapon. Returns the weapon granted, or null.
         /// </summary>
-        public static string SetClass(SaveData s, string classId, IReadOnlyList<ClassSpec> classes)
+        public static string SetClass(SaveData s, string classId, IReadOnlyList<ClassSpec> classes) => SetClass(s, classId, classes, null);
+
+        public static string SetClass(SaveData s, string classId, IReadOnlyList<ClassSpec> classes, List<string> learned)
         {
             s.classId = classId;
             s.UnlockClass(classId);
+            var keys = s.LearnTree(classId);
+            learned?.AddRange(keys);
             var cls = Find(classes, classId);
             string w = WeaponFor(s, cls);
             string granted = null;
@@ -226,7 +237,7 @@ namespace ProjectHymn.Progression
                     if (s.level == MinstrelBelow + 1 && s.classId == Minstrel &&
                         !s.HasUnlockedClass(Warden) && !s.HasUnlockedClass(Crusader))
                     {
-                        SetClass(s, Fighter, classes);
+                        SetClass(s, Fighter, classes, o.SequencesLearned);
                         o.ClassChangeReason = $"passed level {MinstrelBelow} with neither the Warden nor the Crusader unlocked: now a Fighter";
                     }
                 }

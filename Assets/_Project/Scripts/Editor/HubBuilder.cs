@@ -74,7 +74,7 @@ namespace ProjectHymn.EditorTools
             c.bracket = bracket; c.lean = lean;
             c.hearts = hearts; c.damage = damage;
             c.weapons = weapons;
-            c.startingSequences = new List<string> { "CrossingCuts", "Powerslice" };     // the Minstrel's tree (Tempest moved out)
+            c.startingSequences = ProjectHymn.Combat.SequenceLibrary.TreeKeys(id);     // its tree in the sequence library
             c.blockBonus = 0f; c.blockDamage = 0f; c.parryDamage = 0f; c.blockSkipsNote = false;
             c.dodgeInvulnerable = 0.25f; c.commonTimeOnly = false;
             return c;

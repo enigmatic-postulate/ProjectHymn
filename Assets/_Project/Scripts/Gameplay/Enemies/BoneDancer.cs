@@ -198,6 +198,13 @@ namespace ProjectHymn.Gameplay
             return guardShare;
         }
 
+        protected override void Shove(float dx)
+        {
+            var p = transform.position;
+            p.x = Mathf.Clamp(p.x + dx, bounds.x, bounds.y);
+            transform.position = p;
+        }
+
         protected override void OnStaggered()
         {
             _staggerT = 0f;

@@ -84,6 +84,8 @@ namespace ProjectHymn.Gameplay
             var cls = GameSession.Instance.Class;
             if (cls != null && cls.commonTimeOnly && first.beatsPerMeasure != 4)
                 text += $"\n{cls.displayName}: sequences only in 4/4. Lone notes still hit here.";
+            else if (Sequences.KnownIn(first.Signature).Count == 0)
+                text += $"\nNone of your sequences play in {first.Signature}. Lone notes still hit here.";
             GameHud.Toast(text, 3.5f);
         }
 
@@ -238,9 +240,13 @@ namespace ProjectHymn.Gameplay
                     {
                         if (id != current)
                         {
-                            string granted = s.SetClass(id);
+                            var learned = new List<string>();
+                            string granted = s.SetClass(id, learned);
                             var w = granted != null && s.Db != null ? s.Db.Weapon(granted) : null;
-                            if (w != null) GameHud.Toast($"The {s.ClassName(id)} takes up the {w.displayName}", 3f);
+                            var lines = new List<string>();
+                            if (w != null) lines.Add($"The {s.ClassName(id)} takes up the {w.displayName}");
+                            if (learned.Count > 0) lines.Add($"Learned: {Sequences.Names(learned)}");
+                            if (lines.Count > 0) GameHud.Toast(string.Join("\n", lines), 3.5f);
                         }
                         ReturnToHub();
                     });

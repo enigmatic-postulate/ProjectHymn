@@ -38,10 +38,10 @@ namespace ProjectHymn.Tests
             s.AddNotes(400);
             Assert.AreEqual(PurchaseResult.Bought, s.Buy("potion", 60));
             Assert.AreEqual(2, s.Count("potion"));
-            Assert.AreEqual(PurchaseResult.Bought, s.Buy("scroll_powerslice", 250, "Powerslice"));
-            Assert.IsTrue(s.Knows("Powerslice"));
-            Assert.AreEqual(0, s.Count("scroll_powerslice"), "scrolls are learned, not stored");
-            Assert.AreEqual(PurchaseResult.AlreadyKnown, s.Buy("scroll_powerslice", 250, "Powerslice"));
+            Assert.AreEqual(PurchaseResult.Bought, s.Buy("scroll_tempest", 250, "Tempest"));
+            Assert.IsTrue(s.Knows("Tempest"));
+            Assert.AreEqual(0, s.Count("scroll_tempest"), "scrolls are learned, not stored");
+            Assert.AreEqual(PurchaseResult.AlreadyKnown, s.Buy("scroll_tempest", 250, "Tempest"));
             Assert.AreEqual(PurchaseResult.TooPoor, s.Buy("tonic", 120));
             Assert.AreEqual(90, s.notes);
         }

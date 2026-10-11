@@ -158,10 +158,13 @@ namespace ProjectHymn.Gameplay
 
         public void ToTitle() => Travel(Db != null ? Db.titleScene : "Title", "");
 
-        /// <summary>Change class (a level-up's choice). Keeps a weapon the class can hold; returns a weapon the class brought.</summary>
-        public string SetClass(string classId)
+        /// <summary>
+        /// Change class (a level-up's choice): learns its sequence tree (into <paramref name="learned"/>), keeps a weapon the
+        /// class can hold, and returns a weapon the class brought.
+        /// </summary>
+        public string SetClass(string classId, List<string> learned = null)
         {
-            string granted = ProgressionRules.SetClass(Data, classId, Db != null ? Db.ClassSpecs() : null);
+            string granted = ProgressionRules.SetClass(Data, classId, Db != null ? Db.ClassSpecs() : null, learned);
             var cls = Class;
             if (cls != null) foreach (var q in cls.startingSequences) Data.Learn(q);
             Changed?.Invoke();

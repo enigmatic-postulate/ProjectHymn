@@ -46,6 +46,26 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Slice 9: the sequence library
+
+Rebuild with **Project Hymn → Build Hub & Loop** (every weapon gets the whole library as sequence assets). The data is one table, `Combat/SequenceLibrary.cs`; names, patterns and multipliers are Update 18's drafts.
+
+- **Home meters:** every sequence has one and only plays in it. A 4/4 sequence does nothing in a 3/4 bar; a meter change starts the match afresh (the chain itself goes on). So the Minstrel has **no sequences in 3/4 or 7/8**: Belfry Ridge and the boss's 3/4 and 7/8 verses are lone notes until you take the Warden (Lantern Step, 3/4) or the Crusader (Crusade, 7/8). The stage intro says when none of yours play in its meter.
+- **Class trees:** taking a class (a level-up's choice, or the Fighter fallback) learns its tree, and a learned sequence works for every class. The Minstrel's tree is known from the start. The Fighter still plays sequences only in 4/4, borrowed ones included.
+
+| Tree | 4/4 | Odd meter |
+| --- | --- | --- |
+| Minstrel | Crossing Cuts 1-2-1 ×1.8, Powerslice 2-2 ×1.6, **Rising Verse** 1-1-2 ×1.7 (launches) | — |
+| Fighter | Drill 1-1-1-1 ×1.8, Hammerfall 2-2-2 ×2.0, Iron Count 2-1-2-1 ×2.0 | — (by design) |
+| Warden | **Bulwark** 2-1-1 ×1.7 (pushes), Counterpoint 1-2-2-1 ×2.0 | 3/4: Lantern Step 1-2-2 ×1.8 |
+| Crusader | Brandish 2-1 ×1.5, Judgement 2-2-1-2 ×2.2 | 7/8: Crusade 2-1-2-1-2-1-2 ×2.6 |
+| Balladeer (later) | Tempest 1-1-1-2-1-1-1 ×2.5 | — |
+
+- **Longest match wins:** when a longer known sequence carries on from one you just finished (Brandish 2-1 into Iron Count 2-1-2-1, Powerslice 2-2 into Hammerfall 2-2-2 or Judgement 2-2-1-2), the finisher pays and the chain keeps following the longer one.
+- **Rising Verse launches:** its finisher throws the enemy up for 1.5 beats; it can't attack and takes ×1.5 damage until it lands ("LAUNCH"). **Bulwark pushes:** the enemy is shoved back 1.2 m and its next hit comes a beat later ("PUSHED"). A knight's shield stops both; the Bone Cantor can't be launched and isn't shoved, but the push still costs him a beat.
+- **Songbook** (pause menu): one page per class tree, with each sequence's notes, home meter, finisher and, for the equipped weapon, its moves; unlearned ones are greyed. Lore has its own page. The level-up class choice lists the tree each class teaches, and learning shows as a toast (and on the results screen for the Fighter fallback).
+- **Free play** knows every sequence, Tempest included.
+
 ## Slice 8: GDD update 18 alignment
 
 Rebuild with **Project Hymn → Build Hub & Loop** (it now also builds the Arena and deletes the potion, tonic and scroll assets). **Saves reset:** a save from before version 3 loads as a level 1 Minstrel with the sword (Notes, lore and stage records are kept). This replaces the rules in the Rank & Class section below. All numbers are placeholders in `Progression/ClassProgression.cs` (`ProgressionRules`) and `Progression/StageScoring.cs`.

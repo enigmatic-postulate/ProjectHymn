@@ -11,10 +11,13 @@ namespace ProjectHymn.Gameplay
         public readonly bool IsFinisher;
         /// <summary>World position where the blade connected (for sparks and numbers).</summary>
         public readonly Vector3 Point;
+        /// <summary>A sequence finisher's extra effect (Rising Verse launches, Bulwark pushes).</summary>
+        public readonly ProjectHymn.Combat.SequenceEffect Effect;
 
-        public HitData(float damage, Vector2 direction, string effectId, bool isFinisher, Vector3 point = default)
+        public HitData(float damage, Vector2 direction, string effectId, bool isFinisher, Vector3 point = default,
+                       ProjectHymn.Combat.SequenceEffect effect = ProjectHymn.Combat.SequenceEffect.None)
         {
-            Damage = damage; Direction = direction; EffectId = effectId; IsFinisher = isFinisher; Point = point;
+            Damage = damage; Direction = direction; EffectId = effectId; IsFinisher = isFinisher; Point = point; Effect = effect;
         }
     }
 

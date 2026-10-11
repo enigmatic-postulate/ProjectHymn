@@ -81,7 +81,16 @@ namespace ProjectHymn.UI
             sb.Append($"Perks: {c.PerksText()}\n");
             var names = new List<string>();
             foreach (var w in c.weapons) if (w != null) names.Add(w.displayName);
-            sb.Append($"Equips: {(names.Count > 0 ? string.Join(", ", names) : "—")}");
+            sb.Append($"Equips: {(names.Count > 0 ? string.Join(", ", names) : "—")}\n");
+            var tree = ProjectHymn.Combat.SequenceLibrary.Tree(c.id);
+            if (tree.Count > 0)
+            {
+                var parts = new List<string>();
+                foreach (var e in tree)
+                    parts.Add($"{e.Name} {e.NotesText}{(e.Meter != ProjectHymn.Combat.SequenceLibrary.Common ? $" ({e.Meter})" : "")}" +
+                              (Sequences.Knows(e.Key) ? "" : " <color=#ffd56a>new</color>"));
+                sb.Append($"Teaches: {string.Join(", ", parts)}");
+            }
             return sb.ToString();
         }
 

@@ -1,4 +1,5 @@
 using System.Text;
+using ProjectHymn.Combat;
 using ProjectHymn.Core;
 using ProjectHymn.Gameplay;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace ProjectHymn.UI
 {
     /// <summary>
     /// Esc / Start: pauses the music on its clock and the world, with Resume, Character (class, level, class progress, stage
-    /// ranks), Songbook (the sequences you know and the lore you found), Weapon (equip an owned weapon your class can hold), Settings, Return to the village and Quit to the title.
+    /// ranks), Songbook (the class trees of the sequence library, and the lore you found), Weapon (equip an owned weapon your class can hold), Settings, Return to the village and Quit to the title.
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
@@ -137,30 +138,75 @@ namespace ProjectHymn.UI
             UiKit.Select(back);
         }
 
+        /// <summary>The Songbook, by class tree (GDD update 18): each tree's sequences, their home meters and what's learned.</summary>
         void Songbook()
         {
             _onMain = false;
             var col = Page();
             UiKit.Line(col, "SONGBOOK", 40, UiKit.Gold, 60f);
+            UiKit.Line(col, "Taking a class teaches its tree. Once learned, any class can play a sequence, but only in its home meter.", 22, UiKit.Dim, 56f);
+            Button first = null;
+            foreach (var tree in SequenceLibrary.Trees)
+            {
+                var entries = SequenceLibrary.Tree(tree);
+                if (entries.Count == 0) continue;
+                int known = 0;
+                foreach (var e in entries) if (Sequences.Knows(e.Key)) known++;
+                string name = GameSession.Instance.ClassName(tree);
+                if (name == tree) name = char.ToUpperInvariant(tree[0]) + tree.Substring(1);
+                string t = tree;
+                var b = UiKit.Button(col, $"{name}   <color=#8a84a0>{known}/{entries.Count} learned</color>", () => SongbookTree(t), 28, 54f);
+                if (first == null) first = b;
+            }
+            UiKit.Button(col, $"Lore  <color=#8a84a0>({GameSession.Instance.Data.lore.Count} found)</color>", Lore, 28, 54f);
+            var back = UiKit.Button(col, "Back", Main, 28, 54f);
+            UiKit.Select(first != null ? first : back);
+        }
+
+        void SongbookTree(string tree)
+        {
+            _onMain = false;
+            var col = Page();
             var s = GameSession.Instance;
+            string name = s.ClassName(tree);
+            if (name == tree) name = char.ToUpperInvariant(tree[0]) + tree.Substring(1);
+            UiKit.Line(col, $"{name.ToUpperInvariant()}'S TREE", 36, UiKit.Gold, 56f);
             var weapon = s.Weapon;
             var sb = new StringBuilder();
-            if (weapon != null)
+            sb.Append($"<color=#8a84a0>Moves as played with the {(weapon != null ? weapon.displayName : "weapon")}. 1 = light (J / X), 2 = heavy (K / Y), on consecutive beats.</color>\n\n");
+            if (tree == SequenceLibrary.Balladeer) sb.Append("<color=#8a84a0>The Balladeer comes later in the game.</color>\n\n");
+            foreach (var e in SequenceLibrary.Tree(tree))
             {
-                sb.Append($"<color=#8a84a0>{weapon.displayName} — play notes on consecutive beats; 1 = light (J / X), 2 = heavy (K / Y)</color>\n\n");
-                foreach (var q in weapon.sequences)
+                bool known = Sequences.Knows(e.Key);
+                string meter = e.Meter == SequenceLibrary.Common ? "4/4" : $"<color=#9ab8ff>{e.Meter}</color>";
+                if (!known)
                 {
-                    if (q == null) continue;
-                    if (s.FreePlay || s.Data.Knows(q.key))
-                    {
-                        var moves = new StringBuilder();
-                        foreach (var m in q.moves) { if (moves.Length > 0) moves.Append(", "); moves.Append(m != null ? m.displayName : "?"); }
-                        sb.Append($"<color=#ffd56a>{q.displayName}</color>   <b>{q.NotesText}</b>   finisher ×{q.finisherMultiplier:0.#}\n<color=#b8b2c8>{moves}</color>\n\n");
-                    }
-                    else sb.Append($"<color=#6a6478>???   {new string('·', q.notes.Count)}   (not learned yet)</color>\n\n");
+                    sb.Append($"<color=#6a6478>{e.Name}   {e.NotesText}   {e.Meter}   not learned</color>\n\n");
+                    continue;
                 }
+                sb.Append($"<color=#ffd56a>{e.Name}</color>   <b>{e.NotesText}</b>   {meter}   finisher x{e.Finisher:0.0#}");
+                if (!string.IsNullOrEmpty(e.Note)) sb.Append($"   <color=#8ad8ff>{e.Note}</color>");
+                sb.Append('\n');
+                SwordSequence q = null;
+                if (weapon != null) foreach (var w in weapon.sequences) if (w != null && w.key == e.Key) { q = w; break; }
+                if (q != null)
+                {
+                    var moves = new StringBuilder();
+                    foreach (var m in q.moves) { if (moves.Length > 0) moves.Append(", "); moves.Append(m != null ? m.displayName : "?"); }
+                    sb.Append($"<color=#b8b2c8>{moves}</color>");
+                }
+                sb.Append("\n\n");
             }
-            UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 360f, TextAnchor.UpperLeft);
+            if (s.Class != null && s.Class.commonTimeOnly) sb.Append($"<color=#ffb070>As a {s.Class.displayName} you play sequences in 4/4 only.</color>");
+            UiKit.Line(col, sb.ToString(), 24, UiKit.Text, 520f, TextAnchor.UpperLeft);
+            UiKit.Select(UiKit.Button(col, "Back", Songbook));
+        }
+
+        void Lore()
+        {
+            _onMain = false;
+            var col = Page();
+            var s = GameSession.Instance;
             UiKit.Line(col, $"LORE  ({s.Data.lore.Count} found)", 30, UiKit.Gold, 46f);
             Button first = null;
             if (s.Db != null)
@@ -171,7 +217,7 @@ namespace ProjectHymn.UI
                     var b = UiKit.Button(col, item.displayName, () => DialogueBox.Show(item.displayName, new[] { item.loreText }, null), 26, 48f);
                     if (first == null) first = b;
                 }
-            var back = UiKit.Button(col, "Back", Main);
+            var back = UiKit.Button(col, "Back", Songbook);
             UiKit.Select(first != null ? first : back);
         }
 

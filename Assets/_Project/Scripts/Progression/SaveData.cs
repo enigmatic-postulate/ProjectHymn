@@ -96,6 +96,8 @@ namespace ProjectHymn.Progression
         {
             var s = new SaveData { classId = classId };
             s.level = 1;
+            s.LearnTree(ProgressionRules.Minstrel);
+            s.LearnTree(classId);
             if (startingSequences != null) foreach (var q in startingSequences) s.Learn(q);
             if (startingItems != null) foreach (var it in startingItems) s.AddItem(it.id, it.count);
             return s;
@@ -162,6 +164,15 @@ namespace ProjectHymn.Progression
         // ---------------- Sequences, lore, pickups, stages ----------------
 
         public bool Knows(string sequence) => sequences.Contains(sequence);
+
+        /// <summary>Learn a class's whole tree (the sequence library); returns the keys that were new.</summary>
+        public List<string> LearnTree(string classId)
+        {
+            var learned = new List<string>();
+            if (string.IsNullOrEmpty(classId)) return learned;
+            foreach (var k in ProjectHymn.Combat.SequenceLibrary.TreeKeys(classId)) if (Learn(k)) learned.Add(k);
+            return learned;
+        }
 
         public bool Learn(string sequence)
         {
@@ -313,6 +324,8 @@ namespace ProjectHymn.Progression
             if (string.IsNullOrEmpty(classId)) classId = ProgressionRules.Minstrel;
             UnlockClass(ProgressionRules.Minstrel);
             UnlockClass(classId);
+            LearnTree(ProgressionRules.Minstrel);
+            LearnTree(classId);
             UnlockWeapon(ProgressionRules.Sword);
             if (!HasWeapon(weaponId)) weaponId = ProgressionRules.Sword;
             if (level < 1) level = 1;

@@ -103,6 +103,12 @@ namespace ProjectHymn.EditorTools.Sword
                 foreach (var id in s.Moves) seq.moves.Add(moves[id]);
                 seq.finisherMultiplier = s.FinisherMultiplier;
                 seq.color = ToColor(s.Color);
+                var entry = SequenceLibrary.Find(s.Id);        // the library sets the meter, tree and finisher
+                if (entry != null)
+                {
+                    seq.key = entry.Key; seq.meter = entry.Meter; seq.tree = entry.Tree; seq.effect = entry.Effect;
+                    seq.finisherMultiplier = entry.Finisher;
+                }
                 if (fresh) AssetDatabase.CreateAsset(seq, path); else EditorUtility.SetDirty(seq);
                 w.sequences.Add(seq);
             }

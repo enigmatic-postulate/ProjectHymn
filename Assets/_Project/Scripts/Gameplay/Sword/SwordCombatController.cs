@@ -43,8 +43,8 @@ namespace ProjectHymn.Gameplay
 
     /// <summary>
     /// The M2 sword prototype's combat loop:
-    /// press 1 or 2 → judge against the Conductor → the rhythm chain decides the move (a step of 1-2-1, 2-2,
-    /// 1-1-1-2-1-1-1, or a lone cut) → the RhythmAnimator plays it with its hit on the beat → at the hit, damage is
+    /// press 1 or 2 → judge against the Conductor → the rhythm chain decides the move (a step of a known sequence in the
+    /// current meter, or a lone cut) → the RhythmAnimator plays it with its hit on the beat → at the hit, damage is
     /// applied for every note, scaled by its timing (off the beat 25%, True Perfect 200%) → finishing a
     /// sequence multiplies that last hit. Between notes the next move of the rhythm is anticipated so the swings flow.
     /// </summary>
@@ -181,7 +181,7 @@ namespace ProjectHymn.Gameplay
             var judge = BeatJudge.Judge(map, pressTime, windows);
             bool locked = CommonTimeOnly && judge.Beat.BeatsPerMeasure != 4;
             if (locked != _meterLocked) { _meterLocked = locked; RebuildSequences(); }
-            var step = _chain.Register(judge.Beat.Index, button, judge.IsOnBeat);
+            var step = _chain.Register(judge.Beat.Index, button, judge.IsOnBeat, judge.Beat.Signature);
 
             SwordSequence seq = step.Sequence >= 0 && step.Sequence < _chain.Sequences.Count
                 ? _chain.Sequences[step.Sequence].Source as SwordSequence : null;
@@ -243,7 +243,8 @@ namespace ProjectHymn.Gameplay
                 var target = c.GetComponentInParent<IBeatDamageable>();
                 if (target == null || !done.Add(target)) continue;
                 point = c.ClosestPoint(center);
-                target.TakeHit(new HitData(damage, facing, completed ? "finisher" : move.effect, completed, point));
+                target.TakeHit(new HitData(damage, facing, completed ? "finisher" : move.effect, completed, point,
+                                           completed ? note.Sequence.effect : SequenceEffect.None));
                 hit++;
             }
             if (damage > 0f && hit > 0)

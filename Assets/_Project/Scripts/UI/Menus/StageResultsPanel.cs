@@ -63,6 +63,8 @@ namespace ProjectHymn.UI
                 sb.Append($"<color=#ffd56a>Unlocked the {ClassName(c)}</color> (offered at level-ups from level 6)\n");
             if (!string.IsNullOrEmpty(o.ClassChangeReason))
                 sb.Append($"<color=#ffb070>Class: {ClassName(o.ClassBefore)} → {ClassName(o.ClassAfter)}</color> ({o.ClassChangeReason})\n");
+            if (o.SequencesLearned.Count > 0)
+                sb.Append($"<color=#ffd56a>Sequences learned: {Sequences.Names(o.SequencesLearned)}</color> (any class can play them)\n");
             if (o.Offer != null)
                 sb.Append($"<color=#ffd56a>Level {o.Offer.Level}:</color> change to any class you have unlocked, or keep yours. Choose next.\n");
             foreach (var w in o.WeaponsUnlocked)

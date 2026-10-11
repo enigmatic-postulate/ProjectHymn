@@ -33,6 +33,12 @@ namespace ProjectHymn.Gameplay
         [Header("Stagger")]
         [SerializeField] protected int staggerBeats = 2;
         [SerializeField] protected float staggerDamageMultiplier = 1.5f;
+        [Header("Sequence effects")]
+        [Tooltip("Rising Verse: how high the enemy is thrown and for how many beats it's in the air (staggered).")]
+        [SerializeField] protected float launchHeight = 1.3f;
+        [SerializeField] protected float launchBeats = 1.5f;
+        [Tooltip("Bulwark: how far the push shoves the enemy back (its next hit also comes a beat later).")]
+        [SerializeField] protected float pushDistance = 1.2f;
         [Header("Look")]
         [SerializeField] protected Renderer[] flashRenderers = new Renderer[0];
         [SerializeField] protected Color warnColor = new Color(1f, 0.2f, 0.1f);
@@ -53,6 +59,8 @@ namespace ProjectHymn.Gameplay
         bool _hitInRange;
         double _notBeforeBeat = double.NegativeInfinity;
         double _staggerUntilBeat = double.NegativeInfinity;
+        double _launchFrom = double.NegativeInfinity, _launchUntil = double.NegativeInfinity;
+        float _lift;          // launch height applied in LateUpdate, taken off again at the start of the next Update
         int _patternIndex;
         protected Vector3 Home { get; private set; }
         float _hp, _flash;
@@ -120,6 +128,7 @@ namespace ProjectHymn.Gameplay
 
         void Update()
         {
+            if (_lift != 0f) { transform.position -= Vector3.up * _lift; _lift = 0f; }
             if (IsDead) return;
             UpdateFlash();
             if (conductor == null || !conductor.IsPlaying || conductor.Map == null || Player == null) { Tick(false); return; }
@@ -199,9 +208,17 @@ namespace ProjectHymn.Gameplay
             TakeHit(new HitData(dmg, dir, "counter", false, transform.position + Vector3.up * 1.4f));
         }
 
-        void Stagger()
+        void LateUpdate()
         {
-            _staggerUntilBeat = BeatNow + staggerBeats;
+            if (IsDead || BeatNow >= _launchUntil || launchBeats <= 0f) return;
+            float t = Mathf.Clamp01((float)((BeatNow - _launchFrom) / launchBeats));
+            _lift = 4f * launchHeight * t * (1f - t);
+            transform.position += Vector3.up * _lift;
+        }
+
+        void Stagger(double beats = -1)
+        {
+            _staggerUntilBeat = BeatNow + (beats > 0 ? beats : staggerBeats);
             _notBeforeBeat = _staggerUntilBeat;
             CancelPlan();
             _flash = 1f;
@@ -236,12 +253,57 @@ namespace ProjectHymn.Gameplay
             _flash = Mathf.Max(_flash, 0.8f);
             if (!Aggro) Aggro = true;
             if (_hp <= 0f) Die();
+            else if (hit.Effect != SequenceEffect.None && scale >= 0.5f) ApplyEffect(hit);     // a shield stops the effect too
         }
+
+        // ---------------- Sequence effects (the library) ----------------
+
+        void ApplyEffect(HitData hit)
+        {
+            var at = transform.position + Vector3.up * 2.6f;
+            if (hit.Effect == SequenceEffect.Launch)
+            {
+                if (!CanBeLaunched) { if (_popups != null) _popups.Show(at, "STEADY", new Color(0.7f, 0.74f, 0.85f), 0.8f); return; }
+                Stagger(Math.Max(staggerBeats, launchBeats + 0.5));
+                _launchFrom = BeatNow;
+                _launchUntil = BeatNow + launchBeats;
+                if (_popups != null) _popups.Show(at, "LAUNCH", new Color(0.55f, 0.85f, 1f), 1f);
+            }
+            else if (hit.Effect == SequenceEffect.Push)
+            {
+                float dir = Mathf.Abs(hit.Direction.x) > 0.01f ? Mathf.Sign(hit.Direction.x)
+                          : Player != null ? Mathf.Sign(transform.position.x - Player.position.x) : 1f;
+                Shove(dir * pushDistance);
+                DelayOneBeat();
+                if (_popups != null) _popups.Show(at, "PUSHED", new Color(0.6f, 0.75f, 1f), 0.9f);
+            }
+        }
+
+        /// <summary>The next hit comes a beat later: the current attack slips a beat (if no hit has started), or the next waits one.</summary>
+        void DelayOneBeat()
+        {
+            if (Plan.IsValid && !_hitStarted && _hitsDone < Plan.HitCount)
+            {
+                int lead = (int)Math.Round(Plan.FirstHitBeat - Plan.TelegraphBeat) + 1;
+                var moved = new PlannedAttack(Plan.Pattern, Plan.FirstHitBeat + 1, lead);
+                EnemyThreats.Clear(this);
+                Plan = moved;
+                for (int i = _hitsDone; i < Plan.HitCount; i++)
+                    EnemyThreats.Add(this, (long)Math.Round(Plan.HitBeat(i)), Plan.Pattern.Damage >= 2 ? 2 : 1);
+            }
+            else if (!Plan.IsValid) _notBeforeBeat = Math.Max(_notBeforeBeat, BeatNow + 1);
+        }
+
+        /// <summary>Whether a launch can lift this enemy (a boss stands firm).</summary>
+        protected virtual bool CanBeLaunched => true;
+        /// <summary>Move the body along the lane (a push). Subclasses clamp to their bounds.</summary>
+        protected virtual void Shove(float dx) => transform.position += new Vector3(dx, 0f, 0f);
 
         void Die()
         {
             IsDead = true;
             _hp = 0f;
+            _launchUntil = double.NegativeInfinity;
             CancelPlan();
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
             if (_barRoot != null) _barRoot.gameObject.SetActive(false);
@@ -259,6 +321,8 @@ namespace ProjectHymn.Gameplay
             Aggro = false;
             CancelPlan();
             _staggerUntilBeat = _notBeforeBeat = double.NegativeInfinity;
+            _launchUntil = double.NegativeInfinity;
+            _lift = 0f;
             _patternIndex = 0;
             transform.position = Home;
             OnReset();
