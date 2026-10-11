@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ProjectHymn.Progression
 {
-    /// <summary>Where a class sits: the Fighter is the low (D rank) bracket, the Minstrel the base, the rest high.</summary>
+    /// <summary>Where a class sits: the Fighter is the automatic progression, the Minstrel the base, the rest high.</summary>
     public enum ClassBracket { Low, Base, High }
 
     /// <summary>How a run defended: mostly guarding (parries and blocks), mostly dodging, or neither.</summary>
@@ -15,20 +15,18 @@ namespace ProjectHymn.Progression
         public string Id;
         public string Name;
         public ClassBracket Bracket;
-        /// <summary>A level-down below this costs the class (back to the Minstrel).</summary>
-        public int MinLevel;
-        /// <summary>The play style that earns the class at a class check (high classes).</summary>
+        /// <summary>The play style that unlocks the class (high classes).</summary>
         public PlayLean Lean;
-        /// <summary>Weapon ids the class can equip, in order of preference.</summary>
+        /// <summary>Weapon ids the class can equip, in order of preference (set by weight: see the class assets).</summary>
         public IReadOnlyList<string> Weapons = Array.Empty<string>();
 
-        public ClassSpec(string id, string name, ClassBracket bracket, int minLevel = 0, PlayLean lean = PlayLean.Balanced, params string[] weapons)
+        public ClassSpec(string id, string name, ClassBracket bracket, PlayLean lean = PlayLean.Balanced, params string[] weapons)
         {
-            Id = id; Name = name; Bracket = bracket; MinLevel = minLevel; Lean = lean; Weapons = weapons ?? Array.Empty<string>();
+            Id = id; Name = name; Bracket = bracket; Lean = lean; Weapons = weapons ?? Array.Empty<string>();
         }
     }
 
-    /// <summary>The classes on offer at a class check. One choice means nothing to choose.</summary>
+    /// <summary>The class change a level-up offers. One choice means nothing to choose.</summary>
     public sealed class ClassOffer
     {
         public int Level;
@@ -38,38 +36,56 @@ namespace ProjectHymn.Progression
         public bool HasChoice => Choices.Count > 1;
     }
 
-    /// <summary>What one stage clear did to the save, for the results screen.</summary>
+    /// <summary>One level lost (dying, or losing half your hearts in a stage).</summary>
+    public readonly struct LevelDown
+    {
+        public readonly string Reason;
+        public readonly int LevelBefore, LevelAfter;
+        public readonly string ClassBefore, ClassAfter;
+        public bool LostClass => ClassBefore != ClassAfter;
+        public LevelDown(string reason, int before, int after, string classBefore, string classAfter)
+        {
+            Reason = reason; LevelBefore = before; LevelAfter = after; ClassBefore = classBefore; ClassAfter = classAfter;
+        }
+    }
+
+    /// <summary>What one stage run did to the save, for the results screen.</summary>
     public sealed class RunOutcome
     {
         public StageRank Rank;
-        public bool NewBest;
+        public bool Failed, Clean, NewBest;
         public int XpGained;
         public int LevelBefore, LevelAfter;
         public readonly List<int> LevelsGained = new List<int>();
-        public readonly List<string> LevelDownReasons = new List<string>();
+        /// <summary>Level-downs that happened during the run (they apply when they happen, not at the goal).</summary>
+        public readonly List<LevelDown> LevelDowns = new List<LevelDown>();
         public string ClassBefore, ClassAfter;
-        /// <summary>Why the class changed without a choice (empty when it didn't).</summary>
+        /// <summary>Why the class changed without a choice (the Fighter fallback), or empty.</summary>
         public string ClassChangeReason = "";
-        /// <summary>A class check with a real choice; the player picks before leaving the results.</summary>
+        /// <summary>A level-up's class change, when there is more than one class to pick from.</summary>
         public ClassOffer Offer;
-        /// <summary>The class check's verdict when it gave no choice (kept, held or changed), for the screen.</summary>
-        public string CheckNote = "";
+        public readonly List<string> ClassesUnlocked = new List<string>();
+        /// <summary>Weapons this run made available in the shop.</summary>
         public readonly List<string> WeaponsUnlocked = new List<string>();
         public int XpIntoLevel, XpToNext;
+        public bool AtCap;
     }
 
     /// <summary>
-    /// Rank &amp; Class (GDD update 3, slice 6). Pure C#; every number is a placeholder until playtested.
+    /// Levels and classes (GDD update 18, Slice 8). Pure C#; every number is a placeholder until the whole game is balanced.
     /// <list type="bullet">
-    /// <item>A stage clear earns experience by rank plus a little per enemy. Levels need 100 × level experience.</item>
-    /// <item>Level-downs: losing too many hearts, or attacking off the beat too often, each drop one level. Experience
-    /// is never lost, and a run that drops a level earns none.</item>
-    /// <item>Class checks at levels 6, 8 and 10 (then every 5): S or A lets a class upgrade, B holds it, C can't
-    /// progress it and costs one (a Minstrel becomes a Fighter; a high class falls back to the Minstrel). The mastery
-    /// score decides which high classes are offered, and the run's lean (guarding or dodging) which one fits.
-    /// A Minstrel who reaches the last check (10) without an upgrade becomes a Fighter; only S or A moves a Fighter up.</item>
-    /// <item>A level-down below a class's minimum level costs the class.</item>
-    /// <item>The first B or better unlocks the greatsword.</item>
+    /// <item>A clear (B or better) earns experience by rank plus some per enemy; a fail (C) earns none. Level n needs
+    /// 100 × n; the slice caps at 10.</item>
+    /// <item>Level-downs: dying, and losing half your hearts in a stage, each drop one level when they happen (a run that
+    /// loses half its hearts and then dies costs one level, not two). Experience is never lost. Off-beat play only costs
+    /// damage. Below level 5 you return to the Minstrel.</item>
+    /// <item>Classes unlock from how you play, counted over clean clears: the Warden from parries and blocks as a share of
+    /// the enemy attacks that reached you, the Crusader from dodges as a share of them; both need about 70% of hits on the
+    /// beat. Rank doesn't gate class.</item>
+    /// <item>From level 6, every level-up offers a change to any unlocked class (or keeping yours). A Minstrel who levels
+    /// past 5 with neither the Warden nor the Crusader unlocked becomes a Fighter automatically.</item>
+    /// <item>The first B or better puts the greatsword in the shop. Choosing a class that can't hold any weapon you own
+    /// (the Crusader before you bought the greatsword) gives you its weapon.</item>
     /// </list>
     /// </summary>
     public sealed class ProgressionRules
@@ -77,32 +93,29 @@ namespace ProjectHymn.Progression
         public const string Minstrel = "minstrel", Fighter = "fighter", Warden = "warden", Crusader = "crusader";
         public const string Sword = "sword", Greatsword = "greatsword";
 
-        /// <summary>Experience for a clear at S, A, B, C.</summary>
-        public int[] XpByRank = { 500, 400, 300, 200 };
+        /// <summary>Experience for a clear at S, A, B (C fails and earns none).</summary>
+        public int[] XpByRank = { 300, 250, 200, 0 };
         public int XpPerEnemy = 20;
         public int XpPerLevelStep = 100;
-        public int[] CheckLevels = { 6, 8, 10 };
-        /// <summary>After the last listed check level, a check every this many levels.</summary>
-        public int CheckEvery = 5;
-        public int HeartsLostForLevelDown = 3;
-        public double OffBeatShareForLevelDown = 0.4;
-        public int MinAttacksForOffBeat = 6;
-        /// <summary>Mastery for the high class that fits the run's lean.</summary>
-        public double MasteryForHigh = 70.0;
-        /// <summary>Mastery for every high class to be offered.</summary>
-        public double MasteryForEveryHigh = 85.0;
+        public int LevelCap = 10;
+        /// <summary>Level-ups from this level on offer a class change.</summary>
+        public int ClassChangeFrom = 6;
+        /// <summary>Below this level you are a Minstrel.</summary>
+        public int MinstrelBelow = 5;
+        public double UnlockShare = 0.5;
+        public double UnlockOnBeat = 0.7;
+        /// <summary>Enemy attacks (over clean clears) before a play style counts.</summary>
+        public int UnlockMinAttacks = 6;
         public StageRank GreatswordAt = StageRank.B;
 
         public static ProgressionRules Default => new ProgressionRules();
 
         public int XpToNext(int level) => XpPerLevelStep * Math.Max(1, level);
-        public int FinalCheckLevel => CheckLevels.Length > 0 ? CheckLevels[CheckLevels.Length - 1] : 10;
 
-        public bool IsCheckLevel(int level)
+        public static ClassSpec Find(IReadOnlyList<ClassSpec> classes, string id)
         {
-            foreach (int l in CheckLevels) if (l == level) return true;
-            int last = FinalCheckLevel;
-            return CheckEvery > 0 && level > last && (level - last) % CheckEvery == 0;
+            if (classes != null) foreach (var c in classes) if (c != null && c.Id == id) return c;
+            return null;
         }
 
         public static PlayLean LeanOf(PlaystyleLog log)
@@ -113,74 +126,125 @@ namespace ProjectHymn.Progression
             return PlayLean.Balanced;
         }
 
-        public static ClassSpec Find(IReadOnlyList<ClassSpec> classes, string id)
-        {
-            if (classes != null) foreach (var c in classes) if (c != null && c.Id == id) return c;
-            return null;
-        }
+        // ---------------- Weapons and class changes ----------------
 
-        /// <summary>The weapon the class should hold: the current one if it may, else its first unlocked weapon.</summary>
+        /// <summary>The weapon the class should hold: the current one if it may, else its first owned weapon (or none).</summary>
         public static string WeaponFor(SaveData s, ClassSpec cls)
         {
             if (cls == null || cls.Weapons.Count == 0) return s.HasWeapon(s.weaponId) ? s.weaponId : Sword;
             foreach (var w in cls.Weapons) if (w == s.weaponId && s.HasWeapon(w)) return w;
             foreach (var w in cls.Weapons) if (s.HasWeapon(w)) return w;
-            return cls.Weapons[0];
+            return null;
         }
 
-        /// <summary>Set the class (and a weapon it can hold).</summary>
-        public static void SetClass(SaveData s, string classId, IReadOnlyList<ClassSpec> classes)
+        /// <summary>
+        /// Set the class and a weapon it can hold. If it can hold none you own (the Crusader before the greatsword), it
+        /// gives you its first weapon. Returns the weapon granted, or null.
+        /// </summary>
+        public static string SetClass(SaveData s, string classId, IReadOnlyList<ClassSpec> classes)
         {
             s.classId = classId;
-            s.weaponId = WeaponFor(s, Find(classes, classId));
+            s.UnlockClass(classId);
+            var cls = Find(classes, classId);
+            string w = WeaponFor(s, cls);
+            string granted = null;
+            if (w == null && cls != null && cls.Weapons.Count > 0)
+            {
+                w = cls.Weapons[0];
+                s.UnlockWeapon(w);
+                granted = w;
+            }
+            s.weaponId = w ?? Sword;
+            return granted;
         }
 
-        // ---------------- A stage clear ----------------
+        // ---------------- Level-downs ----------------
 
-        public RunOutcome Apply(SaveData s, string stage, StageResult result, PlaystyleLog log, IReadOnlyList<ClassSpec> classes)
+        /// <summary>Drop one level now (dying, or losing half your hearts). Below level 5 you return to the Minstrel.</summary>
+        public LevelDown LoseLevel(SaveData s, string reason, IReadOnlyList<ClassSpec> classes)
         {
-            var o = new RunOutcome { Rank = result.Rank, LevelBefore = s.level, ClassBefore = s.classId };
-            o.NewBest = s.RecordStage(stage, result.Rank, result.Seconds);
+            int before = s.level;
+            string cls = s.classId;
+            s.level = Math.Max(1, s.level - 1);
+            if (s.level < MinstrelBelow && s.classId != Minstrel) SetClass(s, Minstrel, classes);
+            return new LevelDown(reason, before, s.level, cls, s.classId);
+        }
 
-            if (result.Rank <= GreatswordAt && s.UnlockWeapon(Greatsword)) o.WeaponsUnlocked.Add(Greatsword);
+        // ---------------- Class unlocks ----------------
 
-            if (log.HeartsLost >= HeartsLostForLevelDown)
-                o.LevelDownReasons.Add($"lost {log.HeartsLost} hearts");
-            if (log.Attacks >= MinAttacksForOffBeat && log.OffBeat / (double)log.Attacks >= OffBeatShareForLevelDown)
-                o.LevelDownReasons.Add($"{log.OffBeat / (double)log.Attacks:P0} of attacks off the beat");
+        /// <summary>Classes the play totals have earned (and not yet unlocked).</summary>
+        public List<string> EarnedClasses(SaveData s)
+        {
+            var list = new List<string>();
+            var t = s.totals;
+            if (t.EnemyAttacks < UnlockMinAttacks || t.OnBeatShare < UnlockOnBeat) return list;
+            if (t.GuardShare >= UnlockShare && !s.HasUnlockedClass(Warden)) list.Add(Warden);
+            if (t.DodgeShare >= UnlockShare && !s.HasUnlockedClass(Crusader)) list.Add(Crusader);
+            return list;
+        }
 
-            if (o.LevelDownReasons.Count > 0)
+        // ---------------- A stage run ----------------
+
+        /// <summary>
+        /// A run reached the goal. A fail (C) only records the attempt. A clear records the best rank, opens the
+        /// greatsword in the shop on the first B or better, counts a clean clear's play toward class unlocks, then
+        /// adds experience (capped) and handles level-ups: the Fighter fallback past level 5, and from level 6 a class
+        /// change offer when more than one class is unlocked. <paramref name="levelDowns"/> are the run's level-downs
+        /// (already applied), passed through for the results screen.
+        /// </summary>
+        public RunOutcome Apply(SaveData s, string stage, StageResult result, PlaystyleLog log, IReadOnlyList<ClassSpec> classes,
+                                IEnumerable<LevelDown> levelDowns = null)
+        {
+            var o = new RunOutcome
             {
-                s.level = Math.Max(1, s.level - o.LevelDownReasons.Count);
-                var cls = Find(classes, s.classId);
-                if (cls != null && s.level < cls.MinLevel)
+                Rank = result.Rank, Failed = result.Failed, Clean = result.Clean,
+                LevelBefore = s.level, ClassBefore = s.classId,
+            };
+            if (levelDowns != null) o.LevelDowns.AddRange(levelDowns);
+            if (o.LevelDowns.Count > 0) { o.LevelBefore = o.LevelDowns[0].LevelBefore; o.ClassBefore = o.LevelDowns[0].ClassBefore; }
+            s.AddHistory(stage, result.Rank, result.Seconds);
+
+            if (!result.Failed)
+            {
+                o.NewBest = s.RecordStage(stage, result.Rank, result.Seconds);
+                if (result.Rank <= GreatswordAt && s.OfferWeapon(Greatsword)) o.WeaponsUnlocked.Add(Greatsword);
+
+                if (result.Clean)
                 {
-                    SetClass(s, Minstrel, classes);
-                    o.ClassChangeReason = $"fell below level {cls.MinLevel}: back to the Minstrel";
+                    s.totals.Add(log);
+                    foreach (var c in EarnedClasses(s)) { s.UnlockClass(c); o.ClassesUnlocked.Add(c); }
                 }
-            }
-            else
-            {
+
                 o.XpGained = XpByRank[(int)result.Rank] + XpPerEnemy * log.EnemiesDefeated;
+                if (s.level >= LevelCap) o.XpGained = 0;
                 s.xp += o.XpGained;
-                while (s.xp >= XpToNext(s.level))
+                while (s.level < LevelCap && s.xp >= XpToNext(s.level))
                 {
                     s.xp -= XpToNext(s.level);
                     s.level++;
                     o.LevelsGained.Add(s.level);
-                }
-                int check = 0;
-                foreach (int l in o.LevelsGained) if (IsCheckLevel(l)) check = l;
-                if (check > 0)
-                {
-                    var offer = Check(s.classId, result.Rank, log.MasteryScore, LeanOf(log), check, classes);
-                    if (offer.HasChoice) o.Offer = offer;
-                    else
+                    if (s.level == MinstrelBelow + 1 && s.classId == Minstrel &&
+                        !s.HasUnlockedClass(Warden) && !s.HasUnlockedClass(Crusader))
                     {
-                        string to = offer.Choices.Count > 0 ? offer.Choices[0] : s.classId;
-                        if (to != s.classId) { SetClass(s, to, classes); o.ClassChangeReason = offer.Reason; }
-                        else o.CheckNote = offer.Reason;
+                        SetClass(s, Fighter, classes);
+                        o.ClassChangeReason = $"passed level {MinstrelBelow} with neither the Warden nor the Crusader unlocked: now a Fighter";
                     }
+                }
+                if (s.level >= LevelCap) s.xp = 0;
+
+                if (o.LevelsGained.Count > 0 && s.level >= ClassChangeFrom)
+                {
+                    var offer = new ClassOffer { Level = s.level, Recommended = s.classId };
+                    offer.Choices.Add(s.classId);
+                    foreach (var id in s.unlockedClasses) if (id != s.classId && Find(classes, id) != null) offer.Choices.Add(id);
+                    var lean = LeanOf(log);
+                    foreach (var id in offer.Choices)
+                    {
+                        var c = Find(classes, id);
+                        if (o.ClassesUnlocked.Contains(id) || (c != null && c.Lean != PlayLean.Balanced && c.Lean == lean)) { offer.Recommended = id; break; }
+                    }
+                    offer.Reason = "level up: change to any class you have unlocked, or keep yours";
+                    if (offer.HasChoice) o.Offer = offer;
                 }
             }
 
@@ -188,73 +252,8 @@ namespace ProjectHymn.Progression
             o.ClassAfter = s.classId;
             o.XpIntoLevel = s.xp;
             o.XpToNext = XpToNext(s.level);
+            o.AtCap = s.level >= LevelCap;
             return o;
-        }
-
-        // ---------------- A class check ----------------
-
-        public ClassOffer Check(string current, StageRank rank, double mastery, PlayLean lean, int level, IReadOnlyList<ClassSpec> classes)
-        {
-            var offer = new ClassOffer { Level = level, Recommended = current };
-            var cur = Find(classes, current);
-            var bracket = cur != null ? cur.Bracket : ClassBracket.Base;
-
-            if (rank <= StageRank.A)
-            {
-                var highs = new List<ClassSpec>();
-                if (classes != null)
-                    foreach (var c in classes)
-                    {
-                        if (c == null || c.Bracket != ClassBracket.High || c.MinLevel > level) continue;
-                        bool fits = lean == PlayLean.Balanced || c.Lean == PlayLean.Balanced || c.Lean == lean;
-                        if (mastery >= MasteryForEveryHigh || (mastery >= MasteryForHigh && fits)) highs.Add(c);
-                    }
-                foreach (var c in highs)
-                    if (c.Id != current && (lean != PlayLean.Balanced && c.Lean == lean)) { offer.Recommended = c.Id; break; }
-                foreach (var c in highs) if (c.Id != current) offer.Choices.Add(c.Id);
-                if (bracket == ClassBracket.Low) offer.Choices.Add(Minstrel);
-                offer.Choices.Add(current);
-                if (offer.Recommended == current && offer.Choices.Count > 1) offer.Recommended = offer.Choices[0];
-                offer.Reason = highs.Count > 0
-                    ? $"{rank} rank and mastery {mastery:0}: a class can rise"
-                    : bracket == ClassBracket.Low
-                        ? $"{rank} rank: the Fighter can move up"
-                        : $"{rank} rank, but mastery {mastery:0} is below {MasteryForHigh:0}: no new class yet";
-                return offer;
-            }
-
-            if (rank == StageRank.B)
-            {
-                if (bracket == ClassBracket.Base && level >= FinalCheckLevel)
-                {
-                    offer.Choices.Add(Fighter);
-                    offer.Reason = $"the Minstrel reached level {level} without an S or A: now a Fighter";
-                }
-                else
-                {
-                    offer.Choices.Add(current);
-                    offer.Reason = "B rank holds the class";
-                }
-                return offer;
-            }
-
-            // C
-            switch (bracket)
-            {
-                case ClassBracket.Base:
-                    offer.Choices.Add(Fighter);
-                    offer.Reason = "a C clear at a class check: the Minstrel becomes a Fighter";
-                    break;
-                case ClassBracket.High:
-                    offer.Choices.Add(Minstrel);
-                    offer.Reason = "a C clear at a class check costs the class";
-                    break;
-                default:
-                    offer.Choices.Add(current);
-                    offer.Reason = "C rank: the Fighter stays a Fighter";
-                    break;
-            }
-            return offer;
         }
     }
 }

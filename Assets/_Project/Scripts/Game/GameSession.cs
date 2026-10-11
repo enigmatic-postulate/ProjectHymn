@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using ProjectHymn.Progression;
 using UnityEngine;
@@ -78,12 +79,60 @@ namespace ProjectHymn.Gameplay
                     s.UnlockWeapon(w.id);
                     foreach (var q in w.sequences) if (q != null) s.Learn(q.key);
                 }
+            if (Db != null) foreach (var c in Db.classes) if (c != null) s.UnlockClass(c.id);
             return s;
         }
 
         void Update()
         {
             if (Data != null) Data.playSeconds += Time.unscaledDeltaTime;
+            DebugKeys();
+        }
+
+        // ---------------- Debug keys (Slice 8: test classes and ranks in minutes) ----------------
+
+        /// <summary>A rank the next stage clear is forced to (debug F12), or null.</summary>
+        public StageRank? DebugRank { get; set; }
+
+        void DebugKeys()
+        {
+            if (Data == null || UiState.Blocking) return;
+            bool shift;
+            bool f10, f11, f12;
+#if ENABLE_INPUT_SYSTEM && HYMN_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb == null) return;
+            shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
+            f10 = kb.f10Key.wasPressedThisFrame; f11 = kb.f11Key.wasPressedThisFrame; f12 = kb.f12Key.wasPressedThisFrame;
+#else
+            shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            f10 = Input.GetKeyDown(KeyCode.F10); f11 = Input.GetKeyDown(KeyCode.F11); f12 = Input.GetKeyDown(KeyCode.F12);
+#endif
+            var rules = Db != null ? Db.Rules : ProgressionRules.Default;
+            if (f10)
+            {
+                // +experience: enough for the next level (levels up through the normal rules on the next clear).
+                Data.xp = Mathf.Max(Data.xp, rules.XpToNext(Data.level) - 1);
+                ProjectHymn.UI.GameHud.Toast($"Debug: {Data.xp}/{rules.XpToNext(Data.level)} experience (the next clear levels up)");
+                Changed?.Invoke();
+            }
+            if (f11)
+            {
+                if (shift) { var d = rules.LoseLevel(Data, "debug", Db != null ? Db.ClassSpecs() : null); ProjectHymn.UI.GameHud.Toast($"Debug: level {d.LevelAfter} ({ClassName(Data.classId)})"); }
+                else { Data.level = Mathf.Min(rules.LevelCap, Data.level + 1); ProjectHymn.UI.GameHud.Toast($"Debug: level {Data.level}"); }
+                Changed?.Invoke();
+            }
+            if (f12 && !shift)
+            {
+                DebugRank = DebugRank == null ? StageRank.S : DebugRank == StageRank.C ? (StageRank?)null : DebugRank + 1;
+                ProjectHymn.UI.GameHud.Toast(DebugRank == null ? "Debug: ranks from real play" : $"Debug: the next clear is {DebugRank} (its clear time set to match)");
+            }
+        }
+
+        public string ClassName(string id)
+        {
+            var c = Db != null ? Db.Class(id) : null;
+            return c != null && c.id == id ? c.displayName : id;
         }
 
         // ---------------- Game flow ----------------
@@ -94,7 +143,6 @@ namespace ProjectHymn.Gameplay
             var cls = Db != null ? Db.Class(ProgressionRules.Minstrel) : null;
             Data = SaveData.NewGame(ProgressionRules.Minstrel, cls != null ? cls.startingSequences : null);
             Data.weaponId = ProgressionRules.Sword;
-            if (Db != null) foreach (var it in Db.startingItems) Data.AddItem(it.id, it.count);
             FreePlay = false;
             Travel(Db != null ? Db.hubScene : "Village", "Start", saveOnArrival: true);
         }
@@ -110,16 +158,17 @@ namespace ProjectHymn.Gameplay
 
         public void ToTitle() => Travel(Db != null ? Db.titleScene : "Title", "");
 
-        /// <summary>Change class (a class check's choice); keeps a weapon the class can hold.</summary>
-        public void SetClass(string classId)
+        /// <summary>Change class (a level-up's choice). Keeps a weapon the class can hold; returns a weapon the class brought.</summary>
+        public string SetClass(string classId)
         {
-            ProgressionRules.SetClass(Data, classId, Db != null ? Db.ClassSpecs() : null);
+            string granted = ProgressionRules.SetClass(Data, classId, Db != null ? Db.ClassSpecs() : null);
             var cls = Class;
             if (cls != null) foreach (var q in cls.startingSequences) Data.Learn(q);
             Changed?.Invoke();
+            return granted;
         }
 
-        /// <summary>Equip an unlocked weapon the class can hold. Takes effect when the scene next loads.</summary>
+        /// <summary>Equip an owned weapon the class can hold. Takes effect when the scene next loads.</summary>
         public bool SetWeapon(string weaponId)
         {
             var cls = Class;
@@ -129,13 +178,33 @@ namespace ProjectHymn.Gameplay
             return true;
         }
 
-        /// <summary>A stage clear: best rank, the greatsword unlock, experience, level-downs and the class check.</summary>
-        public RunOutcome RecordClear(string stage, StageResult result, PlaystyleLog log)
+        /// <summary>Buy a weapon play has put in the shop.</summary>
+        public PurchaseResult BuyWeapon(WeaponSet w)
+        {
+            if (w == null) return PurchaseResult.Invalid;
+            var r = Data.BuyWeapon(w.id, w.price);
+            if (r == PurchaseResult.Bought) { SaveProgress(); Changed?.Invoke(); }
+            return r;
+        }
+
+        /// <summary>Lose one level now (dying, or half your hearts). Saved at once, so quitting doesn't undo it.</summary>
+        public LevelDown LoseLevel(string reason)
         {
             var rules = Db != null ? Db.Rules : ProgressionRules.Default;
-            var outcome = rules.Apply(Data, stage, result, log, Db != null ? Db.ClassSpecs() : null);
+            var d = rules.LoseLevel(Data, reason, Db != null ? Db.ClassSpecs() : null);
+            SaveProgress();
+            Changed?.Invoke();
+            return d;
+        }
+
+        /// <summary>A run reached the goal: rank history, best rank, unlocks, experience and level-ups (a C fails).</summary>
+        public RunOutcome RecordClear(string stage, StageResult result, PlaystyleLog log, IEnumerable<LevelDown> levelDowns)
+        {
+            var rules = Db != null ? Db.Rules : ProgressionRules.Default;
+            var outcome = rules.Apply(Data, stage, result, log, Db != null ? Db.ClassSpecs() : null, levelDowns);
             var cls = Class;
             if (cls != null) foreach (var q in cls.startingSequences) Data.Learn(q);
+            SaveProgress();
             Changed?.Invoke();
             return outcome;
         }
@@ -163,6 +232,18 @@ namespace ProjectHymn.Gameplay
             if (FreePlay) return false;
             Data.scene = SceneName;
             if (spawn != null) Data.spawn = spawn;
+            try
+            {
+                File.WriteAllText(SavePath, JsonUtility.ToJson(Data, true));
+                return true;
+            }
+            catch (Exception e) { Debug.LogWarning($"[Project Hymn] Could not save: {e.Message}"); return false; }
+        }
+
+        /// <summary>Write progress without moving the saved place (level-downs and clears in a stage).</summary>
+        public bool SaveProgress()
+        {
+            if (FreePlay || !HasSave && string.IsNullOrEmpty(Data.scene)) return false;
             try
             {
                 File.WriteAllText(SavePath, JsonUtility.ToJson(Data, true));

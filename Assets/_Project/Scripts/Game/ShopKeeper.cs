@@ -6,11 +6,11 @@ using ProjectHymn.UI;
 
 namespace ProjectHymn.Gameplay
 {
-    /// <summary>The shop counter.</summary>
+    /// <summary>The weapon shop counter.</summary>
     public class ShopKeeper : Interactable
     {
         public string speaker = "Merchant";
-        [TextArea(2, 4)] public string greeting = "Potions, tonics and old songs. What'll it be?";
+        [TextArea(2, 4)] public string greeting = "Blades, for those who've earned the use of them. Have a look.";
 
         public override void Interact(PlayerInteractor who) =>
             DialogueBox.Show(speaker, new[] { greeting }, () => ShopMenu.Open(speaker));

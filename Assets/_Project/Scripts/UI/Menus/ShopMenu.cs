@@ -5,7 +5,10 @@ using UnityEngine.UI;
 
 namespace ProjectHymn.UI
 {
-    /// <summary>The village shop: the stock with prices, what you hold, and your Notes. Buying a scroll learns it.</summary>
+    /// <summary>
+    /// The village weapon shop (GDD update 18): it sells the weapons play has put on sale (the greatsword after a B or
+    /// better), lists the ones you own, and shows your Notes. Potions, tonics and scrolls are gone.
+    /// </summary>
     public class ShopMenu : MonoBehaviour
     {
         static ShopMenu _open;
@@ -31,7 +34,7 @@ namespace ProjectHymn.UI
             _notes = UiKit.Line(col, "", 30, UiKit.Gold);
             _list = UiKit.Column(col, 8f, 0);
             _list.gameObject.AddComponent<LayoutElement>().preferredHeight = 420f;
-            _info = UiKit.Line(col, "", 24, UiKit.Dim, 70f, TextAnchor.UpperLeft);
+            _info = UiKit.Line(col, "", 24, UiKit.Dim, 90f, TextAnchor.UpperLeft);
             Refresh(0);
         }
 
@@ -39,46 +42,45 @@ namespace ProjectHymn.UI
         {
             UiKit.Clear(_list);
             var s = GameSession.Instance;
-            _notes.text = $"♪ {s.Data.notes} Notes";
+            _notes.text = $"{s.Data.notes} Notes";
             Button first = null, chosen = null;
             int i = 0;
             if (s.Db != null)
-                foreach (var item in s.Db.shopStock)
+                foreach (var w in s.Db.weapons)
                 {
-                    if (item == null) continue;
-                    string label;
-                    if (item.kind == ItemKind.Scroll)
-                    {
-                        var seq = SequenceInfo.Find(item.teaches);
-                        string notes = seq != null ? "  " + seq.NotesText : "";
-                        label = s.Data.Knows(item.teaches) ? $"{item.displayName}{notes}   <color=#8a84a0>known</color>"
-                                                           : $"{item.displayName}{notes}   <color=#ffd56a>{item.price} ♪</color>";
-                    }
-                    else label = $"{item.displayName}   <color=#ffd56a>{item.price} ♪</color>   <color=#8a84a0>have {s.Data.Count(item.id)}</color>";
-                    var it = item;
+                    if (w == null) continue;
+                    bool owned = s.Data.HasWeapon(w.id), forSale = s.Data.weaponsForSale.Contains(w.id);
+                    if (!owned && !forSale) continue;
+                    string kind = w.weight == WeaponWeight.Heavy ? "heavy" : "light";
+                    string label = owned ? $"{w.displayName}   <color=#8a84a0>owned</color>"
+                                         : $"{w.displayName}   <color=#ffd56a>{w.price} Notes</color>";
+                    var cls = s.Class;
+                    string info = $"A {kind} weapon{(w.HasShield ? " with a shield" : "")}, damage x{w.damageScale:0.0#}. " +
+                                  (w.weight == WeaponWeight.Heavy ? "The Crusader's kind (no shield)." : "The Warden's kind.") +
+                                  (cls != null && !cls.CanEquip(w.id) ? $"\n<color=#6a6478>Your {cls.displayName} can't hold it yet.</color>" : "");
+                    var weapon = w;
                     int index = i;
-                    var b = UiKit.Button(_list, label, () => Buy(it, index));
-                    var trig = b.gameObject.AddComponent<SelectHint>();
-                    trig.OnSelected = () => _info.text = it.description;
+                    var b = UiKit.Button(_list, label, () => Buy(weapon, index));
+                    b.gameObject.AddComponent<SelectHint>().OnSelected = () => _info.text = info;
                     if (first == null) first = b;
                     if (i == select) chosen = b;
                     i++;
                 }
+            if (s.Data.weaponsForSale.Count == 0)
+                UiKit.Line(_list, "Nothing new on the rack. Clear a stage with a B or better and I'll have something heavier.", 24, UiKit.Dim, 70f);
             var close = UiKit.Button(_list, "Leave", Close);
             UiKit.Select(chosen != null ? chosen : first != null ? first : close);
         }
 
-        void Buy(ItemDefinition item, int index)
+        void Buy(WeaponSet w, int index)
         {
-            var r = GameSession.Instance.Buy(item);
-            switch (r)
+            var s = GameSession.Instance;
+            if (s.Data.HasWeapon(w.id)) { GameHud.Toast($"You own the {w.displayName}. Equip it from the pause menu."); return; }
+            switch (s.BuyWeapon(w))
             {
-                case PurchaseResult.Bought:
-                    GameHud.Toast(item.kind == ItemKind.Scroll ? $"Learned {item.displayName.Replace("Scroll: ", "")}" : $"Bought {item.displayName}");
-                    break;
+                case PurchaseResult.Bought: GameHud.Toast($"Bought the {w.displayName}. Equip it from the pause menu (Weapon)."); break;
                 case PurchaseResult.TooPoor: GameHud.Toast("Not enough Notes"); break;
-                case PurchaseResult.AlreadyKnown: GameHud.Toast("You already know that song"); break;
-                default: GameHud.Toast("You can't carry more"); break;
+                default: GameHud.Toast("Not for sale"); break;
             }
             Refresh(index);
         }

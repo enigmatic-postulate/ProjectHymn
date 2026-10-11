@@ -28,6 +28,7 @@ namespace ProjectHymn.EditorTools
         const string CliffsidePath = SceneDir + "/Cliffside.unity";
         const string BelfryPath = SceneDir + "/Belfry.unity";
         const string SummitPath = SceneDir + "/Summit.unity";
+        const string ArenaPath = SceneDir + "/Arena.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
@@ -35,13 +36,15 @@ namespace ProjectHymn.EditorTools
             CliffsideBuilder.Build();
             CliffsideBuilder.BuildBelfry();
             CliffsideBuilder.BuildSummit();
+            CliffsideBuilder.BuildArenaStage();
             BuildVillage();
             BuildTitle();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside, Belfry Ridge and the Summit are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside, Belfry Ridge, the Summit and the Arena are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
-                      "E drinks the quick item, Q changes it, Esc pauses (Songbook, Items, Settings).");
+                      "Esc pauses (Character, Songbook, Weapon, Settings). Playtest keys: F10 experience, F11 / Shift+F11 level up / down, " +
+                      "F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints.");
         }
 
         // ---------------- Database ----------------
@@ -63,23 +66,23 @@ namespace ProjectHymn.EditorTools
             return i;
         }
 
-        static ClassDefinition Class(string id, string name, string description, ClassBracket bracket, int minLevel, PlayLean lean,
+        static ClassDefinition Class(string id, string name, string description, ClassBracket bracket, PlayLean lean,
                                      int hearts, float damage, List<WeaponSet> weapons)
         {
             var c = Asset<ClassDefinition>($"{DataDir}/Classes/{name}.asset");
             c.id = id; c.displayName = name; c.description = description;
-            c.bracket = bracket; c.minLevel = minLevel; c.lean = lean;
+            c.bracket = bracket; c.lean = lean;
             c.hearts = hearts; c.damage = damage;
             c.weapons = weapons;
-            c.startingSequences = new List<string> { "CrossingCuts" };
+            c.startingSequences = new List<string> { "CrossingCuts", "Powerslice" };     // the Minstrel's tree (Tempest moved out)
             c.blockBonus = 0f; c.blockDamage = 0f; c.parryDamage = 0f; c.blockSkipsNote = false;
             c.dodgeInvulnerable = 0.25f; c.commonTimeOnly = false;
             return c;
         }
 
         /// <summary>
-        /// Resources/HymnDatabase: the weapons (sword and shield, greatsword), the four slice classes (Minstrel, Fighter,
-        /// Warden, Crusader; placeholder numbers), the items, the shop's stock and what a new game starts with.
+        /// Resources/HymnDatabase: the weapons (sword and shield, greatsword) with weights and prices, the four slice classes
+        /// (Minstrel, Fighter, Warden, Crusader; placeholder numbers) with their weapons by weight, and the lore items.
         /// </summary>
         public static GameDatabase EnsureDatabase(List<WeaponSet> weapons)
         {
@@ -88,13 +91,15 @@ namespace ProjectHymn.EditorTools
             Directory.CreateDirectory(ResourcesDir);
             AssetDatabase.Refresh();
 
-            // Weapons are separate from classes: give them the ids the save and the classes use.
+            // Weapons are separate from classes (GDD update 18): ids for the save, a weight and a price. The sword and
+            // shield is light and owned from the start; the greatsword is heavy and goes on sale with the first B.
             var sword = weapons.Count > 0 ? weapons[0] : null;
             var great = weapons.Count > 1 ? weapons[1] : null;
-            if (sword != null) { sword.id = ProgressionRules.Sword; EditorUtility.SetDirty(sword); }
-            if (great != null) { great.id = ProgressionRules.Greatsword; EditorUtility.SetDirty(great); }
-            var both = new List<WeaponSet>(); if (sword != null) both.Add(sword); if (great != null) both.Add(great);
-            var swordOnly = new List<WeaponSet>(); if (sword != null) swordOnly.Add(sword);
+            if (sword != null) { sword.id = ProgressionRules.Sword; sword.weight = WeaponWeight.Light; sword.price = 0; EditorUtility.SetDirty(sword); }
+            if (great != null) { great.id = ProgressionRules.Greatsword; great.weight = WeaponWeight.Heavy; great.price = 300; EditorUtility.SetDirty(great); }
+            var any = new List<WeaponSet>(); if (sword != null) any.Add(sword); if (great != null) any.Add(great);
+            var lightAndShields = any.FindAll(w => w.weight == WeaponWeight.Light || w.HasShield);
+            var heavyNoShield = any.FindAll(w => w.weight == WeaponWeight.Heavy && !w.HasShield);
 
             // The Hub & Loop classes are gone (the weapon was the class then).
             foreach (var old in new[] { "Knight", "Barbarian" })
@@ -102,34 +107,33 @@ namespace ProjectHymn.EditorTools
                     AssetDatabase.DeleteAsset($"{DataDir}/Classes/{old}.asset");
 
             var minstrel = Class(ProgressionRules.Minstrel, "Minstrel",
-                "Everyone starts here: a wandering player who fights to the beat. What you become depends on how you play.",
-                ClassBracket.Base, 0, PlayLean.Balanced, 5, 1f, both);
+                "Everyone starts here: a wandering Cantor who fights to the beat. What you become depends on how you play.",
+                ClassBracket.Base, PlayLean.Balanced, 5, 1f, any);
             var fighter = Class(ProgressionRules.Fighter, "Fighter",
-                "The D-rank brawler. Common time only and a wider block window, and blocks hit back. Only an S or A clear moves a Fighter up.",
-                ClassBracket.Low, 0, PlayLean.Balanced, 6, 1f, both);
+                "Where a Minstrel goes who passes level 5 with neither the Warden nor the Crusader unlocked. Sequences in 4/4 only, " +
+                "a wider block window, and blocks hit back. Switch out at a later level-up once another class unlocks.",
+                ClassBracket.Low, PlayLean.Balanced, 6, 1f, any);
             fighter.blockBonus = 0.04f;           // about 2–3 frames at 60 fps either side; parry timing is unchanged
             fighter.blockDamage = 6f;
             fighter.parryDamage = 12f;
             fighter.commonTimeOnly = true;
             var warden = Class(ProgressionRules.Warden, "Warden",
-                "Earned by mastery that leans on the guard. A parry cuts the attacker; a block makes it skip a note.",
-                ClassBracket.High, 6, PlayLean.Guard, 6, 1f, swordOnly);
+                "Unlocked by clean clears that lean on the guard. The simple class: read, guard, punish. A parry cuts the attacker; " +
+                "a block makes it skip a note. Shields and lighter weapons only.",
+                ClassBracket.High, PlayLean.Guard, 6, 1f, lightAndShields);
             warden.parryDamage = 20f;
             warden.blockSkipsNote = true;
             var crusader = Class(ProgressionRules.Crusader, "Crusader",
-                "Earned by mastery that rarely blocks and prefers to dodge. Longer dodge frames and heavier blows, fewer hearts. (Brandish to come.)",
-                ClassBracket.High, 6, PlayLean.Dodge, 4, 1.15f, both);
-            crusader.dodgeInvulnerable = 0.35f;
+                "Unlocked by clean clears that dodge rather than block. Longer dodge frames, heavier blows, fewer hearts. " +
+                "No shield, heavier weapons only (taking the class brings the greatsword). The brandish is still to come.",
+                ClassBracket.High, PlayLean.Dodge, 4, 1.15f, heavyNoShield);
+            crusader.dodgeInvulnerable = 0.4f;
             foreach (var c in new[] { minstrel, fighter, warden, crusader }) EditorUtility.SetDirty(c);
 
-            var potion = Item("potion", "Potion", ItemKind.Potion, 60, "Restores 2 hearts.", 0xff6a5a);
-            potion.heal = 2;
-            var tonic = Item("tonic", "Battle Tonic", ItemKind.Tonic, 120, "Blows strike 25% harder for 16 beats.", 0xffb04a);
-            tonic.damageBoost = 1.25f; tonic.boostBeats = 16;
-            var power = Item("scroll_powerslice", "Scroll: Powerslice", ItemKind.Scroll, 250, "Teaches Powerslice (2-2): a short, heavy finisher.", 0xff7a5a);
-            power.teaches = "Powerslice";
-            var tempest = Item("scroll_tempest", "Scroll: Tempest", ItemKind.Scroll, 0, "Teaches Tempest (1-1-1-2-1-1-1): seven blows on seven beats.", 0x7affc8);
-            tempest.teaches = "Tempest";
+            // Potions, tonics and sequence scrolls are gone (GDD update 18): only lore is an item now.
+            foreach (var gone in new[] { "potion", "tonic", "scroll_powerslice", "scroll_tempest" })
+                if (AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{DataDir}/Items/{gone}.asset") != null)
+                    AssetDatabase.DeleteAsset($"{DataDir}/Items/{gone}.asset");
             var loreVillage = Item("lore_village", "The Hymn of Saltmere", ItemKind.Lore, 0, "Told by the village elder.", 0x9ab8ff);
             loreVillage.loreText = "Before the walls, Saltmere had a song. Fishers sang it to keep the oars together, and the sea kept time with them. " +
                                    "When the cliffs began to stir, it was the old cantors who answered, striking only when the tide struck.";
@@ -144,15 +148,15 @@ namespace ProjectHymn.EditorTools
             var loreSummit = Item("lore_summit", "The Last Cantor", ItemKind.Lore, 0, "Cut into the first step of the summit path.", 0x9ab8ff);
             loreSummit.loreText = "THE LAST CANTOR WOULD NOT STOP COUNTING. HE COUNTS FOUR, THEN THREE, THEN SEVEN, AND RAISES HIS STAFF A BAR BEFORE HE CHANGES. " +
                                   "WHEN HE LEAPS, THE GROUND ITSELF STRIKES: NO BLADE TURNS IT. LEAVE THE GROUND.";
-            foreach (var i in new[] { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit }) EditorUtility.SetDirty(i);
+            foreach (var i in new[] { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit }) EditorUtility.SetDirty(i);
 
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>($"{ResourcesDir}/{GameDatabase.ResourcePath}.asset");
             if (db == null) { db = ScriptableObject.CreateInstance<GameDatabase>(); AssetDatabase.CreateAsset(db, $"{ResourcesDir}/{GameDatabase.ResourcePath}.asset"); }
             db.classes = new List<ClassDefinition> { minstrel, fighter, warden, crusader };
-            db.weapons = both;
-            db.items = new List<ItemDefinition> { potion, tonic, power, tempest, loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit };
-            db.shopStock = new List<ItemDefinition> { potion, tonic, power };
-            db.startingItems = new List<GameDatabase.ItemCount> { new GameDatabase.ItemCount { id = "potion", count = 1 } };
+            db.weapons = any;
+            db.items = new List<ItemDefinition> { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit };
+            db.shopStock = new List<ItemDefinition>();
+            db.startingItems = new List<GameDatabase.ItemCount>();
             db.hubScene = "Village";
             db.titleScene = "Title";
             EditorUtility.SetDirty(db);
@@ -179,7 +183,7 @@ namespace ProjectHymn.EditorTools
                 string character = weapon.id == ProgressionRules.Greatsword ? "Barbarian" : "Knight";
                 var player = new GameObject($"Player ({weapon.displayName})", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
                     typeof(RhythmAnimator), typeof(SwordCombatController), typeof(PlayerGuard), typeof(PlayerHealth),
-                    typeof(PlayerInteractor), typeof(QuickItems));
+                    typeof(PlayerInteractor));
                 player.transform.SetParent(spawnerGo.transform, false);
                 player.transform.position = at + Vector3.up * 0.05f;
                 var cc = player.GetComponent<CharacterController>();
@@ -390,7 +394,7 @@ namespace ProjectHymn.EditorTools
             var shop = Figure(people, "Merchant", "Ranger", new Vector3(VillageLayout.ShopX + 1.2f, top, npcZ), art).AddComponent<ShopKeeper>();
             shop.prompt = "Shop";
             var trainer = Figure(people, "Trainer", "Rogue_Hooded", new Vector3(VillageLayout.TrainerX + 1.5f, top, npcZ), art).AddComponent<ClassTrainer>();
-            trainer.prompt = "Weapon rack";
+            trainer.prompt = "Mentor"; trainer.speaker = "Mentor";
             var talk = new (string name, string model, string[] lines, string lore)[]
             {
                 ("Elder", "Mage", new[]
@@ -407,7 +411,7 @@ namespace ProjectHymn.EditorTools
                 ("Lookout", "Ranger", new[]
                 {
                     "Path to the cliffs is through the gate, east end of the street.",
-                    "Some say a scroll's tucked up high over the third tier. Need two jumps to reach it, if it's there at all.",
+                    "The arena's through there too, if you want a fight without the climb. Three waves, and they don't wait for you to be ready.",
                 }, ""),
             };
             for (int i = 0; i < talk.Length && i < VillageLayout.Villagers.Length; i++)
@@ -417,7 +421,7 @@ namespace ProjectHymn.EditorTools
                 npc.speaker = t.name; npc.lines = t.lines; npc.givesLore = t.lore; npc.prompt = "Talk";
             }
 
-            // The way out: the gate opens onto every stage (Belfry Ridge once Cliffside is cleared).
+            // The way out: the gate opens onto every stage (Belfry Ridge once Cliffside is cleared; the Arena always).
             var doorGo = new GameObject("Stage Gate", typeof(StageGate));
             doorGo.transform.SetParent(level, false);
             doorGo.transform.position = new Vector3(VillageLayout.GateX, top, 0f);
@@ -428,6 +432,7 @@ namespace ProjectHymn.EditorTools
                 new StageGate.Destination { stageId = "Cliffside", scene = "Cliffside", label = "Cliffside", meter = "4/4" },
                 new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
                 new StageGate.Destination { stageId = "Summit", scene = "Summit", label = "The Summit (boss)", meter = "4/4 · 3/4 · 7/8", requires = "Belfry" },
+                new StageGate.Destination { stageId = "Arena", scene = "Arena", label = "The Arena (waves)", meter = "4/4" },
             };
 
             // Spawns, players, camera, UI
@@ -544,7 +549,7 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath, SummitPath };
+            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath, SummitPath, ArenaPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

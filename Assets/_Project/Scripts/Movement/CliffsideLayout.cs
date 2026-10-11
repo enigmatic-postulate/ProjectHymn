@@ -60,7 +60,7 @@ namespace ProjectHymn.Movement
             new Block("East Wall", 102f, 104f, 24f,  Kind.Wall),
         };
 
-        /// <summary>Off the route, never required: a floating ledge over Tier 3 that holds the Tempest scroll (double jump up).</summary>
+        /// <summary>Off the route, never required: a floating ledge over Tier 3 (double jump up); its scroll is gone since update 18.</summary>
         public static readonly Block[] Secrets =
         {
             new Block("High Ledge", 49.8f, 52.6f, 11.0f, Kind.Ledge),
@@ -77,12 +77,8 @@ namespace ProjectHymn.Movement
             new Marker("Shield Knight", MarkerKind.Target,    29f,  2.0f),
             new Marker("Gap Wisp",     MarkerKind.FloatingTarget, 58.5f, 9.4f),
             new Marker("Goal",         MarkerKind.Goal,       97f, 14.5f),
-            // Pickups: the name says what it is (the builder reads it): "Notes ...", "Scroll <sequence>", "Lore <id>"
+            // Pickups: the name says what it is (the builder reads it). Only lore since GDD update 18 (no Notes caches or scrolls).
             new Marker("Lore lore_cliff",  MarkerKind.Pickup, -10.5f, 0f),
-            new Marker("Notes Beach",      MarkerKind.Pickup, 12f,   0f),
-            new Marker("Notes Tier 1",     MarkerKind.Pickup, 32f,   2.0f),
-            new Marker("Scroll Tempest",   MarkerKind.Pickup, 51.2f, 11.0f),
-            new Marker("Notes Far Ledge",  MarkerKind.Pickup, 69f,   8.4f),
             // Camera zones: x centre, look height, width
             new Marker("Climb View",   MarkerKind.CameraZone, 45f,  0f, 24f),
             new Marker("Gap View",     MarkerKind.CameraZone, 64f,  0f, 22f),

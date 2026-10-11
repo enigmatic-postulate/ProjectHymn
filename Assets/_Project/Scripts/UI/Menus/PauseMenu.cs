@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// Esc / Start: pauses the music on its clock and the world, with Resume, Character (class, level, weapons, stage
-    /// ranks), Songbook (the sequences you know and the lore you found), Items (pick the quick-slot item), Settings, Return to the village and Quit to the title.
+    /// Esc / Start: pauses the music on its clock and the world, with Resume, Character (class, level, class progress, stage
+    /// ranks), Songbook (the sequences you know and the lore you found), Weapon (equip an owned weapon your class can hold), Settings, Return to the village and Quit to the title.
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
@@ -82,7 +82,7 @@ namespace ProjectHymn.UI
             var resume = UiKit.Button(col, "Resume", Close);
             UiKit.Button(col, "Character", Character);
             UiKit.Button(col, "Songbook", Songbook);
-            UiKit.Button(col, "Items", Items);
+            UiKit.Button(col, "Weapon", Weapons);
             UiKit.Button(col, "Settings", Settings);
             var s = GameSession.Instance;
             bool inHub = s.Db != null && s.SceneName == s.Db.hubScene;
@@ -103,34 +103,37 @@ namespace ProjectHymn.UI
             var rules = s.Db != null ? s.Db.Rules : Progression.ProgressionRules.Default;
             var cls = s.Class;
             var sb = new StringBuilder();
-            int next = d.level + 1;
-            while (!rules.IsCheckLevel(next) && next < d.level + 100) next++;
-            sb.Append($"<size=34><color=#ffd56a>{(cls != null ? cls.displayName : d.classId)}</color></size>   level {d.level}   ");
-            sb.Append($"<color=#8a84a0>{d.xp} / {rules.XpToNext(d.level)} experience</color>\n");
+            sb.Append($"<size=34><color=#ffd56a>{(cls != null ? cls.displayName : d.classId)}</color></size>   level {d.level}");
+            if (d.level >= rules.LevelCap) sb.Append("   <color=#8a84a0>(the cap)</color>\n");
+            else sb.Append($"   <color=#8a84a0>{d.xp} / {rules.XpToNext(d.level)} experience</color>\n");
             if (cls != null) sb.Append($"{cls.description}\n<color=#b8b2c8>Perks: {cls.PerksText()}</color>\n");
-            sb.Append($"Next class check at level {next}: an S or A lets your class rise, a B holds it, a C costs it.\n\n");
-            sb.Append($"Weapon  <color=#ffd56a>{(s.Weapon != null ? s.Weapon.displayName : d.weaponId)}</color>");
-            if (s.Db != null)
-            {
-                var others = new System.Collections.Generic.List<string>();
-                foreach (var w in s.Db.weapons)
-                    if (w != null && w.id != d.weaponId) others.Add(d.HasWeapon(w.id) ? w.displayName : $"<color=#6a6478>{w.displayName} (locked)</color>");
-                if (others.Count > 0) sb.Append($"   also: {string.Join(", ", others)}");
-            }
-            sb.Append("   <color=#8a84a0>(change at the armsmaster)</color>\n\nStages\n");
-            if (d.stageRecords.Count == 0) sb.Append("<color=#8a84a0>None cleared yet.</color>");
+            sb.Append($"Weapon  <color=#ffd56a>{(s.Weapon != null ? s.Weapon.displayName : d.weaponId)}</color>      Notes  {d.notes}\n\n");
+
+            // Classes: unlocked, and progress toward the two the play style opens (counted over clean clears).
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var id in d.unlockedClasses) names.Add(s.ClassName(id));
+            sb.Append($"Classes unlocked: <color=#ffd56a>{string.Join(", ", names)}</color>\n");
+            var t = d.totals;
+            sb.Append($"<color=#b8b2c8>Over {t.cleanClears} clean clear{(t.cleanClears == 1 ? "" : "s")}: on the beat {t.OnBeatShare:P0} (needs {rules.UnlockOnBeat:P0}), " +
+                      $"guarded {t.GuardShare:P0}, dodged {t.DodgeShare:P0} of {t.EnemyAttacks} enemy attacks (a class needs {rules.UnlockShare:P0} of at least {rules.UnlockMinAttacks})</color>\n");
+            if (!d.HasUnlockedClass(Progression.ProgressionRules.Warden)) sb.Append("<color=#8a84a0>Warden: parry and block most attacks, on the beat.</color>\n");
+            if (!d.HasUnlockedClass(Progression.ProgressionRules.Crusader)) sb.Append("<color=#8a84a0>Crusader: dodge most attacks, on the beat.</color>\n");
+            sb.Append($"<color=#8a84a0>Class changes are offered at each level-up from level {rules.ClassChangeFrom}. Dying or losing half your hearts costs a level; below level {rules.MinstrelBelow} you are a Minstrel.</color>\n\n");
+
+            sb.Append("Stages\n");
+            if (d.stageRecords.Count == 0) sb.Append("<color=#8a84a0>None cleared yet.</color>\n");
             foreach (var r in d.stageRecords)
-                sb.Append($"{r.stage}   best <color=#ffd56a>{r.bestRank}</color> in {(int)(r.bestSeconds / 60.0)}:{r.bestSeconds % 60.0:00.0}   cleared {r.clears}×\n");
-            UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
-            var back = UiKit.Button(col, "Back", Main);
-            // Playtest shortcut: the next clear reaches the next class check (so the checks can be tried in one run).
-            UiKit.Button(col, $"Playtest: next clear reaches level {next}", () =>
+                sb.Append($"{r.stage}   best <color=#ffd56a>{r.bestRank}</color> in {(int)(r.bestSeconds / 60.0)}:{r.bestSeconds % 60.0:00.0}   cleared {r.clears}x\n");
+            if (d.history.Count > 0)
             {
-                d.level = Mathf.Max(1, next - 1);
-                d.xp = Mathf.Max(0, rules.XpToNext(d.level) - 1);
-                s.NotifyChanged();
-                Character();
-            }, 22, 44f);
+                sb.Append("<color=#8a84a0>Recent: ");
+                int from = Mathf.Max(0, d.history.Count - 8);
+                for (int i = d.history.Count - 1; i >= from; i--) sb.Append($"{d.history[i].stage} {d.history[i].rank}{(i > from ? ", " : "")}");
+                sb.Append("</color>\n");
+            }
+            sb.Append("\n<color=#6a6478>Playtest keys: F10 experience to the next level, F11 level up, Shift+F11 level down, F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints</color>");
+            UiKit.Line(col, sb.ToString(), 22, UiKit.Text, 560f, TextAnchor.UpperLeft);
+            var back = UiKit.Button(col, "Back", Main);
             UiKit.Select(back);
         }
 
@@ -154,7 +157,7 @@ namespace ProjectHymn.UI
                         foreach (var m in q.moves) { if (moves.Length > 0) moves.Append(", "); moves.Append(m != null ? m.displayName : "?"); }
                         sb.Append($"<color=#ffd56a>{q.displayName}</color>   <b>{q.NotesText}</b>   finisher ×{q.finisherMultiplier:0.#}\n<color=#b8b2c8>{moves}</color>\n\n");
                     }
-                    else sb.Append($"<color=#6a6478>???   {new string('·', q.notes.Count)}   (find or buy its scroll)</color>\n\n");
+                    else sb.Append($"<color=#6a6478>???   {new string('·', q.notes.Count)}   (not learned yet)</color>\n\n");
                 }
             }
             UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 360f, TextAnchor.UpperLeft);
@@ -172,25 +175,35 @@ namespace ProjectHymn.UI
             UiKit.Select(first != null ? first : back);
         }
 
-        void Items()
+        void Weapons()
         {
             _onMain = false;
             var col = Page();
-            UiKit.Line(col, "ITEMS", 40, UiKit.Gold, 60f);
+            UiKit.Line(col, "WEAPON", 40, UiKit.Gold, 60f);
             var s = GameSession.Instance;
-            UiKit.Line(col, $"♪ {s.Data.notes} Notes      choose the item for the quick slot (E / B uses it)", 24, UiKit.Dim, 40f);
+            var cls = s.Class;
+            UiKit.Line(col, $"The {(cls != null ? cls.displayName : "class")} can hold the weapons below. The change takes effect when you next enter a stage.", 22, UiKit.Dim, 60f);
             Button first = null;
-            foreach (var it in s.Data.items)
-            {
-                var def = s.Db != null ? s.Db.Item(it.id) : null;
-                string name = def != null ? def.displayName : it.id;
-                string mark = it.id == s.Data.quickItem ? "   <color=#ffd56a>in quick slot</color>" : "";
-                string id = it.id;
-                var b = UiKit.Button(col, $"{name} ×{it.count}{mark}", () => { s.Data.quickItem = id; s.NotifyChanged(); Items(); });
-                if (def != null) b.gameObject.AddComponent<SelectHint>();
-                if (first == null) first = b;
-            }
-            if (s.Data.items.Count == 0) UiKit.Line(col, "Nothing yet. The village shop sells potions and tonics.", 26, UiKit.Dim);
+            if (s.Db != null)
+                foreach (var w in s.Db.weapons)
+                {
+                    if (w == null) continue;
+                    bool owned = s.Data.HasWeapon(w.id);
+                    bool allowed = cls == null || cls.CanEquip(w.id);
+                    string kind = w.weight == WeaponWeight.Heavy ? "heavy" : "light";
+                    string label;
+                    if (w.id == s.Data.weaponId) label = $"{w.displayName}   <color=#ffd56a>equipped</color>";
+                    else if (!owned) label = $"<color=#6a6478>{w.displayName}   ({(s.Data.weaponsForSale.Contains(w.id) ? "in the shop" : "locked")})</color>";
+                    else if (!allowed) label = $"<color=#6a6478>{w.displayName}   (your class can't hold a {kind} weapon)</color>";
+                    else label = w.displayName;
+                    string id = w.id;
+                    var b = UiKit.Button(col, label, () =>
+                    {
+                        if (s.SetWeapon(id)) GameHud.Toast($"Equipped: {w.displayName} (from the next stage)");
+                        Weapons();
+                    }, 26, 52f);
+                    if (first == null) first = b;
+                }
             var back = UiKit.Button(col, "Back", Main);
             UiKit.Select(first != null ? first : back);
         }

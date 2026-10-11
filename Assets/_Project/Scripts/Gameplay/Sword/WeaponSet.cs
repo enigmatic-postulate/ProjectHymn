@@ -8,6 +8,9 @@ namespace ProjectHymn.Gameplay
     /// note plays when it isn't part of a sequence. The saber fights one-handed from a side-on stance; the broadsword
     /// two-handed from a square guard (left hand kept on the hilt by IK).
     /// </summary>
+    /// <summary>A weapon's weight class (GDD update 18): the Warden takes light weapons and shields, the Crusader heavy ones.</summary>
+    public enum WeaponWeight { Light, Heavy }
+
     [CreateAssetMenu(menuName = "Project Hymn/Weapon Set", fileName = "NewWeaponSet")]
     public class WeaponSet : ScriptableObject
     {
@@ -32,5 +35,12 @@ namespace ProjectHymn.Gameplay
         public string offHandObject = "";
         [Tooltip("Damage scale for this weapon.")]
         public float damageScale = 1f;
+        [Header("Shop and classes")]
+        public WeaponWeight weight = WeaponWeight.Light;
+        [Tooltip("Notes it costs once play has put it in the shop (0 = owned from the start).")]
+        public int price = 300;
+
+        /// <summary>Carries a shield in the off hand.</summary>
+        public bool HasShield => !string.IsNullOrEmpty(offHandObject);
     }
 }

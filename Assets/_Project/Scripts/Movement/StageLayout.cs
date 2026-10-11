@@ -53,6 +53,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Cliffside => CliffsideLayout.Stage;
         public static StageLayout Belfry => BelfryLayout.Stage;
         public static StageLayout Summit => SummitLayout.Stage;
-        public static IReadOnlyList<StageLayout> All => new[] { Cliffside, Belfry, Summit };
+        public static StageLayout Arena => ArenaLayout.Stage;
+        public static IReadOnlyList<StageLayout> All => new[] { Cliffside, Belfry, Summit, Arena };
     }
 }

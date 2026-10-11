@@ -8,9 +8,9 @@ using UnityEngine;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// The end-of-stage screen: time against par, the rank and what capped it, the attack tally, defence, hits taken,
-    /// enemies and efficiency (Core Combat), then what the clear did (Rank &amp; Class): experience and levels, level-downs
-    /// and why, the class check, and weapons unlocked.
+    /// The end-of-stage screen (GDD update 18): time against par, the rank and what capped it (a C is a fail), the attack
+    /// tally, defence, hits taken, enemies and efficiency, then what the run did: level-downs during it, a clean clear,
+    /// experience and level-ups, classes unlocked, the Fighter fallback, the level-up class change, and the shop.
     /// </summary>
     public class StageResultsPanel : MonoBehaviour
     {
@@ -41,25 +41,32 @@ namespace ProjectHymn.UI
         static string Progress(RunOutcome o)
         {
             var sb = new StringBuilder();
-            if (o.NewBest) sb.Append("<color=#ffd56a>New best for this stage.</color>   ");
-            if (o.LevelDownReasons.Count > 0)
+            foreach (var d in o.LevelDowns)
+                sb.Append($"<color=#ff7a6a>Level down during the run: {d.LevelBefore} → {d.LevelAfter}</color> ({d.Reason})" +
+                          (d.LostClass ? $", back to the {ClassName(d.ClassAfter)}" : "") + "\n");
+            if (o.Failed)
             {
-                sb.Append($"<color=#ff7a6a>Level down: {o.LevelBefore} → {o.LevelAfter}</color> ({string.Join("; ", o.LevelDownReasons)}). No experience this run, none lost.\n");
+                sb.Append("<color=#ff7a6a>A C is a fail: replay the stage.</color> No experience; a clean clear (every enemy, never below half your hearts) can't fail on time.\n");
+                return sb.ToString();
             }
+            if (o.NewBest) sb.Append("<color=#ffd56a>New best for this stage.</color>   ");
+            if (o.Clean) sb.Append("<color=#a0ffa0>Clean clear</color> (counts toward unlocking classes)   ");
+            sb.Append("\n");
+            if (o.AtCap && o.LevelsGained.Count == 0) sb.Append($"Level {o.LevelAfter} (the slice's cap)\n");
             else
             {
                 sb.Append($"+{o.XpGained} experience   ");
-                if (o.LevelsGained.Count > 0) sb.Append($"<color=#a0ffa0>Level up: {o.LevelBefore} → {o.LevelAfter}</color>   ");
-                sb.Append($"<color=#8a84a0>{o.XpIntoLevel} / {o.XpToNext} to level {o.LevelAfter + 1}</color>\n");
+                if (o.LevelsGained.Count > 0) sb.Append($"<color=#a0ffa0>Level up: {o.LevelsGained[0] - 1} → {o.LevelAfter}</color>   ");
+                sb.Append(o.AtCap ? "<color=#8a84a0>(level cap)</color>\n" : $"<color=#8a84a0>{o.XpIntoLevel} / {o.XpToNext} to level {o.LevelAfter + 1}</color>\n");
             }
+            foreach (var c in o.ClassesUnlocked)
+                sb.Append($"<color=#ffd56a>Unlocked the {ClassName(c)}</color> (offered at level-ups from level 6)\n");
             if (!string.IsNullOrEmpty(o.ClassChangeReason))
                 sb.Append($"<color=#ffb070>Class: {ClassName(o.ClassBefore)} → {ClassName(o.ClassAfter)}</color> ({o.ClassChangeReason})\n");
-            else if (o.Offer != null)
-                sb.Append($"<color=#ffd56a>Class check at level {o.Offer.Level}:</color> {o.Offer.Reason}. Choose next.\n");
-            else if (!string.IsNullOrEmpty(o.CheckNote))
-                sb.Append($"Class check: {o.CheckNote}.\n");
+            if (o.Offer != null)
+                sb.Append($"<color=#ffd56a>Level {o.Offer.Level}:</color> change to any class you have unlocked, or keep yours. Choose next.\n");
             foreach (var w in o.WeaponsUnlocked)
-                sb.Append($"<color=#ffd56a>Unlocked: {WeaponName(w)}</color> (equip it at the armsmaster)\n");
+                sb.Append($"<color=#ffd56a>The {WeaponName(w)} is in the shop</color> (buy it with Notes)\n");
             return sb.ToString();
         }
 
@@ -72,7 +79,8 @@ namespace ProjectHymn.UI
             var c = UiKit.Canvas("Results Canvas", 260, transform);
             var panel = UiKit.Panel("Results", c.transform, new Vector2(1180f, 960f));
             var col = UiKit.Column(panel, 6f, 30);
-            UiKit.Line(col, $"{stage.ToUpperInvariant()} CLEARED", 44, UiKit.Gold, 62f);
+            bool failed = o != null && o.Failed;
+            UiKit.Line(col, failed ? $"{stage.ToUpperInvariant()}: FAILED" : $"{stage.ToUpperInvariant()} CLEARED", 44, failed ? new Color(1f, 0.48f, 0.42f) : UiKit.Gold, 62f);
 
             var sb = new StringBuilder();
             sb.Append($"Time  <color=#ffd56a>{Clock(r.Seconds)}</color>   par {Clock(t.ParSeconds)}   time rank <color=#ffd56a>{r.TimeRank}</color>\n");
@@ -83,12 +91,13 @@ namespace ProjectHymn.UI
                       $"Great {log.Hits(Judgement.Great)}   <color=#80ccff>Good {log.Hits(Judgement.Good)}</color>   <color=#8a84a0>Off-beat {log.OffBeat}</color>\n");
             sb.Append($"Defence   parries {log.Parries} (count as Perfect)   blocks {log.Blocks}   dodges {log.Dodges} (count as Great)\n");
             sb.Append($"Hits taken {log.HitsTaken}   hearts lost {log.HeartsLost}   enemies {log.EnemiesDefeated}/{t.Enemies}   sequences {log.SequencesCompleted}\n");
-            sb.Append($"At {t.TargetTiming} or better: {log.ShareAtLeast(t.TargetTiming):P0} of {log.TallyTotal} actions\n");
+            sb.Append($"On the beat {log.OnBeatShare:P0}   guard {log.GuardShare:P0} / dodge {log.DodgeShare:P0} of {log.EnemyAttacks} enemy attacks\n");
             sb.Append($"Efficiency {r.Efficiency:P0}   ({t.PerfectAttacks} attacks for a perfect run, {log.Attacks} used)\n");
             sb.Append($"Mastery score {log.MasteryScore:0}   (a True Perfect counts as 3 Perfects)");
             UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
-            if (o != null) UiKit.Line(col, Progress(o), 26, UiKit.Text, 170f, TextAnchor.UpperLeft);
-            UiKit.Select(UiKit.Button(col, o != null && o.Offer != null ? "Choose your class" : "Continue", Continue, 32, 64f));
+            if (o != null) UiKit.Line(col, Progress(o), 26, UiKit.Text, 200f, TextAnchor.UpperLeft);
+            string label = failed ? "Replay" : o != null && o.Offer != null ? "Level up: choose your class" : "Continue";
+            UiKit.Select(UiKit.Button(col, label, Continue, 32, 64f));
         }
 
         void Continue()

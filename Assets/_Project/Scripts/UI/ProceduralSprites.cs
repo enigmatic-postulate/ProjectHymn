@@ -9,7 +9,33 @@ namespace ProjectHymn.UI
     /// </summary>
     public static class ProceduralSprites
     {
-        static Sprite _heart, _ring, _white;
+        static Sprite _heart, _ring, _white, _glow;
+
+        /// <summary>A soft round glow (the enemies' galvanize aura).</summary>
+        public static Sprite Glow
+        {
+            get
+            {
+                if (_glow != null) return _glow;
+                const int size = 64;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Glow", wrapMode = TextureWrapMode.Clamp };
+                var px = new Color32[size * size];
+                for (int j = 0; j < size; j++)
+                for (int i = 0; i < size; i++)
+                {
+                    float x = (i + 0.5f) / size * 2f - 1f, y = (j + 0.5f) / size * 2f - 1f;
+                    float r = Mathf.Sqrt(x * x + y * y);
+                    float a = Mathf.Clamp01(1f - r);
+                    a = a * a * (3f - 2f * a);
+                    px[j * size + i] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+                tex.SetPixels32(px);
+                tex.Apply();
+                _glow = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+                _glow.name = "Glow";
+                return _glow;
+            }
+        }
 
         public static Sprite Heart => _heart != null ? _heart : (_heart = Make(64, (x, y) =>
         {

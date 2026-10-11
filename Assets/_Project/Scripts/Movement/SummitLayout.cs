@@ -30,20 +30,21 @@ namespace ProjectHymn.Movement
 
         public static readonly Marker[] Markers =
         {
-            new Marker("Spawn",            M.Spawn,      -5f, 0f),
-            new Marker("Checkpoint 1",     M.Checkpoint, -5f, 0f),
+            // Par 0:15 (GDD update 18): a short run up the stair, the Cantor just past the top, the way down close behind him.
+            new Marker("Spawn",            M.Spawn,       4f, 0f),
+            new Marker("Checkpoint 1",     M.Checkpoint,  4f, 0f),
             new Marker("Checkpoint 2",     M.Checkpoint, 29f, ArenaTop),
-            new Marker("Bone Cantor",      M.Boss,       52f, ArenaTop),
-            new Marker("Goal",             M.Goal,       64f, ArenaTop),
+            new Marker("Bone Cantor",      M.Boss,       38f, ArenaTop),
+            new Marker("Goal",             M.Goal,       48f, ArenaTop),
             new Marker("Lore lore_summit", M.Pickup,     -8.5f, 0f),
             new Marker("Climb View",       M.CameraZone, 12f, 0f, 30f),
-            new Marker("Summit View",      M.CameraZone, 47f, 0f, 42f),
+            new Marker("Summit View",      M.CameraZone, 42f, 0f, 32f),
         };
 
         public static StageLayout Stage => new StageLayout
         {
             Id = "Summit", Name = "The Summit", Scene = "Summit", Meter = 4,
-            ParSeconds = 100f, PerfectAttacks = 40,
+            ParSeconds = 15f, PerfectAttacks = 14,
             Route = Route, Props = Props, Markers = Markers,
         };
     }

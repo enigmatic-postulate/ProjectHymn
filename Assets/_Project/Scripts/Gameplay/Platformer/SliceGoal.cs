@@ -10,9 +10,11 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float spinSpeed = 60f;
         [Tooltip("The goal stays sealed until this enemy falls (a boss stage). Empty = always open.")]
         [SerializeField] BeatEnemy requires;
+        [Tooltip("The goal stays sealed until these waves are cleared (the Arena). Empty = no waves.")]
+        [SerializeField] ArenaWaves waves;
 
         public bool Done { get; private set; }
-        public bool Open => requires == null || requires.IsDead;
+        public bool Open => (requires == null || requires.IsDead) && (waves == null || waves.Done);
         public event Action Reached;
         float _nagAt = -9f;
         Vector3 _spinScale;
@@ -24,7 +26,11 @@ namespace ProjectHymn.Gameplay
             if (Done) return;
             if (!Open)
             {
-                if (Time.time - _nagAt > 2.5f) { _nagAt = Time.time; ProjectHymn.UI.GameHud.Toast($"Sealed until the {requires.DisplayName} falls."); }
+                if (Time.time - _nagAt > 2.5f)
+                {
+                    _nagAt = Time.time;
+                    ProjectHymn.UI.GameHud.Toast(requires != null && !requires.IsDead ? $"Sealed until the {requires.DisplayName} falls." : "Sealed until every wave falls.");
+                }
                 return;
             }
             Done = true;

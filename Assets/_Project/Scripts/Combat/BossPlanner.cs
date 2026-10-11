@@ -91,11 +91,14 @@ namespace ProjectHymn.Combat
             return new PlannedAttack(pick, slot.FirstHitBeat, lead);
         }
 
-        /// <summary>Phase from health: 0 above two thirds, 1 above one third, 2 below.</summary>
-        public static int PhaseFor(float hp, float maxHp)
+        /// <summary>Phase from health, in equal bands: with 2 phases, 0 above half and 1 below; with 3, thirds.</summary>
+        public static int PhaseFor(float hp, float maxHp, int phases = 2)
         {
-            float k = maxHp <= 0f ? 0f : hp / maxHp;
-            return k > 2f / 3f ? 0 : k > 1f / 3f ? 1 : 2;
+            if (phases <= 1 || maxHp <= 0f) return 0;
+            float lost = 1f - Mathf01(hp / maxHp);
+            return Math.Min(phases - 1, (int)Math.Floor(lost * phases + 1e-6));
         }
+
+        static float Mathf01(float x) => x < 0f ? 0f : x > 1f ? 1f : x;
     }
 }

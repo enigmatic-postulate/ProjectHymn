@@ -15,7 +15,7 @@ namespace ProjectHymn.Tests
         [TestCase(82.6, StageRank.B)]
         [TestCase(90.0, StageRank.B)]
         [TestCase(97.5, StageRank.C)]
-        [TestCase(200.0, StageRank.C)]       // C is the lowest: any slower clear still clears
+        [TestCase(200.0, StageRank.C)]       // C is the lowest: anything slower is a fail too
         public void CliffsideTimeRanks(double seconds, StageRank expected)
         {
             Assert.AreEqual(expected, StageScoring.TimeRank(seconds, 75.0));
@@ -57,21 +57,61 @@ namespace ProjectHymn.Tests
         }
 
         [Test]
-        public void TooMuchDamageOrSloppyTimingCapsBelowA()
+        public void TooManyHitsCapAtB()
         {
             var hurt = Clean(14, 2);
-            hurt.AddHurt(2); hurt.AddHurt(1);
+            hurt.MaxHearts = 5;
+            for (int i = 0; i < 4; i++) hurt.AddHurt(1);          // 4 hits (A allows 3)
             Assert.AreEqual(StageRank.B, StageScoring.Score(70.0, hurt, new StageTargets(75.0, 2, 14)).Rank);
-
-            var sloppy = Clean(4, 2);
-            for (int i = 0; i < 10; i++) sloppy.AddNote(Judgement.OffBeat);
-            Assert.AreEqual(StageRank.B, StageScoring.Score(70.0, sloppy, new StageTargets(75.0, 2, 14)).Rank);
         }
 
         [Test]
-        public void GatesNeverRaiseASlowRank()
+        public void OffBeatPlayNoLongerGatesTheLetter()
         {
-            Assert.AreEqual(StageRank.C, StageScoring.Score(120.0, Clean(1, 0), new StageTargets(75.0, 2, 14)).Rank);
+            var sloppy = Clean(4, 2);
+            for (int i = 0; i < 10; i++) sloppy.AddNote(Judgement.OffBeat);
+            Assert.AreEqual(StageRank.S, StageScoring.Score(70.0, sloppy, new StageTargets(75.0, 2, 14)).Rank);
+        }
+
+        [Test]
+        public void ACIsAFail()
+        {
+            var log = Clean(1, 1);
+            log.MaxHearts = 5;
+            var r = StageScoring.Score(120.0, log, new StageTargets(75.0, 2, 14));
+            Assert.AreEqual(StageRank.C, r.Rank);
+            Assert.IsTrue(r.Failed);
+            Assert.IsFalse(r.Clean);
+        }
+
+        [Test]
+        public void ACleanClearCantFailOnTime()
+        {
+            var log = Clean(14, 2);
+            log.MaxHearts = 5;
+            log.AddHurt(2);                                        // 2 of 5: under half
+            var r = StageScoring.Score(300.0, log, new StageTargets(75.0, 2, 14));
+            Assert.IsTrue(r.Clean);
+            Assert.AreEqual(StageRank.B, r.Rank);
+            Assert.IsFalse(r.Failed);
+
+            log.AddHurt(1);                                        // 3 of 5: half lost, not clean
+            var r2 = StageScoring.Score(300.0, log, new StageTargets(75.0, 2, 14));
+            Assert.IsFalse(r2.Clean);
+            Assert.IsTrue(r2.Failed);
+        }
+
+        [Test]
+        public void HalfHeartsRoundsUp()
+        {
+            var log = new PlaystyleLog { MaxHearts = 5 };
+            log.AddHurt(2);
+            Assert.IsFalse(log.HalfHeartsLost);
+            log.AddHurt(1);
+            Assert.IsTrue(log.HalfHeartsLost);
+            var six = new PlaystyleLog { MaxHearts = 6 };
+            six.AddHurt(3);
+            Assert.IsTrue(six.HalfHeartsLost);
         }
     }
 

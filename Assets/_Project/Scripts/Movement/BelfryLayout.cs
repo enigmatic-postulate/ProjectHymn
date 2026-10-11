@@ -45,9 +45,6 @@ namespace ProjectHymn.Movement
             new Marker("Lead Dancer",     M.Dancer,     88f, 12.0f),
             new Marker("Goal",            M.Goal,       94.5f, 12.0f),
             new Marker("Lore lore_belfry", M.Pickup,    -8.5f, 0f),
-            new Marker("Notes Ridge",     M.Pickup,     11f,  0f),
-            new Marker("Notes Bell Wall", M.Pickup,     50f,  6.4f),
-            new Marker("Notes Approach",  M.Pickup,     64f,  6.4f),
             new Marker("Climb View",      M.CameraZone, 36f,  0f, 26f),
             new Marker("Gap View",        M.CameraZone, 58f,  0f, 18f),
             new Marker("Summit View",     M.CameraZone, 88f,  0f, 22f),
@@ -56,7 +53,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Stage => new StageLayout
         {
             Id = "Belfry", Name = "Belfry Ridge", Scene = "Belfry", Meter = 3,
-            ParSeconds = 85f, PerfectAttacks = 20,
+            ParSeconds = 45f, PerfectAttacks = 20,
             Route = Route, Props = Props, Markers = Markers,
         };
     }

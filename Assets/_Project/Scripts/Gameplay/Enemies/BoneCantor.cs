@@ -65,7 +65,7 @@ namespace ProjectHymn.Gameplay
             new BossMove(new EnemyAttackPattern("Four on the Floor", new[] { 0.0, 1.0, 2.0, 3.0 }, 4, 2, 1), 4, 1),
             new BossMove(new EnemyAttackPattern("Hesitation", new[] { 0.0, 2.0 }, 3, 3, 1), 3, 1),
             new BossMove(new EnemyAttackPattern("Shockwave", new[] { 0.0 }, 4, 3, 2).WithUnblockable(), 0, 1),
-            new BossMove(new EnemyAttackPattern("Limp Run", new[] { 0.0, 2.0, 4.0, 6.0 }, 7, 6, 1), 7, 2),
+            new BossMove(new EnemyAttackPattern("Limp Run", new[] { 0.0, 2.0, 4.0, 6.0 }, 7, 6, 1), 7, 1),
         };
 
         protected override void Awake()
@@ -78,11 +78,6 @@ namespace ProjectHymn.Gameplay
             BuildRing();
         }
 
-        protected override void Start()
-        {
-            base.Start();
-            BossHud.Track(this);
-        }
 
         protected override PlannedAttack NextPlan(double nowBeat, double notBeforeBeat)
         {
@@ -99,17 +94,13 @@ namespace ProjectHymn.Gameplay
             var phase = Phase;
             bool attacking = phase == AttackPhase.Telegraph || phase == AttackPhase.Active;
 
-            // Phase changes: hold for a bar and flourish.
+            // Phase change at half health (two phases: the boss stage's par is 0:15, so no pause between them).
             int want = BossPlanner.PhaseFor(Hp, MaxHp);
             if (live && want > _phase && !IsDead)
             {
                 _phase = want;
                 _phaseT = 0f;
-                int bar = conductor != null && conductor.IsPlaying ? conductor.CurrentBeat.BeatsPerMeasure : 4;
-                Hold(bar);
-                GameHud.Toast(_phase == 1
-                    ? "The Cantor quickens: four on the floor, and shockwaves (jump or dodge them)"
-                    : "The Cantor's last verse: the full seven");
+                GameHud.Toast("The Cantor's second verse: four on the floor, shockwaves (jump or dodge), the full seven");
             }
 
             _conducting = live && Map != null && !attacking && BossPlanner.Cue(Map, BeatNow).Changing;

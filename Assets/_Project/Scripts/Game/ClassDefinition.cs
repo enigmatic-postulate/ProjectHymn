@@ -5,9 +5,9 @@ using UnityEngine;
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// A class (Rank &amp; Class slice): earned from how you play, not picked. Its bracket and lean feed the class checks,
-    /// its stats and perks change how a fight goes, and it lists the weapons it can equip (weapons are separate and
-    /// unlocked on their own).
+    /// A class (GDD update 18): unlocked by how you play and chosen at level-up from level 6. Its perks are its Rites
+    /// (always active), and it lists the weapons it can equip by weight (weapons are separate, unlocked by play and
+    /// bought in the shop).
     /// </summary>
     [CreateAssetMenu(menuName = "Project Hymn/Class", fileName = "Class")]
     public class ClassDefinition : ScriptableObject
@@ -16,9 +16,7 @@ namespace ProjectHymn.Gameplay
         public string displayName = "Minstrel";
         [TextArea] public string description = "";
         public ClassBracket bracket = ClassBracket.Base;
-        [Tooltip("A level-down below this level costs the class.")]
-        public int minLevel;
-        [Tooltip("The play style that earns this class at a class check.")]
+        [Tooltip("The play style that unlocks this class.")]
         public PlayLean lean = PlayLean.Balanced;
         public int hearts = 5;
         public float damage = 1f;
@@ -36,7 +34,7 @@ namespace ProjectHymn.Gameplay
         public float parryDamage;
         [Tooltip("A block makes the enemy skip its next note (Warden).")]
         public bool blockSkipsNote;
-        [Tooltip("Seconds of invulnerability a dodge gives (Crusader: longer).")]
+        [Tooltip("Seconds of invulnerability a dodge gives (Crusader: 0.4).")]
         public float dodgeInvulnerable = 0.25f;
         [Tooltip("Sequences in common time (4/4) only (Fighter). Every slice stage is 4/4 so far.")]
         public bool commonTimeOnly;
@@ -53,7 +51,7 @@ namespace ProjectHymn.Gameplay
         {
             var ids = new List<string>();
             foreach (var w in weapons) if (w != null) ids.Add(w.id);
-            return new ClassSpec(id, displayName, bracket, minLevel, lean, ids.ToArray());
+            return new ClassSpec(id, displayName, bracket, lean, ids.ToArray());
         }
 
         /// <summary>The perks in a line, for menus.</summary>

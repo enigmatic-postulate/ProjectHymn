@@ -22,6 +22,18 @@ namespace ProjectHymn.Progression
         /// <summary>Enemy hits that landed on the player.</summary>
         public int HitsTaken { get; private set; }
         public int HeartsLost { get; private set; }
+        /// <summary>Hearts at the start of the run (the class's), for the half-hearts rule.</summary>
+        public int MaxHearts { get; set; }
+        /// <summary>Lost half the hearts (or more) this run: a level-down trigger, and the run isn't clean.</summary>
+        public bool HalfHeartsLost => MaxHearts > 0 && HeartsLost * 2 >= MaxHearts;
+        /// <summary>Enemy attacks that reached the player: answered (parried, blocked, dodged) or taken.</summary>
+        public int EnemyAttacks => Parries + Blocks + Dodges + HitsTaken;
+        /// <summary>Parries and blocks as a share of enemy attacks (the Warden's measure).</summary>
+        public double GuardShare => EnemyAttacks == 0 ? 0.0 : (Parries + Blocks) / (double)EnemyAttacks;
+        /// <summary>Dodges as a share of enemy attacks (the Crusader's measure).</summary>
+        public double DodgeShare => EnemyAttacks == 0 ? 0.0 : Dodges / (double)EnemyAttacks;
+        /// <summary>Hits on the beat (Good or better) as a share of all hits.</summary>
+        public double OnBeatShare => Attacks == 0 ? 0.0 : (Attacks - OffBeat) / (double)Attacks;
         public int EnemiesDefeated { get; private set; }
         public int SequencesCompleted { get; private set; }
 
@@ -92,7 +104,7 @@ namespace ProjectHymn.Progression
         }
     }
 
-    /// <summary>What a stage asks for alongside its par time (GDD update 3).</summary>
+    /// <summary>What a stage asks for alongside its par time (GDD update 18).</summary>
     public readonly struct StageTargets
     {
         public readonly double ParSeconds;
@@ -101,21 +113,20 @@ namespace ProjectHymn.Progression
         public readonly int PerfectAttacks;
         /// <summary>Hits a run may take and still earn S (0 on the first stage).</summary>
         public readonly int HitsAllowedForS;
-        /// <summary>Hearts a run may lose and still earn S or A (placeholder; calibrated later).</summary>
-        public readonly int HeartsAllowedForA;
-        /// <summary>Share of actions that must be at <see cref="TargetTiming"/> or better for S or A (placeholder).</summary>
-        public readonly double TimingShareForA;
+        /// <summary>Hits a run may take and still earn A (more caps it at B; placeholder, calibrated later).</summary>
+        public readonly int HitsAllowedForA;
+        /// <summary>Shown on the results screen only (the attack tally no longer gates the letter).</summary>
         public readonly Judgement TargetTiming;
 
-        public StageTargets(double parSeconds, int enemies, int perfectAttacks, int hitsAllowedForS = 0,
-                            int heartsAllowedForA = 2, double timingShareForA = 0.5, Judgement targetTiming = Judgement.Great)
+        public StageTargets(double parSeconds, int enemies, int perfectAttacks, int hitsAllowedForS = 0, int hitsAllowedForA = 3,
+                            Judgement targetTiming = Judgement.Great)
         {
-            ParSeconds = parSeconds; Enemies = enemies; PerfectAttacks = perfectAttacks; HitsAllowedForS = hitsAllowedForS;
-            HeartsAllowedForA = heartsAllowedForA; TimingShareForA = timingShareForA; TargetTiming = targetTiming;
+            ParSeconds = parSeconds; Enemies = enemies; PerfectAttacks = perfectAttacks;
+            HitsAllowedForS = hitsAllowedForS; HitsAllowedForA = hitsAllowedForA; TargetTiming = targetTiming;
         }
     }
 
-    /// <summary>A stage clear: its time rank, the gates that capped it, the final rank and the efficiency.</summary>
+    /// <summary>A stage run's result: time rank, the gates that capped it, the final rank, and whether it failed.</summary>
     public readonly struct StageResult
     {
         public readonly double Seconds;
@@ -124,16 +135,23 @@ namespace ProjectHymn.Progression
         public readonly IReadOnlyList<string> Caps;
         /// <summary>Perfect-play attack count over attacks used, 0..1 (1 = no wasted attacks).</summary>
         public readonly double Efficiency;
+        /// <summary>Every enemy defeated and never below half your hearts.</summary>
+        public readonly bool Clean;
 
-        public StageResult(double seconds, StageRank timeRank, StageRank rank, IReadOnlyList<string> caps, double efficiency)
+        public StageResult(double seconds, StageRank timeRank, StageRank rank, IReadOnlyList<string> caps, double efficiency, bool clean = false)
         {
-            Seconds = seconds; TimeRank = timeRank; Rank = rank; Caps = caps; Efficiency = efficiency;
+            Seconds = seconds; TimeRank = timeRank; Rank = rank; Caps = caps; Efficiency = efficiency; Clean = clean;
         }
+
+        /// <summary>A C is a fail: the stage restarts and must be replayed.</summary>
+        public bool Failed => Rank == StageRank.C;
     }
 
     /// <summary>
-    /// Stage ranks (GDD update 3): time-based against a hard par time (par or faster = S; each step of 10% of par slower
-    /// drops one rank; C is the lowest and still clears), then gated by how cleanly the stage was fought. Pure C#.
+    /// Stage ranks (GDD update 18): time-based against a hard par time (par or faster = S; each step of 10% of par
+    /// slower drops one rank). B or better clears; a C fails. Gates: S and A need every enemy; too many hits caps the
+    /// rank at B; a hit over the S allowance (none on the first stage) caps it at A. A clean clear (every enemy defeated,
+    /// never below half your hearts) can't fail on time: at worst it earns B. Pure C#.
     /// </summary>
     public static class StageScoring
     {
@@ -149,31 +167,32 @@ namespace ProjectHymn.Progression
         {
             var caps = new List<string>();
             var rank = TimeRank(seconds, t.ParSeconds);
+            bool allEnemies = log.EnemiesDefeated >= t.Enemies;
+            bool clean = allEnemies && !log.HalfHeartsLost;
 
-            if (log.EnemiesDefeated < t.Enemies && rank < StageRank.B)
+            if (!allEnemies && rank < StageRank.B)
             {
                 rank = StageRank.B;
                 caps.Add($"enemies {log.EnemiesDefeated}/{t.Enemies}: S and A need every enemy");
             }
-            if (log.HeartsLost > t.HeartsAllowedForA && rank < StageRank.B)
+            if (log.HitsTaken > t.HitsAllowedForA && rank < StageRank.B)
             {
                 rank = StageRank.B;
-                caps.Add($"{log.HeartsLost} hearts lost: too much damage for S or A");
-            }
-            double share = log.ShareAtLeast(t.TargetTiming);
-            if (log.TallyTotal > 0 && share < t.TimingShareForA && rank < StageRank.B)
-            {
-                rank = StageRank.B;
-                caps.Add($"{share:P0} of actions at {t.TargetTiming} or better: most must be");
+                caps.Add($"{log.HitsTaken} hits taken: A allows {t.HitsAllowedForA}");
             }
             if (log.HitsTaken > t.HitsAllowedForS && rank == StageRank.S)
             {
                 rank = StageRank.A;
                 caps.Add(t.HitsAllowedForS == 0 ? "a hit taken: S needs a clean run here" : $"{log.HitsTaken} hits taken: S allows {t.HitsAllowedForS}");
             }
+            if (rank == StageRank.C && clean)
+            {
+                rank = StageRank.B;
+                caps.Add("clean clear: it can't fail on time");
+            }
 
             double efficiency = t.PerfectAttacks <= 0 ? 0.0 : Math.Min(1.0, t.PerfectAttacks / (double)Math.Max(1, log.Attacks));
-            return new StageResult(seconds, TimeRank(seconds, t.ParSeconds), rank, caps, efficiency);
+            return new StageResult(seconds, TimeRank(seconds, t.ParSeconds), rank, caps, efficiency, clean);
         }
     }
 }

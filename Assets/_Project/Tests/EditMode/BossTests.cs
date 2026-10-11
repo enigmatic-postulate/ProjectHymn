@@ -110,9 +110,18 @@ namespace ProjectHymn.Tests
         [TestCase(599f, 900f, 1)]
         [TestCase(301f, 900f, 1)]
         [TestCase(299f, 900f, 2)]
-        public void PhasesFollowHealth(float hp, float max, int phase)
+        public void PhasesFollowHealthInThirds(float hp, float max, int phase)
         {
-            Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, max));
+            Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, max, 3));
+        }
+
+        [TestCase(200f, 0)]
+        [TestCase(101f, 0)]
+        [TestCase(99f, 1)]
+        [TestCase(1f, 1)]
+        public void TheSliceBossHasTwoPhases(float hp, int phase)
+        {
+            Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, 200f));
         }
 
         [Test]

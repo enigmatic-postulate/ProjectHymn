@@ -8,8 +8,8 @@ using UnityEngine.UI;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// A list to choose from with details for the highlighted entry: the class offer at a class check, and the weapon
-    /// rack in the village. Without a cancel action there is no Back: the choice must be made.
+    /// A list to choose from with details for the highlighted entry: the class offer at a level-up, the mentor's
+    /// questions and weapon rack, and the stage gate. Without a cancel action there is no Back: the choice must be made.
     /// </summary>
     public class ClassMenu : MonoBehaviour
     {
@@ -77,7 +77,7 @@ namespace ProjectHymn.UI
         {
             var sb = new StringBuilder();
             sb.Append(c.description).Append("\n\n");
-            sb.Append($"<color=#ff5a4a>{new string('♥', Mathf.Max(0, c.hearts))}</color>   damage ×{c.damage:0.0#}   {c.bracket} bracket\n");
+            sb.Append($"<color=#ff5a4a>{c.hearts} hearts</color>   damage x{c.damage:0.0#}\n");
             sb.Append($"Perks: {c.PerksText()}\n");
             var names = new List<string>();
             foreach (var w in c.weapons) if (w != null) names.Add(w.displayName);
@@ -102,8 +102,9 @@ namespace ProjectHymn.UI
                             : !allowed ? "   <color=#6a6478>(not for your class)</color>" : "";
                 var sb = new StringBuilder();
                 sb.Append(w.twoHanded || string.IsNullOrEmpty(w.offHandObject) ? "Two hands on the hilt." : "Blade and shield.");
-                sb.Append($"   damage ×{w.damageScale:0.0#}\n");
-                if (!unlocked) sb.Append(w.id == Progression.ProgressionRules.Greatsword ? "<color=#ffd56a>Unlocks with your first B rank or better.</color>\n" : "<color=#6a6478>Locked.</color>\n");
+                sb.Append($"   {(w.weight == WeaponWeight.Heavy ? "Heavy" : "Light")}   damage x{w.damageScale:0.0#}\n");
+                if (!unlocked) sb.Append(s.Data.weaponsForSale.Contains(w.id) ? $"<color=#ffd56a>For sale in the shop ({w.price} Notes).</color>\n"
+                                       : w.id == Progression.ProgressionRules.Greatsword ? "<color=#ffd56a>Clear a stage with a B or better and the shop will stock it.</color>\n" : "<color=#6a6478>Locked.</color>\n");
                 else if (!allowed) sb.Append($"<color=#6a6478>The {cls.displayName} can't equip it.</color>\n");
                 sb.Append("\nSequences:");
                 foreach (var q in w.sequences)

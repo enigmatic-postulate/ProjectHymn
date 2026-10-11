@@ -6,15 +6,16 @@ using UnityEngine.UI;
 namespace ProjectHymn.UI
 {
     /// <summary>
-    /// The minimal in-game HUD (Hub &amp; Loop): hearts and Notes top left, the quick-slot item bottom left, a banner
-    /// naming a sequence when one completes, toasts, and the "▲ Talk" prompt over the player. Everything else about
-    /// rhythm is told by animation, sound and effects. Made on first use if the scene has none.
+    /// The in-game HUD (GDD update 18): hearts only, top left. Notes, level and experience live in the pause menu's
+    /// Character page and on the results screen; there is no sequence banner. Short toasts (stage name, level-downs) and
+    /// the "[E] Talk" prompt over the player remain. Everything else about rhythm is told by animation, sound and
+    /// effects. Made on first use if the scene has none.
     /// </summary>
     public class GameHud : MonoBehaviour
     {
         static GameHud _instance;
 
-        Text _notes, _item, _banner, _toast, _prompt, _boost;
+        Text _banner, _toast, _prompt;
         RectTransform _heartRow;
         readonly System.Collections.Generic.List<Image> _hearts = new System.Collections.Generic.List<Image>();
         static readonly Color HeartFull = new Color(1f, 0.35f, 0.29f), HeartEmpty = new Color(0.24f, 0.2f, 0.28f, 0.9f);
@@ -48,16 +49,11 @@ namespace ProjectHymn.UI
             _heartRow.pivot = new Vector2(0f, 1f);
             _heartRow.anchoredPosition = new Vector2(40f, -40f);
             _heartRow.sizeDelta = new Vector2(700f, 52f);
-            _notes = Fixed(t, new Vector2(0f, 1f), new Vector2(42f, -100f), new Vector2(500f, 44f), 32, TextAnchor.UpperLeft);
-            _notes.color = UiKit.Gold;
-            _boost = Fixed(t, new Vector2(0f, 1f), new Vector2(42f, -146f), new Vector2(500f, 36f), 24, TextAnchor.UpperLeft);
-            _boost.color = new Color(1f, 0.55f, 0.35f);
-            _item = Fixed(t, new Vector2(0f, 0f), new Vector2(42f, 40f), new Vector2(700f, 44f), 28, TextAnchor.LowerLeft);
             _banner = Fixed(t, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(1600f, 80f), 54, TextAnchor.MiddleCenter);
             _toast = Fixed(t, new Vector2(0.5f, 0.5f), new Vector2(0f, 170f), new Vector2(1400f, 60f), 38, TextAnchor.MiddleCenter);
             _toast.color = UiKit.Gold;
             _prompt = Fixed(t, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500f, 44f), 30, TextAnchor.MiddleCenter);
-            foreach (var x in new[] { _notes, _item, _banner, _toast, _prompt, _boost })
+            foreach (var x in new[] { _banner, _toast, _prompt })
             {
                 var o = x.gameObject.AddComponent<Outline>();
                 o.effectColor = new Color(0f, 0f, 0f, 0.75f);
@@ -108,18 +104,14 @@ namespace ProjectHymn.UI
             if (_combat == null)
             {
                 _combat = FindAnyObjectByType<SwordCombatController>();
-                if (_combat != null) _combat.SequenceCompleted += OnSequence;
             }
             if (_player == null && _health != null) _player = _health.transform;
         }
 
         void OnDestroy()
         {
-            if (_combat != null) _combat.SequenceCompleted -= OnSequence;
             if (_instance == this) _instance = null;
         }
-
-        void OnSequence(SwordSequence s) => Banner($"{s.displayName.ToUpperInvariant()}", s.color);
 
         void Update()
         {
@@ -130,10 +122,6 @@ namespace ProjectHymn.UI
                 SetHearts(_health.Hp, _health.MaxHp);
             }
             else SetHearts(0, 0);
-            _notes.text = $"♪ {session.Data.notes}";
-            var item = session.Db != null ? session.Db.Item(session.Data.quickItem) : null;
-            _item.text = item != null ? $"<color=#ffd56a>[E]</color> {item.displayName} ×{session.Data.Count(item.id)}   <color=#8a84a0>[Q] next</color>" : "<color=#8a84a0>No item</color>";
-            _boost.text = _combat != null && _combat.Boosted ? "Tonic: damage up" : "";
 
             Fade(_banner, ref _bannerTime, 0.5f);
             Fade(_toast, ref _toastTime, 0.6f);

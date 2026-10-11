@@ -25,6 +25,7 @@ namespace ProjectHymn.EditorTools
         static string ScenePath => $"{SceneDir}/{L.Scene}.unity";
         static bool Waltz => L.Id == "Belfry";
         static bool Boss => L.Id == "Summit";
+        static bool IsArena => L.Id == "Arena";
         static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
@@ -42,6 +43,9 @@ namespace ProjectHymn.EditorTools
 
         [MenuItem("Project Hymn/Build Summit Boss Slice", priority = 3)]
         public static void BuildSummit() => BuildStage(StageLayout.Summit);
+
+        [MenuItem("Project Hymn/Build Arena", priority = 4)]
+        public static void BuildArenaStage() => BuildStage(StageLayout.Arena);
 
         /// <summary>
         /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
@@ -68,8 +72,8 @@ namespace ProjectHymn.EditorTools
             foreach (var b in L.Route) BuildBlock(level, b);
             foreach (var b in L.Props) BuildBlock(level, b);
             BuildWaterAndBackdrop(level);
-            BuildDressing(level);
-            if (_village) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
+            if (!IsArena) BuildDressing(level);
+            if (_village && !IsArena) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
             if (Boss) BuildArena(level);
@@ -84,6 +88,29 @@ namespace ProjectHymn.EditorTools
             HubBuilder.Spawn(spawns, "Start", new Vector3(spawn.X, spawn.Y, 0f));
             var player = HubBuilder.BuildPlayers(new Vector3(spawn.X, spawn.Y, 0f), conductor, db, locomotion, additive, _art);
 
+            // The Arena's waves: enemies named "Wave N ..." wait, switched off, under wave N.
+            ArenaWaves arenaWaves = null;
+            var waveRoots = new List<GameObject>();
+            if (IsArena)
+            {
+                arenaWaves = new GameObject("Waves", typeof(ArenaWaves)).GetComponent<ArenaWaves>();
+                arenaWaves.transform.SetParent(level, false);
+                int count = 0;
+                foreach (var m in L.Markers) count = Mathf.Max(count, ArenaLayout.WaveOf(m.Name));
+                for (int i = 1; i <= count; i++)
+                {
+                    var w = new GameObject($"Wave {i}");
+                    w.transform.SetParent(arenaWaves.transform, false);
+                    waveRoots.Add(w);
+                }
+                SetList(arenaWaves, "waves", waveRoots);
+            }
+            Transform ParentFor(CliffsideLayout.Marker m)
+            {
+                int w = ArenaLayout.WaveOf(m.Name);
+                return w > 0 && w <= waveRoots.Count ? waveRoots[w - 1].transform : level;
+            }
+
             // Checkpoints, targets, pickups, goal, camera zones
             Checkpoint first = null;
             foreach (var m in L.Markers)
@@ -94,11 +121,14 @@ namespace ProjectHymn.EditorTools
                         var cp = BuildCheckpoint(level, m);
                         if (first == null) { first = cp; SetBool(cp, "startsLit", true); }
                         break;
-                    case CliffsideLayout.MarkerKind.Target: BuildKnight(level, m, conductor); break;
-                    case CliffsideLayout.MarkerKind.Dancer: BuildDancer(level, m, conductor); break;
+                    case CliffsideLayout.MarkerKind.Target: BuildKnight(ParentFor(m), m, conductor); break;
+                    case CliffsideLayout.MarkerKind.Dancer: BuildDancer(ParentFor(m), m, conductor); break;
                     case CliffsideLayout.MarkerKind.Boss: _boss = BuildBoss(level, m, conductor); break;
-                    case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(level, new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
-                    case CliffsideLayout.MarkerKind.Goal: BuildGoal(level, m); break;
+                    case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(ParentFor(m), new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
+                    case CliffsideLayout.MarkerKind.Goal:
+                        var goal = BuildGoal(level, m);
+                        if (arenaWaves != null) SetRef(goal, "waves", arenaWaves);
+                        break;
                     case CliffsideLayout.MarkerKind.CameraZone: BuildCameraZone(level, m); break;
                     case CliffsideLayout.MarkerKind.Pickup:
                         HubBuilder.BuildPickup(level, m.Name, new Vector3(m.X, m.Y, 0f), L.Id, m.X < 20f ? 40 : m.X < 40f ? 60 : 80);
@@ -133,6 +163,8 @@ namespace ProjectHymn.EditorTools
             var dso = new SerializedObject(director);
             dso.FindProperty("stageId").stringValue = L.Id;
             dso.FindProperty("stageName").stringValue = L.Name;
+            dso.FindProperty("enemyTotal").intValue = L.EnemyCount;
+            dso.FindProperty("hitsAllowedForS").intValue = L.Id == "Cliffside" ? 0 : 2;     // the first stage allows none
             dso.FindProperty("parSeconds").floatValue = L.ParSeconds;
             dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
             dso.ApplyModifiedPropertiesWithoutUndo();
@@ -318,7 +350,7 @@ namespace ProjectHymn.EditorTools
         {
             var bounds = new Vector2(SummitLayout.ArenaXMin + 3f, SummitLayout.ArenaXMax - 1.5f);
             var pos = new Vector3(m.X, m.Y, 0f);
-            const float Hp = 700f;
+            const float Hp = 200f;          // Slice 8: two phases inside the 0:15 par
             if (_art && ArtLibrary.HasSkeleton) return KayKitBuilder.BuildSkeletonCantor(level, m.Name, pos, bounds, conductor, Hp);
             return EnemyBuilder.BuildCantor(level, m.Name, pos, bounds, conductor, Hp);
         }
@@ -328,7 +360,7 @@ namespace ProjectHymn.EditorTools
         {
             var ledge = L.BlockAt(m.X);
             var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
-            float hp = m.Name.StartsWith("Lead") ? 230f : 150f;
+            float hp = m.Name.StartsWith("Lead") ? 160f : 110f;     // Slice 8: Belfry Ridge's par is 0:45
             var pos = new Vector3(m.X, m.Y, 0f);
             if (_art && ArtLibrary.HasSkeleton) KayKitBuilder.BuildSkeletonDancer(level, m.Name, pos, bounds, conductor, hp);
             else EnemyBuilder.BuildDancer(level, m.Name, pos, bounds, conductor, hp);
@@ -496,7 +528,7 @@ namespace ProjectHymn.EditorTools
             else EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
         }
 
-        static void BuildGoal(Transform level, CliffsideLayout.Marker m)
+        static SliceGoal BuildGoal(Transform level, CliffsideLayout.Marker m)
         {
             var go = new GameObject(m.Name, typeof(BoxCollider), typeof(SliceGoal));
             go.transform.SetParent(level, false);
@@ -524,6 +556,7 @@ namespace ProjectHymn.EditorTools
             spin.GetComponent<MeshRenderer>().sharedMaterial = Lit.Lit(0xf0d070, 0.9f, 0.3f);
             SetRef(go.GetComponent<SliceGoal>(), "spin", spin.transform);
             if (_boss != null) SetRef(go.GetComponent<SliceGoal>(), "requires", _boss);
+            return go.GetComponent<SliceGoal>();
         }
 
         static void BuildCameraZone(Transform level, CliffsideLayout.Marker m)

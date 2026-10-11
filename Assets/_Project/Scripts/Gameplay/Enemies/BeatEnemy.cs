@@ -28,6 +28,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] protected float leashRange = 14f;
         [Tooltip("Telegraph each attack for one bar of the current meter (3 beats in 3/4) instead of the pattern's lead.")]
         [SerializeField] protected bool oneBarCountIn = true;
+        [Tooltip("The red galvanize aura flares this many beats before each hit (one beat for every enemy for now; varied per enemy later).")]
+        [SerializeField] protected float galvanizeBeats = 1f;
         [Header("Stagger")]
         [SerializeField] protected int staggerBeats = 2;
         [SerializeField] protected float staggerDamageMultiplier = 1.5f;
@@ -57,6 +59,7 @@ namespace ProjectHymn.Gameplay
         MaterialPropertyBlock _mpb;
         Color[][] _baseColors, _baseEmission;
         TextMesh _count;
+        SpriteRenderer _aura;
         Transform _barRoot, _barFill;
 
         public string DisplayName => displayName;
@@ -68,6 +71,8 @@ namespace ProjectHymn.Gameplay
         public bool IsStaggered => BeatNow < _staggerUntilBeat;
 
         public event Action<BeatEnemy> Died;
+        /// <summary>Any enemy fell (stage directors count kills with it, including enemies that join later, as in the Arena).</summary>
+        public static event Action<BeatEnemy> AnyDied;
         public event Action<BeatEnemy, DefenseResult> HitResolved;
 
         protected virtual void Awake()
@@ -242,6 +247,7 @@ namespace ProjectHymn.Gameplay
             if (_barRoot != null) _barRoot.gameObject.SetActive(false);
             if (_count != null) _count.gameObject.SetActive(false);
             Died?.Invoke(this);
+            AnyDied?.Invoke(this);
             OnDied();
         }
 
@@ -295,6 +301,27 @@ namespace ProjectHymn.Gameplay
         protected virtual void OnReset() { }
 
         protected AttackPhase Phase => Plan.IsValid ? Plan.PhaseAt(BeatNow) : AttackPhase.Waiting;
+
+        /// <summary>
+        /// 0..1 while the enemy galvanizes: from <see cref="galvanizeBeats"/> before a hit until just after it (GDD update
+        /// 18: a red aura right as it attacks, replacing the 3-2-1 count). 0 otherwise.
+        /// </summary>
+        public float Galvanize
+        {
+            get
+            {
+                if (!Plan.IsValid || IsStaggered || galvanizeBeats <= 0f) return 0f;
+                for (int i = 0; i < Plan.HitCount; i++)
+                {
+                    double h = Plan.HitBeat(i);
+                    double until = h - BeatNow;
+                    if (until < -0.15) continue;
+                    if (until > galvanizeBeats) return 0f;
+                    return until <= 0 ? 1f : Mathf.Clamp01(1f - (float)(until / galvanizeBeats) * 0.6f);
+                }
+                return 0f;
+            }
+        }
         /// <summary>0..1 through the wind-up (1 = the hit).</summary>
         protected float Windup => Plan.IsValid ? (float)Plan.TelegraphProgress(BeatNow) : 0f;
         /// <summary>Beats since the most recent hit of the plan (negative before the first).</summary>
@@ -318,6 +345,7 @@ namespace ProjectHymn.Gameplay
                 }
                 else if (ph == AttackPhase.Active) warn = 1f;
             }
+            warn = Mathf.Max(warn, Galvanize);
             if (IsStaggered) warn = 0f;
             _flash = Mathf.Max(0f, _flash - Time.deltaTime * 5f);
             for (int i = 0; i < flashRenderers.Length; i++)
@@ -352,6 +380,14 @@ namespace ProjectHymn.Gameplay
             _count.fontStyle = FontStyle.Bold;
             if (font != null) { _count.font = font; countGo.GetComponent<MeshRenderer>().sharedMaterial = font.material; }
             _count.text = "";
+
+            // The galvanize aura: a soft glow behind the body that flares one beat before each hit.
+            var auraGo = new GameObject("Galvanize Aura", typeof(SpriteRenderer));
+            auraGo.transform.SetParent(transform, false);
+            _aura = auraGo.GetComponent<SpriteRenderer>();
+            _aura.sprite = UI.ProceduralSprites.Glow;
+            _aura.sortingOrder = -5;
+            _aura.enabled = false;
 
             _barRoot = new GameObject("HP Bar").transform;
             _barRoot.SetParent(transform, false);
@@ -394,23 +430,29 @@ namespace ProjectHymn.Gameplay
             var color = Color.white;
             float scale = 1f;
             if (IsStaggered) { text = "STAGGER"; color = new Color(1f, 0.75f, 0.3f); scale = 0.7f; }
-            else if (Plan.IsValid)
-            {
-                var ph = Plan.PhaseAt(BeatNow);
-                if (ph == AttackPhase.Telegraph || ph == AttackPhase.Active)
-                {
-                    int n = Plan.BeatsUntilNextHit(BeatNow);
-                    if (n >= 1 && n <= 3) { text = n.ToString(); color = Color.Lerp(new Color(1f, 0.85f, 0.4f), warnColor, (3 - n) / 2f); }
-                    else if (n == 0 || ph == AttackPhase.Active) { text = Plan.Pattern.Unblockable ? "JUMP" : "!"; color = warnColor; }
-                    if (Plan.Pattern.Unblockable && text != "JUMP" && text != "") color = new Color(0.75f, 0.55f, 1f);
-                    scale = 1f + 0.35f * Mathf.Exp(-BeatPhase * 6f);
-                }
-            }
+            UpdateAura(rot);
             _count.text = text;
             _count.color = color;
             _count.transform.localScale = Vector3.one * scale;
             _count.transform.position = transform.position + Vector3.up * (barHeight + 0.45f);
             if (_barRoot != null) _barRoot.position = transform.position + Vector3.up * barHeight;
+        }
+
+        void UpdateAura(Quaternion rot)
+        {
+            if (_aura == null) return;
+            float g = Galvanize;
+            bool on = g > 0f;
+            if (_aura.enabled != on) _aura.enabled = on;
+            if (!on) return;
+            bool unblockable = Plan.IsValid && Plan.Pattern.Unblockable;
+            var c = unblockable ? new Color(0.72f, 0.45f, 1f) : new Color(1f, 0.16f, 0.08f);
+            float pulse = 1f + 0.18f * Mathf.Exp(-BeatPhase * 5f);
+            c.a = 0.35f + 0.5f * g;
+            _aura.color = c;
+            _aura.transform.position = transform.position + Vector3.up * (barHeight * 0.45f) + rot * Vector3.forward * 0.6f;
+            _aura.transform.rotation = rot;
+            _aura.transform.localScale = Vector3.one * (barHeight * (0.9f + 0.5f * g) * pulse);
         }
 
         protected virtual void OnDrawGizmosSelected()
