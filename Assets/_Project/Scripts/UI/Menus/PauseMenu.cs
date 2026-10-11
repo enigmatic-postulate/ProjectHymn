@@ -132,10 +132,38 @@ namespace ProjectHymn.UI
                 for (int i = d.history.Count - 1; i >= from; i--) sb.Append($"{d.history[i].stage} {d.history[i].rank}{(i > from ? ", " : "")}");
                 sb.Append("</color>\n");
             }
-            sb.Append("\n<color=#6a6478>Playtest keys: F10 experience to the next level, F11 level up, Shift+F11 level down, F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints</color>");
+            sb.Append("\n<color=#6a6478>Playtest keys: F8 / Shift+F8 next / previous class, F10 experience to the next level, F11 level up, Shift+F11 level down, F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints</color>");
             UiKit.Line(col, sb.ToString(), 22, UiKit.Text, 560f, TextAnchor.UpperLeft);
             var back = UiKit.Button(col, "Back", Main);
+            UiKit.Button(col, "Debug: switch class (playtest)", DebugClass, 22, 44f);
             UiKit.Select(back);
+        }
+
+        /// <summary>Playtest: any class at once, without earning it (the scene restarts so it takes effect).</summary>
+        void DebugClass()
+        {
+            _onMain = false;
+            var col = Page();
+            var s = GameSession.Instance;
+            UiKit.Line(col, "DEBUG: SWITCH CLASS", 36, UiKit.Gold, 56f);
+            UiKit.Line(col, "Playtest only. Unlocks the class (kept in a real save), teaches its tree, gives it a weapon it can hold, saves, and restarts the scene. F8 / Shift+F8 does the same in play.", 22, UiKit.Dim, 80f);
+            Button first = null;
+            if (s.Db != null)
+                foreach (var c in s.Db.classes)
+                {
+                    if (c == null) continue;
+                    string id = c.id;
+                    bool current = id == s.Data.classId;
+                    var b = UiKit.Button(col, current ? $"{c.displayName}   <color=#8a84a0>(current)</color>" : c.displayName, () =>
+                    {
+                        if (id == s.Data.classId) return;
+                        Close();
+                        s.DebugSetClass(id);
+                    });
+                    if (first == null || current) first = b;
+                }
+            var back = UiKit.Button(col, "Back", Character);
+            UiKit.Select(first != null ? first : back);
         }
 
         /// <summary>The Songbook, by class tree (GDD update 18): each tree's sequences, their home meters and what's learned.</summary>

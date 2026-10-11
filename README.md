@@ -107,6 +107,7 @@ Rebuild with **Project Hymn → Build Hub & Loop** (it now also builds the Arena
 
 | Key | Does |
 | --- | --- |
+| F8 / Shift+F8 | Switch to the next / previous class now: unlocks it (kept in a real save), teaches its tree, gives it a weapon it can hold, and restarts the scene. Also Pause → Character → Debug: switch class |
 | F10 | Experience to just below the next level (the next clear levels up) |
 | F11 / Shift+F11 | Level up / level down now |
 | F12 | Force the next clear's rank: S, A, B, C, then real play again |
@@ -211,7 +212,7 @@ The Cliffside builder uses imported art when it finds it, and falls back to the 
 | Pause menu | Esc | Start / Options |
 | Restart the stage (Cliffside) | R | – |
 | Test checkpoints on / off | F7 | – |
-| Playtest keys (experience, level, rank, finish) | F10, F11, Shift+F11, F12, Shift+F12 | – |
+| Playtest keys (class, experience, level, rank, finish) | F8, F10, F11, Shift+F11, F12, Shift+F12 | – |
 | Saber / broadsword (M2 prototype scene only) | Tab | Select / View |
 | Rhythm debug HUD | F9 | – |
 | Animation offset | [ and ] | D-pad left / right |

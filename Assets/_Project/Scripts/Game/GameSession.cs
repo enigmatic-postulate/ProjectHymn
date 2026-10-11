@@ -98,16 +98,19 @@ namespace ProjectHymn.Gameplay
         {
             if (Data == null || UiState.Blocking) return;
             bool shift;
-            bool f10, f11, f12;
+            bool f8, f10, f11, f12;
 #if ENABLE_INPUT_SYSTEM && HYMN_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb == null) return;
             shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
+            f8 = kb.f8Key.wasPressedThisFrame;
             f10 = kb.f10Key.wasPressedThisFrame; f11 = kb.f11Key.wasPressedThisFrame; f12 = kb.f12Key.wasPressedThisFrame;
 #else
             shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            f8 = Input.GetKeyDown(KeyCode.F8);
             f10 = Input.GetKeyDown(KeyCode.F10); f11 = Input.GetKeyDown(KeyCode.F11); f12 = Input.GetKeyDown(KeyCode.F12);
 #endif
+            if (f8) { DebugCycleClass(shift ? -1 : 1); return; }
             var rules = Db != null ? Db.Rules : ProgressionRules.Default;
             if (f10)
             {
@@ -127,6 +130,38 @@ namespace ProjectHymn.Gameplay
                 DebugRank = DebugRank == null ? StageRank.S : DebugRank == StageRank.C ? (StageRank?)null : DebugRank + 1;
                 ProjectHymn.UI.GameHud.Toast(DebugRank == null ? "Debug: ranks from real play" : $"Debug: the next clear is {DebugRank} (its clear time set to match)");
             }
+        }
+
+        // ---------------- Debug: switch class ----------------
+
+        /// <summary>F8 / Shift+F8: the next (previous) class in the database, applied at once.</summary>
+        public void DebugCycleClass(int step)
+        {
+            if (Db == null || Db.classes.Count == 0) return;
+            int i = Db.classes.FindIndex(c => c != null && c.id == Data.classId);
+            for (int n = 0; n < Db.classes.Count; n++)
+            {
+                i = ((i + step) % Db.classes.Count + Db.classes.Count) % Db.classes.Count;
+                if (Db.classes[i] != null) { DebugSetClass(Db.classes[i].id); return; }
+            }
+        }
+
+        /// <summary>
+        /// Playtest only: become a class without earning it. Unlocks it (for good, in a real save), learns its tree, grants a
+        /// weapon it can hold, saves, and restarts the scene so its hearts, perks and weapon take effect.
+        /// </summary>
+        public void DebugSetClass(string classId)
+        {
+            if (Db == null || Db.Class(classId) == null) return;
+            var learned = new List<string>();
+            string granted = SetClass(classId, learned);
+            SaveProgress();
+            var w = Db.Weapon(Data.weaponId);
+            string msg = $"Debug: now a {ClassName(classId)} with the {(w != null ? w.displayName : Data.weaponId)}";
+            if (granted != null) msg += " (granted)";
+            if (learned.Count > 0) msg += $"\nLearned: {Sequences.Names(learned)}";
+            ProjectHymn.UI.GameHud.Toast(msg + "\nRestarting the scene...", 2.5f);
+            Travel(SceneName, "Start");
         }
 
         public string ClassName(string id)
