@@ -169,6 +169,24 @@ namespace ProjectHymn.Progression
             return granted;
         }
 
+        /// <summary>
+        /// Experience outside a ranked clear (the Practice Yard's one-time reward): levels up to the cap, without class
+        /// offers. Returns the levels gained.
+        /// </summary>
+        public int GrantXp(SaveData s, int amount)
+        {
+            if (amount <= 0 || s.level >= LevelCap) return 0;
+            s.xp += amount;
+            int gained = 0;
+            while (s.level < LevelCap && s.level < ClassChangeFrom - 1 && s.xp >= XpToNext(s.level))
+            {
+                s.xp -= XpToNext(s.level);
+                s.level++;
+                gained++;
+            }
+            return gained;
+        }
+
         // ---------------- Level-downs ----------------
 
         /// <summary>Drop one level now (dying, or losing half your hearts). Below level 5 you return to the Minstrel.</summary>

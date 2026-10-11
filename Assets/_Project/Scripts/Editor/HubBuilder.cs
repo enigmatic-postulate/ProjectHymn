@@ -29,6 +29,7 @@ namespace ProjectHymn.EditorTools
         const string BelfryPath = SceneDir + "/Belfry.unity";
         const string SummitPath = SceneDir + "/Summit.unity";
         const string ArenaPath = SceneDir + "/Arena.unity";
+        const string YardPath = SceneDir + "/Yard.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
@@ -37,11 +38,12 @@ namespace ProjectHymn.EditorTools
             CliffsideBuilder.BuildBelfry();
             CliffsideBuilder.BuildSummit();
             CliffsideBuilder.BuildArenaStage();
+            CliffsideBuilder.BuildYard();
             BuildVillage();
             BuildTitle();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, Cliffside, Belfry Ridge, the Summit and the Arena are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit and the Arena are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
                       "Esc pauses (Character, Songbook, Weapon, Settings). Playtest keys: F10 experience, F11 / Shift+F11 level up / down, " +
                       "F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints.");
@@ -410,7 +412,7 @@ namespace ProjectHymn.EditorTools
                 }, ""),
                 ("Lookout", "Ranger", new[]
                 {
-                    "Path to the cliffs is through the gate, east end of the street.",
+                    "Path to the cliffs is through the gate, east end of the street. New to the beat? Try the practice yard first.",
                     "The arena's through there too, if you want a fight without the climb. Three waves, and they don't wait for you to be ready.",
                 }, ""),
             };
@@ -429,6 +431,7 @@ namespace ProjectHymn.EditorTools
             gate.prompt = "Leave the village"; gate.range = 2.2f;
             gate.stages = new List<StageGate.Destination>
             {
+                new StageGate.Destination { stageId = "Yard", scene = "Yard", label = "Practice Yard (optional: the basics)", meter = "4/4" },
                 new StageGate.Destination { stageId = "Cliffside", scene = "Cliffside", label = "Cliffside", meter = "4/4" },
                 new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
                 new StageGate.Destination { stageId = "Summit", scene = "Summit", label = "The Summit (boss)", meter = "4/4 · 3/4 · 7/8", requires = "Belfry" },
@@ -549,7 +552,7 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, CliffsidePath, BelfryPath, SummitPath, ArenaPath };
+            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

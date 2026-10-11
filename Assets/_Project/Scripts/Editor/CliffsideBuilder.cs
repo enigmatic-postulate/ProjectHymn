@@ -26,6 +26,7 @@ namespace ProjectHymn.EditorTools
         static bool Waltz => L.Id == "Belfry";
         static bool Boss => L.Id == "Summit";
         static bool IsArena => L.Id == "Arena";
+        static bool IsYard => L.Id == "Yard";
         static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
@@ -47,6 +48,9 @@ namespace ProjectHymn.EditorTools
         [MenuItem("Project Hymn/Build Arena", priority = 4)]
         public static void BuildArenaStage() => BuildStage(StageLayout.Arena);
 
+        [MenuItem("Project Hymn/Build Practice Yard", priority = 5)]
+        public static void BuildYard() => BuildStage(StageLayout.Yard);
+
         /// <summary>
         /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
         /// bone dancers, dusk light and the belfry). Safe to re-run.
@@ -62,7 +66,7 @@ namespace ProjectHymn.EditorTools
             _art = ArtLibrary.HasKayKit;
             _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var theme = Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : LoadTheme();
+            var theme = Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : IsYard ? LoadPracticeTheme() : LoadTheme();
             var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
@@ -72,8 +76,9 @@ namespace ProjectHymn.EditorTools
             foreach (var b in L.Route) BuildBlock(level, b);
             foreach (var b in L.Props) BuildBlock(level, b);
             BuildWaterAndBackdrop(level);
-            if (!IsArena) BuildDressing(level);
-            if (_village && !IsArena) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
+            if (!IsArena && !IsYard) BuildDressing(level);
+            if (IsYard) BuildYardDressing(level);
+            if (_village && !IsArena && !IsYard) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
             if (Boss) BuildArena(level);
@@ -113,6 +118,8 @@ namespace ProjectHymn.EditorTools
 
             // Checkpoints, targets, pickups, goal, camera zones
             Checkpoint first = null;
+            TrainingDummy dummy = null;
+            ShieldKnight yardKnight = null, boutKnight = null;
             foreach (var m in L.Markers)
             {
                 switch (m.Kind)
@@ -121,7 +128,12 @@ namespace ProjectHymn.EditorTools
                         var cp = BuildCheckpoint(level, m);
                         if (first == null) { first = cp; SetBool(cp, "startsLit", true); }
                         break;
-                    case CliffsideLayout.MarkerKind.Target: BuildKnight(ParentFor(m), m, conductor); break;
+                    case CliffsideLayout.MarkerKind.Target:
+                        var knight = BuildKnight(ParentFor(m), m, conductor);
+                        if (IsYard && m.Name == YardLayout.TrainingKnight) yardKnight = knight;
+                        if (IsYard && m.Name == YardLayout.BoutKnight) { boutKnight = knight; _boss = knight; }   // the way out waits for him
+                        break;
+                    case CliffsideLayout.MarkerKind.Dummy: dummy = BuildDummy(level, m); break;
                     case CliffsideLayout.MarkerKind.Dancer: BuildDancer(ParentFor(m), m, conductor); break;
                     case CliffsideLayout.MarkerKind.Boss: _boss = BuildBoss(level, m, conductor); break;
                     case CliffsideLayout.MarkerKind.FloatingTarget: EnemyBuilder.BuildWisp(ParentFor(m), new Vector3(m.X, m.Y + 1.0f, 0f), conductor, additive); break;
@@ -159,6 +171,17 @@ namespace ProjectHymn.EditorTools
             var dbg = hud.gameObject.AddComponent<DebugHud>();
             SetList(dbg, "parts", debugParts);
             HubBuilder.BuildGameUi(hub: false);
+            if (IsYard)
+            {
+                // The Practice Yard is unranked: its own director runs the lessons instead of the stage director.
+                var tutor = new GameObject("Tutorial Director", typeof(TutorialDirector)).GetComponent<TutorialDirector>();
+                SetRef(tutor, "dummy", dummy);
+                SetRef(tutor, "trainingKnight", yardKnight);
+                SetRef(tutor, "boutKnight", boutKnight);
+                SetRef(tutor, "goal", Object.FindAnyObjectByType<SliceGoal>());
+                FinishScene(scene, theme);
+                return;
+            }
             var director = new GameObject("Stage Director", typeof(StageDirector)).GetComponent<StageDirector>();
             var dso = new SerializedObject(director);
             dso.FindProperty("stageId").stringValue = L.Id;
@@ -169,15 +192,20 @@ namespace ProjectHymn.EditorTools
             dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
             dso.ApplyModifiedPropertiesWithoutUndo();
 
-            if (theme == null) Debug.LogError($"[Project Hymn] The {(Waltz ? "BelfryWaltz" : "BattleTheme1")} song asset could not be loaded; assign a Song on the Conductor by hand.");
+            FinishScene(scene, theme);
+        }
+
+        static void FinishScene(UnityEngine.SceneManagement.Scene scene, SongData theme)
+        {
+            if (theme == null) Debug.LogError($"[Project Hymn] The song asset for {L.Name} could not be loaded; assign a Song on the Conductor by hand.");
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath, first: false);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             Debug.Log($"[Project Hymn] {L.Name} built ({L.Meter}/4). A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
-                      "L guards: press it on an enemy's hit beat (count 3-2-1 over its head) to parry. " +
-                      "W / Up uses doors, E drinks the quick item, Q changes it, Esc pauses. Shift dodge, R restart, F1-F4 tempos, F9 debug HUD.");
+                      "L guards: press it on the beat an enemy's blow lands (it glows red a beat before) to parry. " +
+                      "W / Up uses doors, Esc pauses. Shift dodge, R restart, F1-F4 tempos, F9 debug HUD.");
         }
 
         static bool _art, _village;
@@ -519,13 +547,45 @@ namespace ProjectHymn.EditorTools
         }
 
         /// <summary>The shield knight guards the ledge it stands on (it never walks off it).</summary>
-        static void BuildKnight(Transform level, CliffsideLayout.Marker m, Conductor conductor)
+        static ShieldKnight BuildKnight(Transform level, CliffsideLayout.Marker m, Conductor conductor)
         {
             var ledge = default(CliffsideLayout.Block);
             foreach (var b in L.Route) if (m.X > b.XMin && m.X < b.XMax) ledge = b;
             var bounds = new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
-            if (_art && ArtLibrary.HasSkeleton) KayKitBuilder.BuildSkeletonKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
-            else EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
+            if (IsYard)       // each Yard knight keeps to its own part of the yard
+                bounds = m.Name == YardLayout.TrainingKnight ? new Vector2(7f, 18f) : new Vector2(19f, 31f);
+            var k = _art && ArtLibrary.HasSkeleton ? KayKitBuilder.BuildSkeletonKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor)
+                                                   : EnemyBuilder.BuildKnight(level, new Vector3(m.X, m.Y, 0f), bounds, conductor);
+            if (k != null && IsYard) k.gameObject.name = m.Name;
+            return k;
+        }
+
+        /// <summary>The Practice Yard's straw dummy: the M2 prototype's dummy (it takes hits, wobbles and never falls).</summary>
+        static TrainingDummy BuildDummy(Transform level, CliffsideLayout.Marker m)
+        {
+            var root = Sword.SwordsmanBuilder.BuildDummy();
+            root.name = m.Name;
+            root.transform.SetParent(level, false);
+            root.transform.position = new Vector3(m.X, m.Y, 0f);
+            root.transform.localScale = Vector3.one * 1.15f;
+            root.GetComponent<CapsuleCollider>().isTrigger = true;       // walk through it; blades still find it
+            return root.GetComponent<TrainingDummy>();
+        }
+
+        /// <summary>The Yard's few props: a fence along the back, target boards and a weapon rack (greybox unless the kit is in).</summary>
+        static void BuildYardDressing(Transform level)
+        {
+            var root = new GameObject("Yard Dressing").transform;
+            root.SetParent(level, false);
+            for (float x = -12f; x < 40f; x += 4f)
+            {
+                Box(root, "Fence Post", new Vector3(x, 0f, 3.0f), new Vector3(x + 0.2f, 1.4f, 3.2f), Rope, false);
+                Box(root, "Fence Rail", new Vector3(x, 0.9f, 3.05f), new Vector3(x + 4f, 1.05f, 3.15f), Rope, false);
+            }
+            Box(root, "Board", new Vector3(5.5f, 0.6f, 2.4f), new Vector3(6.9f, 2.0f, 2.5f), 0xd8c49a, false);
+            Box(root, "Bullseye", new Vector3(5.95f, 1.05f, 2.38f), new Vector3(6.45f, 1.55f, 2.4f), 0xb04040, false);
+            Box(root, "Rack", new Vector3(-10f, 0f, 2.2f), new Vector3(-8.2f, 1.6f, 2.5f), StoneDark, false);
+            if (_village) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
         }
 
         static SliceGoal BuildGoal(Transform level, CliffsideLayout.Marker m)

@@ -78,6 +78,14 @@ namespace ProjectHymn.Gameplay
         public double BeatNow { get; private set; }
         public bool IsStaggered => BeatNow < _staggerUntilBeat;
 
+        /// <summary>
+        /// The Practice Yard's training knight: its blows cost no hearts (the player sees "BLUNT" instead) and it can't be
+        /// brought below 1 health.
+        /// </summary>
+        public bool Training { get; set; }
+        /// <summary>Every attack can't be guarded, only dodged (the dodge lesson's violet blows).</summary>
+        public bool ForceUnblockable { get; set; }
+
         public event Action<BeatEnemy> Died;
         /// <summary>Any enemy fell (stage directors count kills with it, including enemies that join later, as in the Arena).</summary>
         public static event Action<BeatEnemy> AnyDied;
@@ -145,6 +153,8 @@ namespace ProjectHymn.Gameplay
             {
                 Plan = NextPlan(BeatNow, _notBeforeBeat);
                 if (!Plan.IsValid) { Tick(true); UpdateOverhead(); return; }
+                if (ForceUnblockable && !Plan.Pattern.Unblockable)
+                    Plan = new PlannedAttack(Plan.Pattern.UnblockableCopy(), Plan.FirstHitBeat, (int)Math.Round(Plan.FirstHitBeat - Plan.TelegraphBeat));
                 var pattern = Plan.Pattern;
                 _hitsDone = 0;
                 _hitStarted = false;
@@ -177,7 +187,11 @@ namespace ProjectHymn.Gameplay
                 var result = _guard != null ? _guard.Defend(_hitInRange, hitTime, HitOrigin, Plan.Pattern.Unblockable)
                                             : _hitInRange ? DefenseResult.Hit : DefenseResult.OutOfRange;
                 EnemyThreats.Remove(this, (long)Math.Round(hitBeat));
-                if (result == DefenseResult.Hit && _health != null) _health.Damage(Plan.Pattern.Damage, HitOrigin);
+                if (result == DefenseResult.Hit && _health != null)
+                {
+                    if (!Training) _health.Damage(Plan.Pattern.Damage, HitOrigin);
+                    else if (_popups != null) _popups.Show(Player.position + Vector3.up * 2.2f, "BLUNT", new Color(1f, 0.55f, 0.45f), 0.9f);
+                }
                 HitResolved?.Invoke(this, result);
                 OnHitResolved(_hitsDone, result);
                 _hitsDone++;
@@ -250,6 +264,7 @@ namespace ProjectHymn.Gameplay
             }
             if (dmg <= 0f) return;
             _hp -= dmg;
+            if (Training && _hp < 1f) _hp = maxHp;                 // the training knight shrugs it off and stands up again
             _flash = Mathf.Max(_flash, 0.8f);
             if (!Aggro) Aggro = true;
             if (_hp <= 0f) Die();

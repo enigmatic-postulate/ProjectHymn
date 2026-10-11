@@ -46,6 +46,29 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Slice 10: the Practice Yard (tutorial)
+
+Built by **Project Hymn → Build Hub & Loop** (or **Build Practice Yard** alone). Scene `Scenes/Yard.unity`; layout `Movement/YardLayout.cs`; lessons `Progression/Tutorial.cs`; runtime `Game/TutorialDirector.cs` and `UI/MetronomeStrip.cs`.
+
+- **Optional, first on the village gate** ("Practice Yard (optional: the basics)", highlighted for a new player). On arrival you choose: start the lessons, skip to the final bout, or go back. Unranked: no level-downs, and dying just respawns you with full hearts. The first finish pays 150 experience (never past level 5) and the save remembers it.
+- **The metronome strip** (the Yard only; everywhere else the HUD stays hearts-only): beat marks slide into a gold hit line, downbeats bigger, the current beat pulsing; each note you play is marked on its beat in its timing colour, with the judgement over the line. Lessons prompt notes on the coming beats (1 blue, 2 orange). The task and progress sit above the strip, and the metronome click is on.
+- **The mentor** introduces each lesson; the game holds while he talks. The first red glow and the first violet glow each freeze the game for a callout.
+
+| # | Lesson | Pass |
+| --- | --- | --- |
+| 1 | Tune your ears: the tap calibration | 16 taps (C skips) |
+| 2 | The beat | J on the beat 8 times in a row (Good or better) |
+| 3 | Two notes, on the dummy | 4 light and 4 heavy on the beat |
+| 4 | Chains and sequences | Crossing Cuts twice, Powerslice once |
+| 5 | The red glow: the training knight (blunted: "BLUNT" instead of losing hearts; can't be killed) | 3 guards |
+| 6 | Parry | 2 parries |
+| 7 | Dodge: his blows turn violet (can't be guarded) | 2 dodges |
+| 8 | Rising Verse | launch the dummy |
+| 9 | Final bout: a real bone knight | defeat him; the east gate opens |
+
+- **Music:** "Practice in the Yard", an original placeholder loop (4/4, 100 BPM, G major, 16 bars) with a kick on every beat so the pulse is obvious. Rendered by `Tools/compose_practice.py`; song asset `Data/Songs/PracticeYard`.
+- **The dummy** is the M2 prototype's straw dummy, now also launched by Rising Verse.
+
 ## Slice 9: the sequence library
 
 Rebuild with **Project Hymn → Build Hub & Loop** (every weapon gets the whole library as sequence assets). The data is one table, `Combat/SequenceLibrary.cs`; names, patterns and multipliers are Update 18's drafts.

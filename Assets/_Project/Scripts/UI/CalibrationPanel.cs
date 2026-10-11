@@ -19,6 +19,10 @@ namespace ProjectHymn.UI
 #pragma warning restore 0414
 
         bool _active;
+
+        public bool Active => _active;
+        /// <summary>The test ended: true when a calibration was saved, false when cancelled (C).</summary>
+        public event System.Action<bool> Finished;
         readonly System.Collections.Generic.List<double> _offsets = new System.Collections.Generic.List<double>();
         ProjectHymn.Gameplay.PlayerInputReader _reader;
 
@@ -52,6 +56,7 @@ namespace ProjectHymn.UI
         void Finish(bool save)
         {
             _active = false;
+            Finished?.Invoke(save && _offsets.Count > 0);
             if (save && _offsets.Count > 0 && conductor != null)
             {
                 var r = CalibrationMath.Summarize(_offsets);

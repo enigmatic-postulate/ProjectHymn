@@ -103,6 +103,7 @@ namespace ProjectHymn.EditorTools
                 new TempoSection(4, 150f, 4), new TempoSection(4, 150f, 3), new TempoSection(4, 165f, 7, 8));
             EnsureWaltz();
             EnsureSummitTheme();
+            EnsurePracticeTheme();
             Sword.SwordContent.Ensure();
             Sword.SwordContent.EnsureLocomotion();
             Sword.SwordsmanBuilder.BuildSwordsman();
@@ -119,6 +120,13 @@ namespace ProjectHymn.EditorTools
         /// <summary>VS-3's boss theme (4/4, 3/4, 7/8), rendered by Tools/compose_summit.py.</summary>
         internal const string SummitClipPath = Root + "/Audio/Generated/Hymn_of_the_Summit.wav";
         internal static SongData LoadSummitTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/SummitTheme.asset");
+
+        /// <summary>The Practice Yard's loop (Slice 10): 16 bars of 4/4 at 100 BPM in G major, rendered by Tools/compose_practice.py.</summary>
+        internal const string PracticeClipPath = Root + "/Audio/Generated/Practice_in_the_Yard.wav";
+        internal static SongData LoadPracticeTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/PracticeYard.asset");
+        static void EnsurePracticeTheme() =>
+            EnsureGeneratedSong("PracticeYard", PracticeClipPath, "Tools/compose_practice.py (original placeholder)", 7, false,
+                new TempoSection(16, 100f, 4));
 
         /// <summary>"Waltz of the Belfry": 32 bars of 3/4 at 168 BPM in D minor.</summary>
         static void EnsureWaltz() =>

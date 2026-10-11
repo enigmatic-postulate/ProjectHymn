@@ -91,6 +91,8 @@ namespace ProjectHymn.Progression
         /// <summary>Weapons play has put in the shop (bought ones move to <see cref="weapons"/>).</summary>
         public List<string> weaponsForSale = new List<string>();
         public List<RunRecord> history = new List<RunRecord>();
+        /// <summary>The Practice Yard was finished once (its experience is paid only the first time).</summary>
+        public bool tutorialDone;
 
         public static SaveData NewGame(string classId, IEnumerable<string> startingSequences, IEnumerable<ItemCount> startingItems = null)
         {

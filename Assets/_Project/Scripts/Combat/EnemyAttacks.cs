@@ -29,6 +29,10 @@ namespace ProjectHymn.Combat
 
         public EnemyAttackPattern WithUnblockable() { Unblockable = true; return this; }
 
+        /// <summary>A copy that can't be guarded (the Practice Yard's dodge lesson), leaving this one as it is.</summary>
+        public EnemyAttackPattern UnblockableCopy() =>
+            new EnemyAttackPattern(Name, Hits, LeadBeats, RecoverBeats, Damage, OnDownbeat) { Unblockable = true };
+
         public double Span => Hits == null || Hits.Length == 0 ? 0.0 : Hits[Hits.Length - 1];
     }
 

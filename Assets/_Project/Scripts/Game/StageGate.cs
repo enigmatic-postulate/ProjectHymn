@@ -30,6 +30,9 @@ namespace ProjectHymn.Gameplay
             return s.FreePlay || string.IsNullOrEmpty(d.requires) || s.Data.HasCleared(d.requires);
         }
 
+        static bool IsCleared(GameSession s, string id) =>
+            id == "Yard" ? s.Data.tutorialDone || s.Data.HasCleared("Cliffside") : s.Data.HasCleared(id);
+
         public override void Interact(PlayerInteractor who)
         {
             var s = GameSession.Instance;
@@ -38,14 +41,19 @@ namespace ProjectHymn.Gameplay
             foreach (var d in stages)
             {
                 bool open = Open(d);
-                string best = s.Data.TryBestRank(d.stageId, out StageRank r) ? $"best {r}" : "not cleared";
+                bool yard = d.stageId == "Yard";           // the Practice Yard is unranked
+                bool cleared = yard ? s.Data.tutorialDone || s.Data.HasCleared("Cliffside") : s.Data.HasCleared(d.stageId);
+                string best = yard ? (s.Data.tutorialDone ? "done" : "new here? start here") : s.Data.TryBestRank(d.stageId, out StageRank r) ? $"best {r}" : "not cleared";
                 string label = open ? $"{d.label}   <color=#8a84a0>{d.meter} · {best}</color>" : $"<color=#6a6478>{d.label}   (locked)</color>";
                 var rec = s.Data.Record(d.stageId);
-                string info = open
+                string info = yard
+                    ? "The basics, with a metronome on screen: the beat, notes and sequences, guarding, parrying, dodging, and one real fight. Unranked; skip any time."
+                    : open
                     ? $"Time signature {d.meter}.\n{(rec != null ? $"Best {rec.bestRank} in {(int)(rec.bestSeconds / 60.0)}:{rec.bestSeconds % 60.0:00.0}, cleared {rec.clears}×." : "Not cleared yet.")}"
                     : $"Clear {d.requires} to open the road.";
                 options.Add(new ClassMenu.Option(d.stageId, label, info));
-                if (open && (select == null || !s.Data.HasCleared(d.stageId))) select = d.stageId;
+                // Highlight the first open road not yet cleared (the Yard for a new player), else the first open one.
+                if (open && (select == null || (!cleared && IsCleared(s, select)))) select = d.stageId;
             }
             ClassMenu.Open("Where to?", "Each road is fought in its own time.", options, select, id =>
             {
