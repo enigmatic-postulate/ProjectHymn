@@ -46,6 +46,32 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Slice 8: GDD update 18 alignment
+
+Rebuild with **Project Hymn → Build Hub & Loop** (it now also builds the Arena and deletes the potion, tonic and scroll assets). **Saves reset:** a save from before version 3 loads as a level 1 Minstrel with the sword (Notes, lore and stage records are kept). This replaces the rules in the Rank & Class section below. All numbers are placeholders in `Progression/ClassProgression.cs` (`ProgressionRules`) and `Progression/StageScoring.cs`.
+
+- **Ranks:** **C is a fail**: the results say FAILED and Replay restarts the stage, with no experience. A **clean clear** (every enemy defeated, never below half your hearts) is at least a B. S and A need every enemy; too many hits (more than 3) caps at B; on Cliffside one hit rules out S (other stages allow 2). Off-beat play no longer lowers the letter (it only costs damage). Pars: Cliffside 1:15, Belfry Ridge 0:45, the Summit 0:15, the Arena 1:00.
+- **Levels:** a clear earns 300 / 250 / 200 for S / A / B plus 20 per enemy; level *n* needs 100 × *n*; the cap is 10. **Level-downs** happen when they happen: dying (or falling) or losing half your hearts drops one level, once a run. Below level 5 you are a Minstrel.
+- **Classes unlock from how you play,** counted over clean clears: the **Warden** when parries and blocks are half or more of the enemy attacks that reached you, the **Crusader** when dodges are; both need 70% of your hits on the beat (and 6+ enemy attacks counted). From **level 6, every level-up** offers a change to any unlocked class (the results button reads *Level up: choose your class*). A Minstrel who passes level 5 with neither unlocked becomes a **Fighter**.
+- **Weapons by weight:** the Warden holds light weapons and shields (the sword), the Crusader heavy weapons and no shield (the greatsword); Minstrel and Fighter hold either. Your first B or better puts the **greatsword in the shop** (300 Notes). Choosing the Crusader without one gives you the greatsword.
+- **Village:** the shop sells weapons only. The armsmaster is now the **Mentor**: ask how you're doing (your guard, dodge and on-beat shares, and how close each class is), how ranks work and how classes work; the weapon rack is there too (changing reloads the village). **Pause → Weapon** equips an owned weapon your class can hold (from the next stage). **Pause → Character** shows level, experience, unlocked classes, class progress, stage bests and recent ranks.
+- **Removed:** potions, tonics, sequence scrolls, the quick slot (E / Q), and Notes, scroll and item pickups in the stages. Sequences come with the class (Crossing Cuts and Powerslice for now).
+- **HUD:** hearts only (plus toasts, prompts and the "next bar" meter countdown). Enemy counts, "JUMP", the Notes counter, the item slot and the boss bar are gone. Instead every enemy **glows a beat before each hit** (red; violet for the boss's unblockable shockwave). "STAGGER" still shows.
+- **The boss** has 200 health and two verses (Limp Run joins in the second); the phase change no longer holds him.
+- **The Arena** (`Scenes/Arena.unity`, layout `Movement/ArenaLayout.cs`; always open at the village gate): a flat stone ring and three waves (a knight; a knight and a wisp; a bone dancer and a knight). Each wave comes in 1.6 s after the last falls, and the goal opens when all three are down. 4/4, Battle Theme 1.
+
+**Playtest keys** (Pause → Character lists them too):
+
+| Key | Does |
+| --- | --- |
+| F10 | Experience to just below the next level (the next clear levels up) |
+| F11 / Shift+F11 | Level up / level down now |
+| F12 | Force the next clear's rank: S, A, B, C, then real play again |
+| Shift+F12 | Finish the stage now (reach the goal) |
+| F7 | Test checkpoints on / off |
+
+To try a class change fast: F11 to level 5, F10, then clear any stage (Shift+F12). To try an unlock, play clean clears that mostly parry and block (Warden) or mostly dodge (Crusader), on the beat.
+
 ## Core Combat slice (GDD update 3)
 
 Rebuild with **Project Hymn → Build Hub & Loop**, then play Cliffside (from the village gate, or press Play in `Scenes/Cliffside.unity`).
@@ -85,6 +111,8 @@ Built by **Project Hymn → Build Hub & Loop** (or **Build Belfry Ridge Slice** 
 - **Art:** copy `Skeleton_Rogue.fbx` from the KayKit Skeletons pack into `Art/Imported/KayKit/Characters` (a companion asset commit does this); without it the dancers use the skeleton warrior, and without KayKit, placeholder primitives.
 
 ## Rank & Class slice (vertical slice milestone VS-1)
+
+*Superseded by Slice 8 (above); kept as a record.*
 
 Ranks now count. Rebuild with **Project Hymn → Build Hub & Loop** (the database gains four classes and the scenes one player per weapon). All numbers are placeholders in `Progression/ClassProgression.cs` (`ProgressionRules`) and the class assets.
 
@@ -137,10 +165,10 @@ The Cliffside builder uses imported art when it finds it, and falls back to the 
 | Guard / parry (Cliffside) | L | LB / L1 |
 | Dodge (roll, i-frames) | Left Shift | RT / R2 |
 | Talk, shop, rest, use a door | W / Up | Stick up |
-| Use quick item / change it | E / Q | B / Circle, D-pad down |
 | Pause menu | Esc | Start / Options |
 | Restart the stage (Cliffside) | R | – |
 | Test checkpoints on / off | F7 | – |
+| Playtest keys (experience, level, rank, finish) | F10, F11, Shift+F11, F12, Shift+F12 | – |
 | Saber / broadsword (M2 prototype scene only) | Tab | Select / View |
 | Rhythm debug HUD | F9 | – |
 | Animation offset | [ and ] | D-pad left / right |
