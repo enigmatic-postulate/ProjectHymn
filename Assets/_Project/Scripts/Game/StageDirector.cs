@@ -34,6 +34,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] int hitsAllowedForS = 0;
         [Tooltip("Hits a run may take and still earn A.")]
         [SerializeField] int hitsAllowedForA = 3;
+        [Tooltip("The brawl stage's open edges: a fall costs a heart and puts you back at the start, instead of restarting the stage.")]
+        [SerializeField] bool fallCostsAHeart;
 
         readonly System.Random _rng = new System.Random();
         readonly List<LevelDown> _levelDowns = new List<LevelDown>();
@@ -103,7 +105,7 @@ namespace ProjectHymn.Gameplay
         void ApplyCheckpointRule()
         {
             bool test = GameSettings.TestCheckpoints;
-            if (_player != null) _player.RespawnOnFall = test;
+            if (_player != null) _player.RespawnOnFall = test && !fallCostsAHeart;
             if (_health != null) _health.RespawnOnDeath = test;
             foreach (var cp in FindObjectsByType<Checkpoint>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 cp.gameObject.SetActive(test);
@@ -190,6 +192,14 @@ namespace ProjectHymn.Gameplay
 
         void OnFellOut()
         {
+            if (fallCostsAHeart && _player != null)
+            {
+                bool hurt = _health != null && _health.Damage(1, _player.transform.position + Vector3.down);
+                if (_health != null && _health.IsDead) return;            // the last heart: the death restarts the stage
+                _player.Respawn();
+                GameHud.Toast(hurt ? "Fell off the island: -1 heart" : "Fell off the island", 1.6f);
+                return;
+            }
             LevelDownOnce("fell");
             Restart();
         }

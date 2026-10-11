@@ -230,6 +230,8 @@ namespace ProjectHymn.Gameplay
             if (scale < 0.5f) { _shieldKick = 1f; _blockHitT = 0f; }
         }
 
+        protected override void OnFloorChanged(float minX, float maxX) => bounds = new Vector2(minX, maxX);
+
         protected override void Shove(float dx)
         {
             var p = transform.position;

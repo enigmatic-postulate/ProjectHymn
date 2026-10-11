@@ -27,6 +27,7 @@ namespace ProjectHymn.EditorTools
         static bool Boss => L.Id == "Summit";
         static bool IsArena => L.Id == "Arena";
         static bool IsYard => L.Id == "Yard";
+        static bool IsSpring => L.Id == "Spring";
         static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
@@ -47,6 +48,9 @@ namespace ProjectHymn.EditorTools
 
         [MenuItem("Project Hymn/Build Arena", priority = 4)]
         public static void BuildArenaStage() => BuildStage(StageLayout.Arena);
+
+        [MenuItem("Project Hymn/Build Starlit Spring", priority = 6)]
+        public static void BuildSpring() => BuildStage(StageLayout.Spring);
 
         [MenuItem("Project Hymn/Build Practice Yard", priority = 5)]
         public static void BuildYard() => BuildStage(StageLayout.Yard);
@@ -71,14 +75,18 @@ namespace ProjectHymn.EditorTools
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
-            if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else BuildLighting();
+            if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else if (!IsSpring) BuildLighting();
             var level = new GameObject("Level").transform;
-            foreach (var b in L.Route) BuildBlock(level, b);
-            foreach (var b in L.Props) BuildBlock(level, b);
-            BuildWaterAndBackdrop(level);
-            if (!IsArena && !IsYard) BuildDressing(level);
+            if (IsSpring) BuildSpringFloors(level);
+            else
+            {
+                foreach (var b in L.Route) BuildBlock(level, b);
+                foreach (var b in L.Props) BuildBlock(level, b);
+                BuildWaterAndBackdrop(level);
+            }
+            if (!IsArena && !IsYard && !IsSpring) BuildDressing(level);
             if (IsYard) BuildYardDressing(level);
-            if (_village && !IsArena && !IsYard) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
+            if (_village && !IsArena && !IsYard && !IsSpring) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
             if (Boss) BuildArena(level);
@@ -96,7 +104,7 @@ namespace ProjectHymn.EditorTools
             // The Arena's waves: enemies named "Wave N ..." wait, switched off, under wave N.
             ArenaWaves arenaWaves = null;
             var waveRoots = new List<GameObject>();
-            if (IsArena)
+            if (IsArena || IsSpring)
             {
                 arenaWaves = new GameObject("Waves", typeof(ArenaWaves)).GetComponent<ArenaWaves>();
                 arenaWaves.transform.SetParent(level, false);
@@ -149,15 +157,28 @@ namespace ProjectHymn.EditorTools
             }
 
             // The path home, at the west end of the beach.
-            var homeGo = new GameObject("Path to the Village", typeof(SceneDoor));
-            homeGo.transform.SetParent(level, false);
-            homeGo.transform.position = new Vector3(-8.6f, 0f, 0f);
-            var home = homeGo.GetComponent<SceneDoor>();
-            home.scene = "Village"; home.spawn = "FromCliffside"; home.saveOnArrival = true; home.prompt = "Back to the village"; home.range = 1.2f;
-            if (_village) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
+            if (!IsSpring)
+            {
+                var homeGo = new GameObject("Path to the Village", typeof(SceneDoor));
+                homeGo.transform.SetParent(level, false);
+                homeGo.transform.position = new Vector3(-8.6f, 0f, 0f);
+                var home = homeGo.GetComponent<SceneDoor>();
+                home.scene = "Village"; home.spawn = "FromCliffside"; home.saveOnArrival = true; home.prompt = "Back to the village"; home.range = 1.2f;
+                if (_village) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
+            }
 
             // Camera, effects, HUD (the minimal HUD builds itself; the old one is the debug HUD)
             var cam = HubBuilder.BuildCamera(player.transform.position);
+            if (IsSpring)
+            {
+                // Starlit Spring's set, lights and post-processing; its enemies follow you between floors.
+                SpringArt.Build(level, L, cam.GetComponent<Camera>());
+                foreach (var e in level.GetComponentsInChildren<BeatEnemy>(true))
+                    if (!(e is Wisp)) SetBool(e, "changesFloors", true);
+                var g = Object.FindAnyObjectByType<SliceGoal>();
+                if (g != null) SpringArt.GoalPortal(g.transform);
+            }
+
             if (Waltz) cam.GetComponent<Camera>().backgroundColor = new Color(0.5f, 0.42f, 0.62f);
             if (Boss) cam.GetComponent<Camera>().backgroundColor = new Color(0.16f, 0.13f, 0.26f);
             new GameObject("Meter Banner", typeof(MeterBanner));
@@ -188,6 +209,7 @@ namespace ProjectHymn.EditorTools
             dso.FindProperty("stageName").stringValue = L.Name;
             dso.FindProperty("enemyTotal").intValue = L.EnemyCount;
             dso.FindProperty("hitsAllowedForS").intValue = L.Id == "Cliffside" ? 0 : 2;     // the first stage allows none
+            dso.FindProperty("fallCostsAHeart").boolValue = L.OpenEdges;
             dso.FindProperty("parSeconds").floatValue = L.ParSeconds;
             dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
             dso.ApplyModifiedPropertiesWithoutUndo();
@@ -598,7 +620,8 @@ namespace ProjectHymn.EditorTools
 
             // A stone arch standing behind the lane (the kit's town gate when the art is in), with a turning crystal.
             var arch = go.transform;
-            if (_village) EnvironmentArt.Gate(arch, new Vector3(m.X, m.Y, 0f));
+            if (IsSpring) { }                     // Starlit Spring's way out is a star portal (SpringArt.GoalPortal)
+            else if (_village) EnvironmentArt.Gate(arch, new Vector3(m.X, m.Y, 0f));
             else
             {
             Box(arch, "Pillar L", new Vector3(m.X - 1.8f, m.Y, 1.0f), new Vector3(m.X - 1.2f, m.Y + 4.2f, 1.8f), StoneWarm, false);
@@ -619,6 +642,51 @@ namespace ProjectHymn.EditorTools
             return go.GetComponent<SliceGoal>();
         }
 
+        /// <summary>
+        /// Starlit Spring's floors: an invisible ground box as wide as the island at the lane (open edges: walk off and
+        /// you fall), and a one-way platform collider per platform; the art is SpringArt's. Enemies read the floors
+        /// from a StageFloors component.
+        /// </summary>
+        static void BuildSpringFloors(Transform level)
+        {
+            var root = new GameObject("Floors").transform;
+            root.SetParent(level, false);
+            var ground = L.Route[0];
+            var g = new GameObject(ground.Name, typeof(BoxCollider));
+            g.transform.SetParent(root, false);
+            g.transform.position = new Vector3(ground.CenterX, ground.Top - 2f, 0f);
+            g.GetComponent<BoxCollider>().size = new Vector3(ground.Width + 0.3f, 4f, 4f);
+            g.isStatic = true;
+            var entries = new List<StageFloors.Entry>();
+            foreach (var b in L.Route) entries.Add(new StageFloors.Entry { name = b.Name, xMin = b.XMin, xMax = b.XMax, top = b.Top });
+            foreach (var p in L.Platforms)
+            {
+                var go = new GameObject(p.Name, typeof(BoxCollider), typeof(OneWayPlatform));
+                go.transform.SetParent(root, false);
+                go.transform.position = new Vector3(p.CenterX, p.Top - 0.15f, 0f);
+                go.GetComponent<BoxCollider>().size = new Vector3(p.Width, 0.3f, 2.4f);
+                var so = new SerializedObject(go.GetComponent<OneWayPlatform>());
+                so.FindProperty("top").floatValue = p.Top;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                entries.Add(new StageFloors.Entry { name = p.Name, xMin = p.XMin, xMax = p.XMax, top = p.Top, oneWay = true });
+            }
+            var floors = new GameObject("Stage Floors", typeof(StageFloors)).GetComponent<StageFloors>();
+            floors.transform.SetParent(level, false);
+            var fso = new SerializedObject(floors);
+            var list = fso.FindProperty("floors");
+            list.arraySize = entries.Count;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var e = list.GetArrayElementAtIndex(i);
+                e.FindPropertyRelative("name").stringValue = entries[i].name;
+                e.FindPropertyRelative("xMin").floatValue = entries[i].xMin;
+                e.FindPropertyRelative("xMax").floatValue = entries[i].xMax;
+                e.FindPropertyRelative("top").floatValue = entries[i].top;
+                e.FindPropertyRelative("oneWay").boolValue = entries[i].oneWay;
+            }
+            fso.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         static void BuildCameraZone(Transform level, CliffsideLayout.Marker m)
         {
             var go = new GameObject(m.Name, typeof(CameraZone));
@@ -631,6 +699,11 @@ namespace ProjectHymn.EditorTools
             {
                 case "Climb View": z.distance = 13.5f; z.height = 3.0f; z.lookHeight = 2.4f; z.lookAhead = 2.0f; z.verticalBias = 1.2f; break;
                 case "Gap View": z.distance = 12.5f; z.height = 2.4f; z.lookHeight = 1.6f; z.lookAhead = 4.0f; z.verticalBias = 0.3f; break;
+                case "Spring View":
+                    // A brawler's fixed view of the whole island, drifting only a little with the player.
+                    z.distance = 27f; z.height = 4f; z.lookHeight = 1.6f; z.lookAhead = 0f; z.verticalBias = 0f;
+                    z.fixedFrame = true; z.fixedFocus = new Vector2(0f, 2.4f); z.fixedFollow = 0.12f;
+                    break;
                 default: z.distance = 15f; z.height = 3.5f; z.lookHeight = 1.8f; z.lookAhead = 1.5f; z.verticalBias = 0.5f; break;
             }
         }

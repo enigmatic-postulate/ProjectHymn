@@ -59,6 +59,14 @@ namespace ProjectHymn.Gameplay
             _focusY = target.position.y;
             _ahead = _player != null ? _player.Facing.x * _lookAhead : 0f;
             _focus = new Vector3(target.position.x + _ahead, _focusY, target.position.z);
+            foreach (var z in CameraZone.Active)
+                if (z.fixedFrame && z.Contains(target.position))
+                {
+                    var f = z.fixedFocus;
+                    _focus = new Vector3(f.x + (target.position.x - f.x) * z.fixedFollow, f.y + (target.position.y - f.y) * z.fixedFollow + z.verticalBias, target.position.z);
+                    _distance = z.distance; _height = z.height; _lookHeight = z.lookHeight; _lookAhead = z.lookAhead; _bias = z.verticalBias;
+                    break;
+                }
             Place();
         }
 
@@ -95,8 +103,19 @@ namespace ProjectHymn.Gameplay
             float face = _player != null ? _player.Facing.x : 0f;
             _ahead = Mathf.Lerp(_ahead, face * _lookAhead, 1f - Mathf.Exp(-aheadSmoothing * dt));
 
-            _focus.x = Mathf.Lerp(_focus.x, p.x + _ahead, 1f - Mathf.Exp(-followX * dt));
-            _focus.y = Mathf.Lerp(_focus.y, _focusY + _bias, 1f - Mathf.Exp(-followY * dt));
+            if (zone != null && zone.fixedFrame)
+            {
+                // A brawler's fixed view: held on the zone's point, drifting only a little toward the player.
+                var f = zone.fixedFocus;
+                float k = 1f - Mathf.Exp(-2.5f * dt);
+                _focus.x = Mathf.Lerp(_focus.x, f.x + (p.x - f.x) * zone.fixedFollow, k);
+                _focus.y = Mathf.Lerp(_focus.y, f.y + (p.y - f.y) * zone.fixedFollow + _bias, k);
+            }
+            else
+            {
+                _focus.x = Mathf.Lerp(_focus.x, p.x + _ahead, 1f - Mathf.Exp(-followX * dt));
+                _focus.y = Mathf.Lerp(_focus.y, _focusY + _bias, 1f - Mathf.Exp(-followY * dt));
+            }
             _focus.z = p.z;
             Place();
             ApplyShake(dt);

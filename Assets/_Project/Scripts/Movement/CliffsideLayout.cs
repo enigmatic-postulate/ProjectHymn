@@ -9,7 +9,7 @@ namespace ProjectHymn.Movement
     /// </summary>
     public static class CliffsideLayout
     {
-        public enum Kind { Ground, Cliff, Pillar, Wall, Ledge }
+        public enum Kind { Ground, Cliff, Pillar, Wall, Ledge, Platform }
 
         /// <summary>A floating ledge is a slab this thick (its underside is open).</summary>
         public const float LedgeThickness = 0.6f;

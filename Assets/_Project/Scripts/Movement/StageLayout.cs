@@ -17,6 +17,10 @@ namespace ProjectHymn.Movement
         public CliffsideLayout.Block[] Route = new CliffsideLayout.Block[0];
         public CliffsideLayout.Block[] Props = new CliffsideLayout.Block[0];
         public CliffsideLayout.Block[] Secrets = new CliffsideLayout.Block[0];
+        /// <summary>One-way platforms (jump up through them, drop down with Down + Jump): the brawl stage's floors above the ground.</summary>
+        public CliffsideLayout.Block[] Platforms = new CliffsideLayout.Block[0];
+        /// <summary>No walls at the ends: falling off the edge costs a heart and respawns you (the brawl stage).</summary>
+        public bool OpenEdges;
         public CliffsideLayout.Marker[] Markers = new CliffsideLayout.Marker[0];
 
         public IEnumerable<CliffsideLayout.Marker> MarkersOf(CliffsideLayout.MarkerKind kind)
@@ -55,6 +59,16 @@ namespace ProjectHymn.Movement
         public static StageLayout Summit => SummitLayout.Stage;
         public static StageLayout Arena => ArenaLayout.Stage;
         public static StageLayout Yard => YardLayout.Stage;
-        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena };
+        public static StageLayout Spring => SpringLayout.Stage;
+        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena, Spring };
+
+        /// <summary>Every floor an enemy (or the player) can stand on: the route and the platforms.</summary>
+        public FloorMap Floors()
+        {
+            var floors = new List<FloorMap.Floor>();
+            foreach (var b in Route) floors.Add(new FloorMap.Floor(b.Name, b.XMin, b.XMax, b.Top, false));
+            foreach (var b in Platforms) floors.Add(new FloorMap.Floor(b.Name, b.XMin, b.XMax, b.Top, true));
+            return new FloorMap(floors);
+        }
     }
 }

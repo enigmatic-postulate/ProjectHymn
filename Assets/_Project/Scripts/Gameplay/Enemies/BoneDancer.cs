@@ -198,6 +198,8 @@ namespace ProjectHymn.Gameplay
             return guardShare;
         }
 
+        protected override void OnFloorChanged(float minX, float maxX) => bounds = new Vector2(minX, maxX);
+
         protected override void Shove(float dx)
         {
             var p = transform.position;

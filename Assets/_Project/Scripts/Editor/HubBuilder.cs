@@ -30,6 +30,7 @@ namespace ProjectHymn.EditorTools
         const string SummitPath = SceneDir + "/Summit.unity";
         const string ArenaPath = SceneDir + "/Arena.unity";
         const string YardPath = SceneDir + "/Yard.unity";
+        const string SpringPath = SceneDir + "/Spring.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
@@ -39,11 +40,12 @@ namespace ProjectHymn.EditorTools
             CliffsideBuilder.BuildSummit();
             CliffsideBuilder.BuildArenaStage();
             CliffsideBuilder.BuildYard();
+            CliffsideBuilder.BuildSpring();
             BuildVillage();
             BuildTitle();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit and the Arena are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit, the Arena and Starlit Spring are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
                       "Esc pauses (Character, Songbook, Weapon, Settings). Playtest keys: F10 experience, F11 / Shift+F11 level up / down, " +
                       "F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints.");
@@ -436,6 +438,7 @@ namespace ProjectHymn.EditorTools
                 new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
                 new StageGate.Destination { stageId = "Summit", scene = "Summit", label = "The Summit (boss)", meter = "4/4 · 3/4 · 7/8", requires = "Belfry" },
                 new StageGate.Destination { stageId = "Arena", scene = "Arena", label = "The Arena (waves)", meter = "4/4" },
+                new StageGate.Destination { stageId = "Spring", scene = "Spring", label = "Starlit Spring (brawl)", meter = "4/4" },
             };
 
             // Spawns, players, camera, UI
@@ -552,7 +555,7 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath };
+            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath, SpringPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

@@ -22,6 +22,13 @@ namespace ProjectHymn.Gameplay
         public float lookAhead = 2.5f;
         [Tooltip("Shift the framing up (positive) to show the cliffs above.")]
         public float verticalBias;
+        [Header("Fixed framing (the brawl stage)")]
+        [Tooltip("Hold the view on a point instead of following the player (a brawler's fixed camera).")]
+        public bool fixedFrame;
+        [Tooltip("The point the fixed view looks at (lane plane, world X and Y).")]
+        public Vector2 fixedFocus;
+        [Tooltip("How much the fixed view still drifts toward the player (0 = locked).")]
+        [Range(0f, 0.5f)] public float fixedFollow = 0.12f;
 
         void OnEnable() { if (!Active.Contains(this)) Active.Add(this); }
         void OnDisable() => Active.Remove(this);

@@ -50,6 +50,8 @@ namespace ProjectHymn.Tests
                         if (m.X > b.XMin + 0.5f && m.X < b.XMax - 0.5f && System.Math.Abs(m.Y - b.Top) < 0.01f) on = true;
                     foreach (var b in stage.Secrets)
                         if (m.X > b.XMin + 0.3f && m.X < b.XMax - 0.3f && System.Math.Abs(m.Y - b.Top) < 0.01f) on = true;
+                    foreach (var b in stage.Platforms)
+                        if (m.X > b.XMin + 0.5f && m.X < b.XMax - 0.5f && System.Math.Abs(m.Y - b.Top) < 0.01f) on = true;
                     Assert.IsTrue(on, $"{stage.Name}: {m.Name} is not standing on a top");
                 }
         }

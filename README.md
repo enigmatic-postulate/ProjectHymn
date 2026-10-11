@@ -46,6 +46,15 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Slice 11: Starlit Spring (brawler arena)
+
+Built by **Project Hymn → Build Hub & Loop** (or **Build Starlit Spring** alone). Scene `Scenes/Spring.unity`; layout `Movement/SpringLayout.cs`; art `Editor/Art/SpringArt.cs` with `Editor/Art/MeshKit.cs`, shaders in `Shaders/`, textures painted by `Tools/paint_spring.py` into `Art/Generated/Spring/`. On the village gate as "Starlit Spring (brawl)", always open.
+
+- **The stage:** a floating island in a night sky, seen from a **fixed camera** (it drifts only slightly with you). The ground spans the island with **open edges**: falling off costs a heart and puts you back in the middle (the last heart restarts the stage, as dying does elsewhere). Above it, **three one-way platforms**: two low side daises and a high crown (reach the crown from a dais). Jump up through them; **Down + Jump** (S + Space) drops through. Ledges on platforms aren't grabbed.
+- **Waves:** three, like the Arena, each with enemies on the ground and on a platform (a knight on a dais; a dancer, a knight and a wisp; the lead dancer on the crown with a knight either side). Knights and dancers **follow you between floors**: stay on another floor for about a beat and a half and they jump up (one platform at a time) or drop down, landing at arm's length. Wisps fly. The star portal opens after the last wave. Par 1:30 (placeholder), ranked like any stage. Music: Battle Theme 1.
+- **The look** (all original, all generated): a starfield with an aurora and a violet nebula (`Project Hymn/Sky`), a ringed moon and distant islets bobbing in the dark; the island's drum of lilac masonry with 32 arched, gold-latticed windows (normal and emission maps); a pearl-tiled terrace; a pool with rippling reflections, fountain rings and star glints (`Project Hymn/Water`); a three-tier marble fountain under a turning star; water spilling over the whole rim and from the daises (`Project Hymn/Waterfall`); two domed spires with orbiting gold rings and lit windows; luminous trees of petal rosettes, crystal clusters and gold stars (`Project Hymn/Glow`, which **pulses on the beat**); a violet rock underside hung with crystals; drifting motes, rim mist and fountain glints; moonlight with soft shadows and coloured point lights.
+- **Post-processing** (first stage to use it): bloom, ACES tonemapping, colour grading and a vignette from `Art/Generated/Spring/SpringVolume.asset`, and SMAA on the camera.
+
 ## Slice 10: the Practice Yard (tutorial)
 
 Built by **Project Hymn → Build Hub & Loop** (or **Build Practice Yard** alone). Scene `Scenes/Yard.unity`; layout `Movement/YardLayout.cs`; lessons `Progression/Tutorial.cs`; runtime `Game/TutorialDirector.cs` and `UI/MetronomeStrip.cs`.
@@ -203,6 +212,7 @@ The Cliffside builder uses imported art when it finds it, and falls back to the 
 | --- | --- | --- |
 | Move / run | WASD (A / D in the Cliffside slice) | Left stick |
 | Jump, double jump (Cliffside) | Space | A / Cross |
+| Drop through a platform (Starlit Spring) | S + Space | Stick down + A |
 | Climb / let go of a ledge (Cliffside) | W or Space / S | Stick up / down |
 | Note 1 (light) | J | X / Square |
 | Note 2 (heavy) | K | Y / Triangle |

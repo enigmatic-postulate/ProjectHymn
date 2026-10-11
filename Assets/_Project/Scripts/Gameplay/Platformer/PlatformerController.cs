@@ -78,6 +78,7 @@ namespace ProjectHymn.Gameplay
         Checkpoint _checkpoint;
         float _dodgeDir, _dodgeCooldownLeft;
         bool _fellOut;
+        float _dropUntil = -1f;
 
         public LocoState State => _state;
         public float StateTime => _stateTime;
@@ -96,6 +97,8 @@ namespace ProjectHymn.Gameplay
         public bool RespawnOnFall { get => respawnOnFall; set => respawnOnFall = value; }
         public float RunSpeed => runSpeed;
         public Checkpoint CurrentCheckpoint => _checkpoint;
+        /// <summary>Dropping down through a one-way platform (Down + Jump on one): they let the player fall through.</summary>
+        public bool DroppingThrough => Time.time < _dropUntil;
 
         public event Action<JumpKind> Jumped;
         /// <summary>Landed; argument is the downward speed at touchdown.</summary>
@@ -153,7 +156,16 @@ namespace ProjectHymn.Gameplay
             float inX = _input != null ? _input.Move.x : 0f;
             if (Mathf.Abs(inX) < 0.2f) inX = 0f;
             bool wasGrounded = _cc.isGrounded;
-            var jump = _rules.Tick(dt, wasGrounded, _input != null && _input.JumpPressed);
+            bool jumpPressed = _input != null && _input.JumpPressed;
+            // Down + Jump on a one-way platform drops through it instead of jumping.
+            if (jumpPressed && wasGrounded && _input.Move.y < -0.5f && OnOneWayPlatform())
+            {
+                jumpPressed = false;
+                _dropUntil = Time.time + 0.3f;
+                _vel.y = -3f;
+                SetState(LocoState.Fall);
+            }
+            var jump = _rules.Tick(dt, wasGrounded, jumpPressed);
 
             float want = inX * runSpeed * (Attacking && wasGrounded ? attackMoveScale : 1f);
             float accel = !wasGrounded ? airAccel : Mathf.Abs(want) > 0.01f ? groundAccel : groundDecel;
@@ -243,6 +255,10 @@ namespace ProjectHymn.Gameplay
             SetState(_cc.isGrounded ? (Mathf.Abs(_vel.x) > 0.4f ? LocoState.Run : LocoState.Idle) : LocoState.Fall);
         }
 
+        bool OnOneWayPlatform() =>
+            Physics.Raycast(transform.position + Vector3.up * 0.15f, Vector3.down, out var hit, 0.4f, ground, QueryTriggerInteraction.Ignore) &&
+            hit.collider.GetComponent<OneWayPlatform>() != null;
+
         bool SideBlocked() =>
             Physics.Raycast(transform.position + Vector3.up * (_cc.height * 0.5f), new Vector3(Mathf.Sign(_vel.x), 0f, 0f),
                 _cc.radius + 0.08f, ground, QueryTriggerInteraction.Ignore);
@@ -261,6 +277,7 @@ namespace ProjectHymn.Gameplay
             var probe = p + dir * (r + 0.3f) + Vector3.up * (grabMax + 0.4f);
             if (!Physics.Raycast(probe, Vector3.down, out var top, grabMax + 0.4f - grabMin, ground, QueryTriggerInteraction.Ignore)) return false;
             if (top.normal.y < 0.7f || top.collider.attachedRigidbody != null || top.collider.GetComponentInParent<IBeatDamageable>() != null) return false;
+            if (top.collider.GetComponent<OneWayPlatform>() != null) return false;      // platforms are jumped onto, not climbed
             float rel = top.point.y - p.y;
             if (rel < grabMin || rel > grabMax) return false;
 

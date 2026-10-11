@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ProjectHymn.Combat;
 using ProjectHymn.Core;
+using ProjectHymn.Movement;
 using UnityEngine;
 
 namespace ProjectHymn.Gameplay
@@ -39,6 +40,12 @@ namespace ProjectHymn.Gameplay
         [SerializeField] protected float launchBeats = 1.5f;
         [Tooltip("Bulwark: how far the push shoves the enemy back (its next hit also comes a beat later).")]
         [SerializeField] protected float pushDistance = 1.2f;
+        [Header("Floors (the brawl stage)")]
+        [Tooltip("Jump up onto platforms and drop down after the player (needs a StageFloors in the scene).")]
+        [SerializeField] protected bool changesFloors;
+        [Tooltip("Beats the player must stay on another floor before the enemy follows, and how long a hop takes.")]
+        [SerializeField] protected float hopDelayBeats = 1.5f;
+        [SerializeField] protected float hopBeats = 1f;
         [Header("Look")]
         [SerializeField] protected Renderer[] flashRenderers = new Renderer[0];
         [SerializeField] protected Color warnColor = new Color(1f, 0.2f, 0.1f);
@@ -61,6 +68,11 @@ namespace ProjectHymn.Gameplay
         double _staggerUntilBeat = double.NegativeInfinity;
         double _launchFrom = double.NegativeInfinity, _launchUntil = double.NegativeInfinity;
         float _lift;          // launch height applied in LateUpdate, taken off again at the start of the next Update
+        FloorMap.Floor _floor;
+        bool _hopping;
+        double _hopStart, _awaySince = double.NaN;
+        Vector3 _hopFrom, _hopTo;
+        FloorMap.Floor _hopTarget, _playerFloor;
         int _patternIndex;
         protected Vector3 Home { get; private set; }
         float _hp, _flash;
@@ -126,6 +138,56 @@ namespace ProjectHymn.Gameplay
                 if (_health != null) _health.Died += OnPlayerDied;
             }
             _popups = FindAnyObjectByType<DamagePopups>();
+            if (changesFloors && StageFloors.Current != null)
+            {
+                var map = StageFloors.Current.Map;
+                _floor = map.FloorAt(transform.position.x, transform.position.y);
+                if (_floor.IsValid) { var (lo, hi) = map.Bounds(_floor); OnFloorChanged(lo, hi); }
+            }
+        }
+
+        /// <summary>The enemy reached another floor: keep to its bounds (knights and dancers clamp their walk to them).</summary>
+        protected virtual void OnFloorChanged(float minX, float maxX) { }
+
+        /// <summary>Mid-hop between floors (no attacks while in the air).</summary>
+        public bool Hopping => _hopping;
+
+        // ---------------- Hopping between floors ----------------
+
+        /// <summary>Follow the player to another floor once they have stayed there a moment: one jump up, or a drop.</summary>
+        void ConsiderHop()
+        {
+            var floors = StageFloors.Current;
+            if (floors == null || !_floor.IsValid || Platformer == null) return;
+            var map = floors.Map;
+            if (Platformer.Grounded) _playerFloor = map.FloorAt(Player.position.x, Player.position.y);
+            if (!_playerFloor.IsValid || _playerFloor.Name == _floor.Name) { _awaySince = double.NaN; return; }
+            if (double.IsNaN(_awaySince)) { _awaySince = BeatNow; return; }
+            if (BeatNow - _awaySince < hopDelayBeats) return;
+            var next = map.NextStep(_floor, _playerFloor);
+            if (!next.IsValid) return;
+            float x = map.LandingX(next, transform.position.x, Player.position.x, next.Name == _playerFloor.Name);
+            _hopFrom = transform.position;
+            _hopTo = new Vector3(x, next.Top, transform.position.z);
+            _hopTarget = next;
+            _hopStart = BeatNow;
+            _hopping = true;
+            CancelPlan();
+        }
+
+        void UpdateHop()
+        {
+            float t = Mathf.Clamp01((float)((BeatNow - _hopStart) / Mathf.Max(0.25f, hopBeats)));
+            float x = Mathf.Lerp(_hopFrom.x, _hopTo.x, t * t * (3f - 2f * t));
+            transform.position = new Vector3(x, FloorMap.HopHeight(_hopFrom.y, _hopTo.y, t), _hopFrom.z);
+            if (t < 1f) return;
+            _hopping = false;
+            _floor = _hopTarget;
+            _awaySince = double.NaN;
+            Home = _hopTo;
+            var (lo, hi) = StageFloors.Current != null ? StageFloors.Current.Map.Bounds(_floor) : (_hopTo.x, _hopTo.x);
+            OnFloorChanged(lo, hi);
+            _notBeforeBeat = Math.Max(_notBeforeBeat, BeatNow + 0.5);       // land, then count in the next attack
         }
 
         protected virtual void OnEnable() { if (!All.Contains(this)) All.Add(this); }
@@ -146,8 +208,13 @@ namespace ProjectHymn.Gameplay
             var p = Player.position;
             var me = transform.position;
             float dx = Mathf.Abs(p.x - Home.x), dy = Mathf.Abs(p.y - Home.y);
+            if (changesFloors && !Aggro && Mathf.Abs(p.x - me.x) <= aggroRange) Aggro = true;     // a brawl: any height
             if (!Aggro && Mathf.Abs(p.x - me.x) <= aggroRange && dy <= aggroHeight) Aggro = true;
-            else if (Aggro && (dx > leashRange || dy > aggroHeight * 2f)) { Aggro = false; CancelPlan(); }
+            else if (!changesFloors && Aggro && (dx > leashRange || dy > aggroHeight * 2f)) { Aggro = false; CancelPlan(); }
+
+            if (_hopping) { UpdateHop(); Tick(false); UpdateOverhead(); return; }
+            if (changesFloors && Aggro && !Plan.IsValid && BeatNow >= _staggerUntilBeat && !IsDead) ConsiderHop();
+            if (_hopping) { Tick(false); UpdateOverhead(); return; }
 
             if (Aggro && !Plan.IsValid && BeatNow >= _staggerUntilBeat && CanPlan)
             {
@@ -338,6 +405,8 @@ namespace ProjectHymn.Gameplay
             _staggerUntilBeat = _notBeforeBeat = double.NegativeInfinity;
             _launchUntil = double.NegativeInfinity;
             _lift = 0f;
+            _hopping = false;
+            _awaySince = double.NaN;
             _patternIndex = 0;
             transform.position = Home;
             OnReset();
