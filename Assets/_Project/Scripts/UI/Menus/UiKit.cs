@@ -1,4 +1,5 @@
 using System;
+using ProjectHymn.Gameplay;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -122,7 +123,12 @@ namespace ProjectHymn.UI
             cb.colorMultiplier = 1f;
             b.colors = cb;
             b.targetGraphic = img;
-            if (onClick != null) b.onClick.AddListener(() => onClick());
+            if (onClick != null) b.onClick.AddListener(() =>
+            {
+                Sfx.Play(label.StartsWith("Back") || label.StartsWith("Leave") ? Sfx.MenuBack : Sfx.MenuConfirm, 0.7f);
+                onClick();
+            });
+            go.AddComponent<UiSound>();
             var t = Label(go.transform, label, size, TextAnchor.MiddleLeft);
             ((RectTransform)t.transform).offsetMin = new Vector2(22f, 0f);
             return b;

@@ -69,6 +69,7 @@ namespace ProjectHymn.Gameplay
         double _launchFrom = double.NegativeInfinity, _launchUntil = double.NegativeInfinity;
         float _lift;          // launch height applied in LateUpdate, taken off again at the start of the next Update
         FloorMap.Floor _floor;
+        double _cuedPlan = double.NaN;        // the plan whose wind-up was sounded (its first hit beat)
         bool _hopping;
         double _hopStart, _awaySince = double.NaN;
         Vector3 _hopFrom, _hopTo;
@@ -230,7 +231,7 @@ namespace ProjectHymn.Gameplay
                 OnPlanned(Plan);
             }
 
-            if (Plan.IsValid) RunPlan(now);
+            if (Plan.IsValid) { CueWindUp(); RunPlan(now); }
             Tick(true);
             UpdateOverhead();
         }
@@ -278,6 +279,21 @@ namespace ProjectHymn.Gameplay
                 _notBeforeBeat = Plan.EndBeat;
                 Plan = default;
             }
+        }
+
+        /// <summary>
+        /// VS-4: a short swell as the enemy galvanizes before an attack's first blow (lower and rougher when it can't be
+        /// guarded), louder the closer it is, so the ear hears what the red or violet glow shows.
+        /// </summary>
+        void CueWindUp()
+        {
+            if (!Aggro || IsStaggered || Player == null || Plan.FirstHitBeat == _cuedPlan) return;
+            double until = Plan.FirstHitBeat - BeatNow;
+            if (until > galvanizeBeats || until < 0) return;
+            _cuedPlan = Plan.FirstHitBeat;
+            float dist = Mathf.Abs(Player.position.x - transform.position.x);
+            float vol = Mathf.Lerp(0.8f, 0.25f, Mathf.InverseLerp(2f, 14f, dist));
+            Sfx.Play(Plan.Pattern.Unblockable ? Sfx.WindUpViolet : Sfx.WindUp, vol, 0.03f);
         }
 
         /// <summary>Class perks: a block or parry that hits back (Fighter, Warden).</summary>

@@ -123,6 +123,9 @@ namespace ProjectHymn.EditorTools
 
         /// <summary>The Practice Yard's loop (Slice 10): 16 bars of 4/4 at 100 BPM in G major, rendered by Tools/compose_practice.py.</summary>
         internal const string PracticeClipPath = Root + "/Audio/Generated/Practice_in_the_Yard.wav";
+        /// <summary>The village's evening loop (VS-4), rendered by Tools/compose_village.py; played off the beat grid.</summary>
+        internal const string VillageClipPath = Root + "/Audio/Generated/Evening_in_the_Village.wav";
+
         internal static SongData LoadPracticeTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/PracticeYard.asset");
         static void EnsurePracticeTheme() =>
             EnsureGeneratedSong("PracticeYard", PracticeClipPath, "Tools/compose_practice.py (original placeholder)", 7, false,

@@ -179,8 +179,14 @@ namespace ProjectHymn.EditorTools
                 if (g != null) SpringArt.GoalPortal(g.transform);
             }
 
-            if (Waltz) cam.GetComponent<Camera>().backgroundColor = new Color(0.5f, 0.42f, 0.62f);
-            if (Boss) cam.GetComponent<Camera>().backgroundColor = new Color(0.16f, 0.13f, 0.26f);
+            if (!IsSpring)
+            {
+                // VS-4: Starlit Spring's finish on every stage (sky, fog, post-processing, beat-lit fires, a living sea).
+                var look = Boss ? StageLook.Night : Waltz ? StageLook.Dusk : IsYard ? StageLook.Morning : StageLook.Day;
+                var sea = level.Find("Backdrop/Sea");
+                if (sea != null) sea.GetComponent<MeshRenderer>().sharedMaterial = StageLook.Water(look, L.Id);
+                StageLook.Apply(level, cam.GetComponent<Camera>(), look, L.Id);
+            }
             new GameObject("Meter Banner", typeof(MeterBanner));
             var fx = BuildFx(conductor, null, null, cam, additive);
             fx.AddComponent<DefenseFeedback>();

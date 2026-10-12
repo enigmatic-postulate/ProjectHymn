@@ -77,7 +77,7 @@ namespace ProjectHymn.Gameplay
             if (_chime == null) _chime = CombatFeedback.Synth.Chord("Pickup", new[] { 84, 88, 91, 96 }, 0.45f, 8f, bright: true);
             var go = new GameObject("Pickup Chime", typeof(AudioSource));
             var src = go.GetComponent<AudioSource>();
-            src.PlayOneShot(_chime, 0.7f);
+            src.PlayOneShot(_chime, 0.7f * GameSettings.SfxVolume);
             Destroy(go, 1.5f);
         }
     }

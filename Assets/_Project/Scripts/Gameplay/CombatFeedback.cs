@@ -119,7 +119,7 @@ namespace ProjectHymn.Gameplay
 
             var v = NextVoice();
             v.clip = clip;
-            v.volume = sfxVolume * volume;
+            v.volume = sfxVolume * volume * GameSettings.SfxVolume;
             v.PlayScheduled(AudioSettings.dspTime + delay);
         }
 
@@ -127,7 +127,7 @@ namespace ProjectHymn.Gameplay
         {
             var v = NextVoice();
             v.clip = clip;
-            v.volume = sfxVolume * volume;
+            v.volume = sfxVolume * volume * GameSettings.SfxVolume;
             v.Play();
         }
 

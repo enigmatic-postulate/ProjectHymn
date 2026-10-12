@@ -14,8 +14,10 @@ namespace ProjectHymn.UI
         public static Button Build(Transform column, Action back, Action calibrate)
         {
             UiKit.Line(column, "SETTINGS", 40, UiKit.Gold, 60f);
-            Button vol = null, audio = null, offset = null, debug = null, checkpoints = null;
+            Button vol = null, music = null, sfx = null, audio = null, offset = null, debug = null, checkpoints = null;
             vol = UiKit.Button(column, "", () => { GameSettings.Volume = GameSettings.Volume >= 0.99f ? 0f : GameSettings.Volume + 0.1f; Refresh(); });
+            music = UiKit.Button(column, "", () => { GameSettings.MusicVolume = GameSettings.MusicVolume >= 0.99f ? 0f : GameSettings.MusicVolume + 0.1f; Refresh(); });
+            sfx = UiKit.Button(column, "", () => { GameSettings.SfxVolume = GameSettings.SfxVolume >= 0.99f ? 0f : GameSettings.SfxVolume + 0.1f; Refresh(); });
             audio = UiKit.Button(column, "", () => { NudgeAudio(1f); Refresh(); });
             UiKit.Button(column, "   Audio offset \u22121 ms", () => { NudgeAudio(-1f); Refresh(); });
             offset = UiKit.Button(column, "", () => { Nudge(10f); Refresh(); });
@@ -28,6 +30,8 @@ namespace ProjectHymn.UI
             void Refresh()
             {
                 UiKit.SetLabel(vol, $"Volume   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.Volume * 100f)}%</color>");
+                UiKit.SetLabel(music, $"   Music   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.MusicVolume * 100f)}%</color>");
+                UiKit.SetLabel(sfx, $"   Effects   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.SfxVolume * 100f)}%</color>");
                 UiKit.SetLabel(audio, $"Audio offset   <color=#ffd56a>{AudioOffset():+0;-0;0} ms</color>   (+1)");
                 UiKit.SetLabel(offset, $"Animation offset   <color=#ffd56a>{Offset():+0;-0;0} ms</color>   (+10)");
                 UiKit.SetLabel(debug, $"Rhythm debug HUD   <color=#ffd56a>{(GameSettings.DebugHud ? "on" : "off")}</color>");

@@ -43,6 +43,25 @@ namespace ProjectHymn.Gameplay
             _bladeLight.intensity = 0f;
         }
 
+        PlatformerController _body;
+
+        void Start()
+        {
+            _body = player != null ? player.GetComponent<PlatformerController>() : null;
+            if (_body != null) _body.Landed += OnLanded;
+        }
+
+        void OnDestroy() { if (_body != null) _body.Landed -= OnLanded; }
+
+        /// <summary>A puff of dust and a faint ring when the player lands from a real fall (VS-4).</summary>
+        void OnLanded(float speed)
+        {
+            if (speed < 5f || player == null) return;
+            var feet = player.position + Vector3.up * 0.05f;
+            Emit(_dust, feet, new Color(0.75f, 0.72f, 0.7f, 0.7f), Mathf.Clamp((int)(speed * 1.5f), 6, 24));
+            Ring(feet, 0.2f, 0.6f + speed * 0.04f, 0.3f, new Color(0.8f, 0.78f, 0.75f, 0.5f));
+        }
+
         void OnEnable()
         {
             if (combat == null) return;

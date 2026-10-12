@@ -54,6 +54,7 @@ namespace ProjectHymn.Gameplay
             var go = new GameObject("Game Session");
             DontDestroyOnLoad(go);
             _instance = go.AddComponent<GameSession>();
+            Sfx.Ensure();
             _instance.Db = GameDatabase.Load();
             _instance.FreePlay = freePlay;
             _instance.Data = freePlay ? _instance.FreePlayData() : new SaveData();

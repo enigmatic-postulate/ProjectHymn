@@ -76,6 +76,11 @@ namespace ProjectHymn.Core
 
         public bool MetronomeEnabled { get => metronome; set => metronome = value; }
 
+        /// <summary>Music volume (0..1), set from the player's settings each frame by the session.</summary>
+        public float MusicVolume { get; set; } = 1f;
+        /// <summary>Effects volume for the metronome click (0..1).</summary>
+        public float ClickVolume { get; set; } = 1f;
+
         void Awake()
         {
             _music = GetComponent<AudioSource>();
@@ -190,6 +195,7 @@ namespace ProjectHymn.Core
 
         void Update()
         {
+            if (_music != null) _music.volume = MusicVolume;
             if (!IsPlaying || IsPaused) return;
             UpdateClock();
             ScheduleClicks();
@@ -255,7 +261,7 @@ namespace ProjectHymn.Core
                     var src = _clickSources[_nextClickSource];
                     _nextClickSource = (_nextClickSource + 1) % _clickSources.Length;
                     src.clip = b.IsDownbeat ? _clickHigh : _clickLow;
-                    src.volume = metronomeVolume;
+                    src.volume = metronomeVolume * ClickVolume;
                     src.PlayScheduled(dspAt);
                 }
                 _nextClickBeat++;

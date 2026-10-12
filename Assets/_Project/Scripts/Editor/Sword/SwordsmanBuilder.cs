@@ -179,7 +179,7 @@ namespace ProjectHymn.EditorTools.Sword
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 mat.EnableKeyword("_BLENDMODE_ADD");
                 mat.renderQueue = (int)RenderQueue.Transparent;
-                mat.SetColor("_BaseColor", Color.white);
+                mat.SetColor("_BaseColor", Color.white * 1.8f);      // HDR (VS-4): sparks, rings and trails reach the bloom
             }
             EditorUtility.SetDirty(mat);
             return mat;

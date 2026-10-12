@@ -3,12 +3,27 @@ using UnityEngine;
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// Player settings kept in PlayerPrefs: volume, the debug HUD, and test-only checkpoints. There is no Easy mode
+    /// Player settings kept in PlayerPrefs: master, music and effects volume, the debug HUD, and test-only checkpoints. There is no Easy mode
     /// (GDD update 3): timing windows are the same for every player.
     /// </summary>
     public static class GameSettings
     {
         const string VolumeKey = "ProjectHymn.Volume", DebugKey = "ProjectHymn.DebugHud", CheckpointKey = "ProjectHymn.TestCheckpoints";
+        const string MusicKey = "ProjectHymn.MusicVolume", SfxKey = "ProjectHymn.SfxVolume";
+
+        /// <summary>The music's share of the master volume (VS-4).</summary>
+        public static float MusicVolume
+        {
+            get => PlayerPrefs.GetFloat(MusicKey, 0.85f);
+            set => PlayerPrefs.SetFloat(MusicKey, Mathf.Clamp01(value));
+        }
+
+        /// <summary>Sound effects' share of the master volume: hits, guards, steps, cues, menus (VS-4).</summary>
+        public static float SfxVolume
+        {
+            get => PlayerPrefs.GetFloat(SfxKey, 0.9f);
+            set => PlayerPrefs.SetFloat(SfxKey, Mathf.Clamp01(value));
+        }
 
         public static float Volume
         {

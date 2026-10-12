@@ -187,7 +187,7 @@ namespace ProjectHymn.EditorTools
                 string character = weapon.id == ProgressionRules.Greatsword ? "Barbarian" : "Knight";
                 var player = new GameObject($"Player ({weapon.displayName})", typeof(CharacterController), typeof(PlayerInputReader), typeof(PlatformerController),
                     typeof(RhythmAnimator), typeof(SwordCombatController), typeof(PlayerGuard), typeof(PlayerHealth),
-                    typeof(PlayerInteractor));
+                    typeof(PlayerInteractor), typeof(MovementSounds));
                 player.transform.SetParent(spawnerGo.transform, false);
                 player.transform.position = at + Vector3.up * 0.05f;
                 var cc = player.GetComponent<CharacterController>();
@@ -446,8 +446,16 @@ namespace ProjectHymn.EditorTools
             foreach (var s in VillageLayout.Spawns) Spawn(spawns, s.Name, new Vector3(s.X, top, 0f));
             var start = new Vector3(VillageLayout.Spawns[0].X, top, 0f);
             BuildPlayers(start, null, db, locomotion, additive, art);
-            BuildCamera(start, 12f, 2.6f);
+            var vcam = BuildCamera(start, 12f, 2.6f);
             BuildGameUi(hub: true);
+            StageLook.Apply(level, vcam.GetComponent<Camera>(), StageLook.Evening, "Village");      // VS-4: evening, lanterns on the beat
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(VillageClipPath);
+            if (clip != null)
+            {
+                var music = new GameObject("Village Music", typeof(AudioSource), typeof(MusicLoop));
+                music.GetComponent<AudioSource>().clip = clip;
+            }
+            else Debug.LogWarning("[Project Hymn] Village music missing: " + VillageClipPath);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, VillagePath);
@@ -544,6 +552,12 @@ namespace ProjectHymn.EditorTools
             cso.FindProperty("metronome").boolValue = false;
             cso.FindProperty("startDelay").floatValue = 0.3f;
             cso.ApplyModifiedPropertiesWithoutUndo();
+
+            // VS-4: the evening sky and post-processing, and a slow drift so the scene breathes behind the menu.
+            StageLook.Apply(set, cam, StageLook.Evening, "Title");
+            var drift = camGo.AddComponent<CameraDrift>();
+            drift.amplitude = new Vector3(0.35f, 0.12f, 0.2f);
+            drift.period = 14f;
 
             new GameObject("Title Menu", typeof(TitleMenu));
             EditorSceneManager.MarkSceneDirty(scene);

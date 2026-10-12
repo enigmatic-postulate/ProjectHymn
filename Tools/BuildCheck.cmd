@@ -37,9 +37,9 @@ if exist "%PROJ%\Builds\Windows\ProjectHymn.exe" (
 
 > "%OUT%\summary.txt" (
   echo Project Hymn build check
-  echo tests exit code: %TESTS%   (0 = all passed)
-  echo build exit code: %BUILD%   (0 = clean rebuild and build)
-  echo smoke exit code: %SMOKE%   (0 = no errors in any scene)
+  echo tests exit code: %TESTS%   [0 = all passed]
+  echo build exit code: %BUILD%   [0 = clean rebuild and build]
+  echo smoke exit code: %SMOKE%   [0 = no errors in any scene]
 )
 echo done> "%OUT%\status.txt"
 type "%OUT%\summary.txt"

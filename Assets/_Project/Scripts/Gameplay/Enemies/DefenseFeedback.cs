@@ -44,7 +44,7 @@ namespace ProjectHymn.Gameplay
             if (health != null) { health.Hurt -= OnHurt; health.Died -= OnDied; }
         }
 
-        void OnRaised() => _src.PlayOneShot(_guard, volume * 0.4f);
+        void OnRaised() => _src.PlayOneShot(_guard, volume * 0.4f * GameSettings.SfxVolume);
 
         void OnDefended(DefenseResult r, Vector3 from)
         {
@@ -52,16 +52,16 @@ namespace ProjectHymn.Gameplay
             switch (r)
             {
                 case DefenseResult.Parried:
-                    _src.PlayOneShot(_parry, volume);
+                    _src.PlayOneShot(_parry, volume * GameSettings.SfxVolume);
                     if (popups != null) popups.Show(at, "PARRY!", new Color(1f, 0.82f, 0.25f), 1.5f);
                     if (cameraRig != null) cameraRig.Shake(0.14f, 0.18f);
                     break;
                 case DefenseResult.Blocked:
-                    _src.PlayOneShot(_block, volume * 0.8f);
+                    _src.PlayOneShot(_block, volume * 0.8f * GameSettings.SfxVolume);
                     if (popups != null) popups.Show(at, "BLOCK", new Color(0.7f, 0.85f, 1f), 1f);
                     break;
                 case DefenseResult.Dodged:
-                    _src.PlayOneShot(_guard, volume * 0.6f);
+                    _src.PlayOneShot(_guard, volume * 0.6f * GameSettings.SfxVolume);
                     if (popups != null) popups.Show(at, "DODGE", new Color(0.6f, 1f, 0.75f), 1f);
                     break;
             }
@@ -69,7 +69,7 @@ namespace ProjectHymn.Gameplay
 
         void OnHurt(int amount)
         {
-            _src.PlayOneShot(_hurt, volume);
+            _src.PlayOneShot(_hurt, volume * GameSettings.SfxVolume);
             if (popups != null) popups.Show(health.transform.position + Vector3.up * 1.9f, $"-{amount}", new Color(1f, 0.3f, 0.25f), 1.2f);
             if (cameraRig != null) cameraRig.Shake(0.18f, 0.22f);
         }

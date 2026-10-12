@@ -38,6 +38,18 @@ namespace ProjectHymn.EditorTools
             Application.logMessageReceived += OnLog;
             try
             {
+                // 0. Components must live in a file named after their class, or a built game misreads the scenes that use them.
+                foreach (var guid in AssetDatabase.FindAssets("t:MonoScript", new[] { "Assets/_Project/Scripts" }))
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    var script = AssetDatabase.LoadAssetAtPath<MonoScript>(path);
+                    if (script == null || script.GetClass() != null) continue;
+                    var text = File.ReadAllText(path);
+                    if (System.Text.RegularExpressions.Regex.IsMatch(text, @"class\s+\w+\s*:\s*(MonoBehaviour|ScriptableObject)\b"))
+                        Problems.Add($"[script] {path}: no MonoBehaviour or ScriptableObject named {Path.GetFileNameWithoutExtension(path)}; a component in this file can't be saved in a scene");
+                }
+                if (Problems.Count > 0) report.Add($"Script check: {Problems.Count} file(s) with a component whose class doesn't match the file name");
+
                 // 1. Rebuild every scene from code.
                 var t0 = DateTime.Now;
                 try { HubBuilder.BuildAll(); }

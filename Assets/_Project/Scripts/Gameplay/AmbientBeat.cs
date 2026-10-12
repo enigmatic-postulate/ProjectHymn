@@ -25,32 +25,4 @@ namespace ProjectHymn.Gameplay
 
         void OnDisable() => Shader.SetGlobalFloat(BeatId, 0f);
     }
-
-    /// <summary>A slow float: bobs up and down and turns a little (distant islets, the fountain star).</summary>
-    public class FloatBob : MonoBehaviour
-    {
-        public float amplitude = 0.4f;
-        public float period = 6f;
-        public float phase;
-        public Vector3 spin = Vector3.zero;
-
-        Vector3 _rest;
-
-        void Awake() => _rest = transform.localPosition;
-
-        void Update()
-        {
-            float t = Time.time * Mathf.PI * 2f / Mathf.Max(0.1f, period) + phase;
-            transform.localPosition = _rest + Vector3.up * Mathf.Sin(t) * amplitude;
-            if (spin != Vector3.zero) transform.Rotate(spin * Time.deltaTime, Space.Self);
-        }
-    }
-
-    /// <summary>A steady turn about a local axis (the spires' orbiting rings).</summary>
-    public class Spin : MonoBehaviour
-    {
-        public Vector3 degreesPerSecond = new Vector3(0f, 30f, 0f);
-
-        void Update() => transform.Rotate(degreesPerSecond * Time.deltaTime, Space.Self);
-    }
 }

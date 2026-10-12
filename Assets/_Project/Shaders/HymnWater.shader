@@ -13,6 +13,9 @@ Shader "Project Hymn/Water"
         _Ripple ("Ripple strength", Range(0, 1)) = 0.25
         _RingCenter ("Ring centre (world XZ)", Vector) = (0, 5, 0, 0)
         _Glints ("Glints", Range(0, 3)) = 1.2
+        _RingStrength ("Fountain rings", Range(0, 1)) = 1
+        _WaveScale ("Wave scale (bigger = broader waves)", Float) = 1
+        _WaveSpeed ("Wave speed", Float) = 1
     }
     SubShader
     {
@@ -31,7 +34,7 @@ Shader "Project Hymn/Water"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _DeepColor, _ShallowColor, _SkyColor, _AuroraColor, _RingCenter;
-                float _Reflect, _Ripple, _Glints;
+                float _Reflect, _Ripple, _Glints, _RingStrength, _WaveScale, _WaveSpeed;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
@@ -64,14 +67,14 @@ Shader "Project Hymn/Water"
                 s += d2 * cos(dot(p, d2) * 6.1 + t * 2.6) * 0.15;
                 float2 r = p - _RingCenter.xy;
                 float dist = length(r) + 0.0001;
-                s += (r / dist) * cos(dist * 5.0 - t * 2.4) * 0.6 * exp(-dist * 0.35);
+                s += (r / dist) * cos(dist * 5.0 - t * 2.4) * 0.6 * exp(-dist * 0.35) * _RingStrength;
                 return s;
             }
 
             half4 frag(Varyings i) : SV_Target
             {
-                float t = _Time.y;
-                float2 p = i.positionWS.xz;
+                float t = _Time.y * _WaveSpeed;
+                float2 p = i.positionWS.xz / max(0.05, _WaveScale);
                 float2 slope = Slope(p, t) * _Ripple;
                 float3 n = normalize(float3(-slope.x, 1.0, -slope.y));
                 float3 v = normalize(GetWorldSpaceViewDir(i.positionWS));

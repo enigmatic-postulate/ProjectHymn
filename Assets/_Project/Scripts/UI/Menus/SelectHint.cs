@@ -11,4 +11,5 @@ namespace ProjectHymn.UI
         public void OnSelect(BaseEventData e) => OnSelected?.Invoke();
         public void OnPointerEnter(PointerEventData e) => OnSelected?.Invoke();
     }
+
 }
