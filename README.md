@@ -46,6 +46,24 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Look & Sound (vertical slice milestone VS-4)
+
+- **Every stage has a look.** `Editor/Art/StageLook.cs` gives each scene a painted sky (the `Project Hymn/Sky` shader, now with clouds and a sun), matching fog, animated water in place of the flat sea, and its own post-processing volume in `Art/Generated/Looks/` (bloom, ACES tonemapping, grading, vignette). Presets: **Day** (Cliffside, Arena), **Morning** (Yard), **Dusk** (Belfry), **Night** (Summit), **Evening** (title and village). Point lights and glowing props **pulse on the beat**. Re-run **Build Hub & Loop** after pulling to regenerate the scenes.
+- **Village and title:** the village plays its own waltz, *Evening in the Village* (3/4, 88 BPM, with birdsong; `Tools/compose_village.py`). The title screen shows the painted **Project Hymn logo** (`Resources/UI/HymnLogo.png`, painted by `Tools/paint_logo.py`), which breathes with the beat, over a slowly drifting camera.
+- **Sound effects** (synthesized, `Gameplay/Sfx.cs`): footsteps, jumps, air jumps, landings, menu move / confirm / back, and an enemy **wind-up** sting when an attack starts its count (a violet one for unblockable attacks). Landing kicks up dust.
+- **Settings → Music** and **Effects** volumes (the metronome click follows Effects).
+- **Results screen:** fades in, and the rank letter stamps in large at the top right in its colour.
+
+### Build check (Windows)
+
+Close the Unity editor, then double-click **`Tools\BuildCheck.cmd`**. It runs, in batch mode:
+
+1. the EditMode tests;
+2. a script check (every MonoBehaviour in a file named after it; otherwise builds load scenes as "corrupted"), a rebuild of every scene, and a Windows build to `Builds/Windows/ProjectHymn.exe`;
+3. a **smoke run** of that build, which opens each scene for 6 seconds and records any error.
+
+Results go to `Logs/BuildCheck/`: `summary.txt` (the three exit codes; 0 is good), `build-report.txt`, `smoke-report.txt`, and the full logs. The same build can be started from **Project Hymn → Build Check (rebuild + Windows build)** (without the tests and smoke run).
+
 ## Slice 11: Starlit Spring (brawler arena)
 
 Built by **Project Hymn → Build Hub & Loop** (or **Build Starlit Spring** alone). Scene `Scenes/Spring.unity`; layout `Movement/SpringLayout.cs`; art `Editor/Art/SpringArt.cs` with `Editor/Art/MeshKit.cs`, shaders in `Shaders/`, textures painted by `Tools/paint_spring.py` into `Art/Generated/Spring/`. On the village gate as "Starlit Spring (brawl)", always open.
