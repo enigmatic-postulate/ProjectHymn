@@ -10,6 +10,8 @@ namespace ProjectHymn.UI
         RectTransform _body;
         GameSession _session;
         Text _status;
+        RectTransform _logo;
+        static readonly int BeatId = Shader.PropertyToID("_HymnBeat");
 
         void Start()
         {
@@ -17,16 +19,36 @@ namespace ProjectHymn.UI
             Time.timeScale = 1f;
             _session = GameSession.ForTitle();
             var c = UiKit.Canvas("Title Canvas", 100, transform);
-            var title = UiKit.Label(c.transform, "PROJECT HYMN", 110, TextAnchor.UpperCenter, UiKit.Gold);
-            ((RectTransform)title.transform).offsetMax = new Vector2(0f, -90f);
-            title.gameObject.AddComponent<Outline>().effectDistance = new Vector2(4f, -4f);
+            // VS-4: the painted logo (Tools/paint_logo.py), breathing with the music; plain text if it's missing.
+            var tex = Resources.Load<Texture2D>("UI/HymnLogo");
+            if (tex != null)
+            {
+                _logo = UiKit.Rect("Logo", c.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+                _logo.pivot = new Vector2(0.5f, 1f);
+                _logo.sizeDelta = new Vector2(1300f, 1300f * tex.height / tex.width);
+                _logo.anchoredPosition = new Vector2(0f, -30f);
+                var img = _logo.gameObject.AddComponent<Image>();
+                img.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                img.raycastTarget = false;
+            }
+            else
+            {
+                var title = UiKit.Label(c.transform, "PROJECT HYMN", 110, TextAnchor.UpperCenter, UiKit.Gold);
+                ((RectTransform)title.transform).offsetMax = new Vector2(0f, -90f);
+                title.gameObject.AddComponent<Outline>().effectDistance = new Vector2(4f, -4f);
+            }
             var sub = UiKit.Label(c.transform, "every blow on the beat", 34, TextAnchor.UpperCenter, UiKit.Text);
-            ((RectTransform)sub.transform).offsetMax = new Vector2(0f, -220f);
+            ((RectTransform)sub.transform).offsetMax = new Vector2(0f, tex != null ? -400f : -220f);
             sub.gameObject.AddComponent<Outline>();
             _status = UiKit.Label(c.transform, "", 26, TextAnchor.LowerCenter, UiKit.Dim);
             ((RectTransform)_status.transform).offsetMin = new Vector2(0f, 40f);
             _body = UiKit.Panel("Menu", c.transform, new Vector2(560f, 420f), new Vector2(-560f, -160f));
             Main();
+        }
+
+        void Update()
+        {
+            if (_logo != null) _logo.localScale = Vector3.one * (1f + 0.012f * Shader.GetGlobalFloat(BeatId));
         }
 
         void Main()

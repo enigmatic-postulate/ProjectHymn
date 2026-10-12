@@ -16,6 +16,8 @@ namespace ProjectHymn.UI
     {
         Action _continue;
         float _openedAt;
+        CanvasGroup _fade;
+        RectTransform _rank;
 
         public static void Show(string stage, StageResult result, PlaystyleLog log, StageTargets targets, RunOutcome outcome, Action onContinue)
         {
@@ -79,6 +81,8 @@ namespace ProjectHymn.UI
             UiState.Push();
             _openedAt = Time.unscaledTime;
             var c = UiKit.Canvas("Results Canvas", 260, transform);
+            _fade = c.gameObject.AddComponent<CanvasGroup>();
+            _fade.alpha = 0f;
             var panel = UiKit.Panel("Results", c.transform, new Vector2(1180f, 960f));
             var col = UiKit.Column(panel, 6f, 30);
             bool failed = o != null && o.Failed;
@@ -86,9 +90,8 @@ namespace ProjectHymn.UI
 
             var sb = new StringBuilder();
             sb.Append($"Time  <color=#ffd56a>{Clock(r.Seconds)}</color>   par {Clock(t.ParSeconds)}   time rank <color=#ffd56a>{r.TimeRank}</color>\n");
-            sb.Append($"Rank  <size=40><color=#ffd56a>{r.Rank}</color></size>");
-            if (r.Caps.Count > 0) sb.Append($"   <color=#b0a8c8>capped: {string.Join("; ", r.Caps)}</color>");
-            sb.Append("\n\n");
+            if (r.Caps.Count > 0) sb.Append($"<color=#b0a8c8>Rank capped: {string.Join("; ", r.Caps)}</color>\n");
+            sb.Append("\n");
             sb.Append($"Hits   <color=#a0ffff>True Perfect {log.Hits(Judgement.TruePerfect)}</color>   <color=#ffd040>Perfect {log.Hits(Judgement.Perfect)}</color>   " +
                       $"Great {log.Hits(Judgement.Great)}   <color=#80ccff>Good {log.Hits(Judgement.Good)}</color>   <color=#8a84a0>Off-beat {log.OffBeat}</color>\n");
             sb.Append($"Defence   parries {log.Parries} (count as Perfect)   blocks {log.Blocks}   dodges {log.Dodges} (count as Great)\n");
@@ -97,10 +100,30 @@ namespace ProjectHymn.UI
             sb.Append($"Efficiency {r.Efficiency:P0}   ({t.PerfectAttacks} attacks for a perfect run, {log.Attacks} used)\n");
             sb.Append($"Mastery score {log.MasteryScore:0}   (a True Perfect counts as 3 Perfects)");
             UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
+
+            // VS-4: the rank letter, big, in its colour, popping in a moment after the panel.
+            var letter = UiKit.Label(panel, r.Rank.ToString(), 190, TextAnchor.MiddleCenter, RankColor(r.Rank));
+            _rank = letter.rectTransform;
+            _rank.anchorMin = _rank.anchorMax = new Vector2(1f, 1f);
+            _rank.pivot = new Vector2(0.5f, 0.5f);
+            _rank.sizeDelta = new Vector2(260f, 240f);
+            _rank.anchoredPosition = new Vector2(-170f, -190f);
+            _rank.localScale = Vector3.zero;
+            letter.gameObject.AddComponent<UnityEngine.UI.Outline>().effectDistance = new Vector2(5f, -5f);
             if (o != null) UiKit.Line(col, Progress(o), 26, UiKit.Text, 200f, TextAnchor.UpperLeft);
             string label = failed ? "Replay" : o != null && o.Offer != null ? "Level up: choose your class" : "Continue";
             UiKit.Select(UiKit.Button(col, label, Continue, 32, 64f));
         }
+
+        static Color RankColor(StageRank r) => r switch
+        {
+            StageRank.S => new Color(1f, 0.85f, 0.35f),
+            StageRank.A => new Color(0.55f, 1f, 0.7f),
+            StageRank.B => new Color(0.55f, 0.8f, 1f),
+            _ => new Color(1f, 0.45f, 0.4f),
+        };
+
+        bool _popped;
 
         void Continue()
         {
@@ -114,6 +137,15 @@ namespace ProjectHymn.UI
 
         void Update()
         {
+            float t = Time.unscaledTime - _openedAt;
+            if (_fade != null) _fade.alpha = Mathf.Clamp01(t / 0.25f);
+            if (_rank != null)
+            {
+                float k = Mathf.Clamp01((t - 0.45f) / 0.3f);
+                float s = k <= 0f ? 0f : k < 1f ? Mathf.Lerp(1.8f, 1f, 1f - (1f - k) * (1f - k)) : 1f;
+                _rank.localScale = Vector3.one * s;
+                if (k > 0f && !_popped) { _popped = true; Sfx.Play(Sfx.MenuConfirm, 1f); }
+            }
             if (UiInput.Cancel) Continue();
         }
 
