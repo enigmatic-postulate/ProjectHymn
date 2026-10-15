@@ -15,7 +15,7 @@ namespace ProjectHymn.Gameplay
         public string spawnId = "Trainer";
 
         public override void Interact(PlayerInteractor who) =>
-            DialogueBox.Show(speaker, new[] { greeting }, Ask);
+            DialogueBox.Show(speaker, new[] { greeting }, Ask, transform);
 
         void Ask()
         {
@@ -30,9 +30,9 @@ namespace ProjectHymn.Gameplay
             {
                 switch (id)
                 {
-                    case "progress": DialogueBox.Show(speaker, Progress(), Ask); break;
-                    case "ranks": DialogueBox.Show(speaker, Ranks, Ask); break;
-                    case "classes": DialogueBox.Show(speaker, Classes(), Ask); break;
+                    case "progress": DialogueBox.Show(speaker, Progress(), Ask, transform); break;
+                    case "ranks": DialogueBox.Show(speaker, Ranks, Ask, transform); break;
+                    case "classes": DialogueBox.Show(speaker, Classes(), Ask, transform); break;
                     default: Rack(); break;
                 }
             }, () => { });

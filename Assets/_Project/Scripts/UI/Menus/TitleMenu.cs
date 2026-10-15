@@ -4,13 +4,14 @@ using UnityEngine.UI;
 
 namespace ProjectHymn.UI
 {
-    /// <summary>The title screen: New Game (choose a class), Continue, Settings, Quit.</summary>
+    /// <summary>The title screen: New Game (the intro, then the village), Continue, Settings, Quit.</summary>
     public class TitleMenu : MonoBehaviour
     {
         RectTransform _body;
         GameSession _session;
         Text _status;
         RectTransform _logo;
+        Canvas _canvas;
         static readonly int BeatId = Shader.PropertyToID("_HymnBeat");
 
         void Start()
@@ -19,6 +20,7 @@ namespace ProjectHymn.UI
             Time.timeScale = 1f;
             _session = GameSession.ForTitle();
             var c = UiKit.Canvas("Title Canvas", 100, transform);
+            _canvas = c;
             // VS-4: the painted logo (Tools/paint_logo.py), breathing with the music; plain text if it's missing.
             var tex = Resources.Load<Texture2D>("UI/HymnLogo");
             if (tex != null)
@@ -63,8 +65,23 @@ namespace ProjectHymn.UI
             UiKit.Select(GameSession.HasSave ? cont : first);
         }
 
-        void NewGame() =>
-            _session.NewGame();
+        /// <summary>New Game (VS-5): confirm over an existing save, then the intro cards, then the village.</summary>
+        void NewGame()
+        {
+            if (!GameSession.HasSave) { StartStory(); return; }
+            UiKit.Clear(_body);
+            var col = UiKit.Column(_body, 12f, 30);
+            UiKit.Line(col, "Start over? This replaces your saved game.", 28, UiKit.Text, 90f, TextAnchor.MiddleCenter);
+            UiKit.Button(col, "Start a new game", StartStory, 32, 66f);
+            var back = UiKit.Button(col, "Back", Main, 32, 66f);
+            UiKit.Select(back);
+        }
+
+        void StartStory()
+        {
+            _canvas.gameObject.SetActive(false);
+            StoryCards.Play(Progression.Story.Intro, () => _session.NewGame());
+        }
 
         void Settings()
         {

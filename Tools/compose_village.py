@@ -6,6 +6,12 @@ and birdsong and a breeze baked in. 3/4 at 88 BPM in D major, 24 bars, looping s
 
     python3 Tools/compose_village.py [out.wav]
 
+VS-5 adds a layer for each verse brought home, the same length as the loop so the game plays them in lock-step with it
+(written next to the main file as <name>_Verse1.wav and so on):
+  1. the Verse of the Tide: hand drum, shaker and tambourine (the town gets its pulse back);
+  2. the Verse of the Bell: a bell countermelody on beats two and three;
+  3. the Verse of the Summit: a choir singing the chords, and a harp sweep every eight bars.
+
 Placeholder only. Written for Project Hymn; no samples used.
 """
 import sys
@@ -107,7 +113,7 @@ def noise(n):
     return rng.uniform(-1, 1, n)
 
 
-TRACKS = {k: np.zeros(LOOP * 2) for k in ("lead", "stab", "bass", "drums", "pad")}
+TRACKS = {k: np.zeros(LOOP * 2) for k in ("lead", "stab", "bass", "drums", "pad", "v1", "v2", "v3")}
 
 
 def place(track, beat, sig):
@@ -171,6 +177,67 @@ def render():
     TRACKS["pad"][:LOOP] += lp * swell * 0.25
 
 
+def render_verses():
+    """The three verse layers (VS-5)."""
+    rng3 = np.random.default_rng(21)
+    for bar in range(BARS):
+        b0 = bar * BEATS_PER_BAR
+        tones = CHORD_TONES[CHORDS[bar]]
+        # 1. Hand drum on one, a lighter tap on three, a shaker on every eighth, tambourine on two and three.
+        for beat, amp, f0 in ((0, 1.0, 92.0), (2, 0.55, 120.0)):
+            n = int(0.35 * SR)
+            t = np.arange(n) / SR
+            f = f0 * (1 + 0.8 * np.exp(-t * 30))
+            body = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 11)
+            slap = noise(n) * np.exp(-t * 90) * 0.3
+            place("v1", b0 + beat, (body + slap) * amp * 0.2)
+        for k in range(6):
+            n = int(0.09 * SR)
+            t = np.arange(n) / SR
+            sh = noise(n) * np.exp(-t * (60 if k % 2 else 40)) * (0.05 if k % 2 else 0.08)
+            sh = np.diff(np.concatenate([[0.0], sh]))           # brighter: a simple high-pass
+            place("v1", b0 + 0.5 * k + rng3.normal(0, 0.006), sh * 2.2)
+        for beat in (1, 2):
+            n = int(0.18 * SR)
+            t = np.arange(n) / SR
+            jingle = sum(np.sin(2 * np.pi * f * t) for f in (5100.0, 6300.0, 7900.0)) * noise(n) * np.exp(-t * 26)
+            place("v1", b0 + beat, jingle * 0.02)
+        # 2. Bells: chord tones up high on two and three, ringing over.
+        for beat, tone, octave in ((1, tones[1], 5), (2, tones[2], 5)):
+            m = midi(tone + str(octave))
+            if m < midi("A5"):
+                m += 12
+            f = hz(m)
+            n = int(2.4 * SR)
+            t = np.arange(n) / SR
+            bell = (np.sin(2 * np.pi * f * t) + 0.5 * np.sin(2 * np.pi * f * 2.0 * t) * np.exp(-t * 3)
+                    + 0.3 * np.sin(2 * np.pi * f * 2.76 * t) * np.exp(-t * 5) + 0.15 * np.sin(2 * np.pi * f * 5.4 * t) * np.exp(-t * 9))
+            place("v2", b0 + beat, bell * np.exp(-t * 2.2) * np.minimum(1, t * 800) * 0.075)
+        # 3. Choir: an "ah" on the chord, built from harmonics shaped by the vowel's formants; a harp sweep every 8 bars.
+        n = int(3 * SPB * SR)
+        t = np.arange(n) / SR
+        voice = np.zeros(n)
+        for tone in tones:
+            f0 = hz(midi(tone + "4"))
+            for v_detune in (0.997, 1.0, 1.003):
+                vib = 1 + 0.006 * np.sin(2 * np.pi * (5.0 + v_detune) * t + v_detune * 9)
+                ph = 2 * np.pi * f0 * v_detune * np.cumsum(vib) / SR
+                for h in range(1, 16):
+                    fh = f0 * h
+                    form = np.exp(-((fh - 750) / 160) ** 2) + 0.7 * np.exp(-((fh - 1150) / 180) ** 2) + 0.25 * np.exp(-((fh - 2600) / 300) ** 2)
+                    voice += np.sin(ph * h) * (form + 0.02 / h)
+        place("v3", b0, voice * env(n, a=0.35, d=0.8, s=0.8, r=0.45) * 0.009)
+        if bar % 8 == 0:
+            seq = [tones[0] + "4", tones[1] + "4", tones[2] + "4", tones[0] + "5", tones[1] + "5", tones[2] + "5", tones[0] + "6"]
+            for k, name in enumerate(seq):
+                m = midi(name)
+                n2 = int(1.8 * SR)
+                t2 = np.arange(n2) / SR
+                f = hz(m)
+                harp = (np.sin(2 * np.pi * f * t2) + 0.4 * np.sin(4 * np.pi * f * t2) * np.exp(-t2 * 4)) * np.exp(-t2 * 2.5)
+                place("v3", b0 + k * 0.125, harp * np.minimum(1, t2 * 900) * 0.05)
+
+
 def echo(x, delay_beats=0.75, feedback=0.33, mix=0.28):
     d = int(round(delay_beats * SPB * SR))
     y = x.copy()
@@ -179,20 +246,30 @@ def echo(x, delay_beats=0.75, feedback=0.33, mix=0.28):
     return x * (1 - mix) + y * mix
 
 
-def main(out):
-    render()
-    lead = echo(TRACKS["lead"], 1.5, 0.3, 0.25)
-    mix = lead + TRACKS["stab"] + TRACKS["bass"] + TRACKS["drums"] + TRACKS["pad"]
-    loop = mix[LOOP:2 * LOOP]
-    loop = np.tanh(loop * 1.05)
-    loop *= 0.7 / np.max(np.abs(loop))
-    pcm = (loop * 32767).astype(np.int16)
-    with wave.open(out, "wb") as w:
+def write(path, loop):
+    pcm = (np.clip(loop, -1, 1) * 32767).astype(np.int16)
+    with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(pcm.tobytes())
-    print(f"{out}: {len(pcm)} samples, {len(pcm) / SR:.4f} s, {BARS} bars of 3/4 at {BPM:g} BPM")
+    print(f"{path}: {len(pcm)} samples, {len(pcm) / SR:.4f} s, {BARS} bars of 3/4 at {BPM:g} BPM")
+
+
+def main(out):
+    render()
+    render_verses()
+    lead = echo(TRACKS["lead"], 1.5, 0.3, 0.25)
+    mix = lead + TRACKS["stab"] + TRACKS["bass"] + TRACKS["drums"] + TRACKS["pad"]
+    loop = mix[LOOP:2 * LOOP]
+    loop = np.tanh(loop * 1.05)
+    gain = 0.7 / np.max(np.abs(loop))
+    write(out, loop * gain)
+    # The verse layers at the same gain, so they sit in the mix as written (the game adds them on top).
+    layers = {"v1": TRACKS["v1"], "v2": echo(TRACKS["v2"], 0.75, 0.35, 0.3), "v3": echo(TRACKS["v3"], 1.5, 0.25, 0.25)}
+    stem = out[:-4] if out.endswith(".wav") else out
+    for i, key in enumerate(("v1", "v2", "v3"), start=1):
+        write(f"{stem}_Verse{i}.wav", np.tanh(layers[key][LOOP:2 * LOOP] * gain * 1.05))
 
 
 if __name__ == "__main__":

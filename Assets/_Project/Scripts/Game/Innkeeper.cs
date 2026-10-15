@@ -21,7 +21,7 @@ namespace ProjectHymn.Gameplay
                 if (health != null) health.HealFull();
                 bool saved = GameSession.Instance.Save(spawnId);
                 GameHud.Toast(saved ? "Rested and saved" : "Rested (free play: nothing is saved)");
-            });
+            }, transform);
         }
     }
 }

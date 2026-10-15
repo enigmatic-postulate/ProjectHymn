@@ -268,7 +268,18 @@ namespace ProjectHymn.Gameplay
         void ReturnToHub()
         {
             var s = GameSession.Instance;
+            // VS-5: the Summit's first clear plays the ending (cards and credits) on the way home.
+            if (Story.EndingDue(s.Data, stageId))
+            {
+                s.Data.MarkStory(Story.EndingSeen);
+                s.SaveProgress();
+                s.Travel(EndingScene, "Start");
+                return;
+            }
             if (s.Db != null) s.Travel(s.Db.hubScene, returnSpawn, saveOnArrival: true);
         }
+
+        /// <summary>The ending's scene (built by Project Hymn → Build Hub &amp; Loop).</summary>
+        public const string EndingScene = "Ending";
     }
 }

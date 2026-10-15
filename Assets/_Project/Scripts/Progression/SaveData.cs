@@ -93,6 +93,8 @@ namespace ProjectHymn.Progression
         public List<RunRecord> history = new List<RunRecord>();
         /// <summary>The Practice Yard was finished once (its experience is paid only the first time).</summary>
         public bool tutorialDone;
+        /// <summary>Story moments already shown (VS-5): "verse1".."verse3" (the village celebrated it), "ending".</summary>
+        public List<string> story = new List<string>();
 
         public static SaveData NewGame(string classId, IEnumerable<string> startingSequences, IEnumerable<ItemCount> startingItems = null)
         {
@@ -196,6 +198,15 @@ namespace ProjectHymn.Progression
         {
             if (string.IsNullOrEmpty(pickupId) || collected.Contains(pickupId)) return false;
             collected.Add(pickupId);
+            return true;
+        }
+
+        public bool HasStory(string flag) => story != null && story.Contains(flag);
+
+        public bool MarkStory(string flag)
+        {
+            if (string.IsNullOrEmpty(flag) || story.Contains(flag)) return false;
+            story.Add(flag);
             return true;
         }
 
@@ -309,6 +320,7 @@ namespace ProjectHymn.Progression
             if (totals == null) totals = new PlayTotals();
             if (weaponsForSale == null) weaponsForSale = new List<string>();
             if (history == null) history = new List<RunRecord>();
+            if (story == null) story = new List<string>();
             if (version < 3)
             {
                 // Saves from before Update 18 load as a level 1 Minstrel (Notes, lore and stage records are kept).

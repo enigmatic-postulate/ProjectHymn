@@ -13,6 +13,6 @@ namespace ProjectHymn.Gameplay
         [TextArea(2, 4)] public string greeting = "Blades, for those who've earned the use of them. Have a look.";
 
         public override void Interact(PlayerInteractor who) =>
-            DialogueBox.Show(speaker, new[] { greeting }, () => ShopMenu.Open(speaker));
+            DialogueBox.Show(speaker, new[] { greeting }, () => ShopMenu.Open(speaker), transform);
     }
 }

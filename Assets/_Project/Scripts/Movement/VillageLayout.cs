@@ -32,6 +32,7 @@ namespace ProjectHymn.Movement
         {
             new Spot("Elder", -1f),
             new Spot("Fisher", 18f),
+            new Spot("Lamplighter", 36.5f),
             new Spot("Lookout", 44f),
         };
 

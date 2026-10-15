@@ -17,6 +17,8 @@ namespace ProjectHymn.Gameplay
         Conductor _conductor;
 
         public static AudioClip Step, Jump, AirJump, Land, LandHard, WindUp, WindUpViolet, MenuMove, MenuConfirm, MenuBack;
+        /// <summary>VS-5 story: a voice blip per word, a page turn between cards, a bell arpeggio when a verse comes home.</summary>
+        public static AudioClip Blip, PageTurn, VerseChime;
 
         public static Sfx Instance
         {
@@ -67,6 +69,17 @@ namespace ProjectHymn.Gameplay
             v.PlayOneShot(clip, volume * GameSettings.SfxVolume);
         }
 
+        /// <summary>Play a clip at a set pitch (a speaker's voice blip).</summary>
+        public static void PlayPitched(AudioClip clip, float volume, float pitch)
+        {
+            if (clip == null) return;
+            var s = Instance;
+            var v = s._voices[s._next];
+            s._next = (s._next + 1) % s._voices.Length;
+            v.pitch = pitch;
+            v.PlayOneShot(clip, volume * GameSettings.SfxVolume);
+        }
+
         /// <summary>Make sure the pool exists (and the volumes reach the music) from the first scene on.</summary>
         public static void Ensure() { var _ = Instance; }
 
@@ -103,6 +116,29 @@ namespace ProjectHymn.Gameplay
             }, lowpass: 0.35f);
             MenuMove = Make("MenuMove", 0.05f, (t, i) => Mathf.Sin(2f * Mathf.PI * 1760f * t) * Mathf.Exp(-t * 90f) * 0.2f);
             MenuConfirm = Make("MenuConfirm", 0.18f, (t, i) => (Mathf.Sin(2f * Mathf.PI * (t < 0.06f ? 1318.5f : 1975.5f) * t)) * Mathf.Exp(-t * 18f) * 0.22f);
+            Blip = Make("Blip", 0.045f, (t, i) =>
+            {
+                float sq = Mathf.Sin(2f * Mathf.PI * 660f * t) > 0f ? 1f : -1f;
+                return (sq * 0.35f + Mathf.Sin(2f * Mathf.PI * 1320f * t) * 0.4f) * Mathf.Exp(-t * 55f) * 0.16f;
+            }, lowpass: 0.5f);
+            var pr = new System.Random(41);
+            PageTurn = Make("PageTurn", 0.42f, (t, i) => Noise(pr) * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / 0.42f)) * (0.6f + 0.4f * Mathf.Sin(t * 70f)) * 0.12f,
+                            lowpass: 0.12f);
+            VerseChime = Make("VerseChime", 2.6f, (t, i) =>
+            {
+                // A bell arpeggio up D major (D5 F#5 A5 D6), each note a struck bell with an inharmonic partial.
+                float[] notes = { 587.3f, 740.0f, 880.0f, 1174.7f };
+                float sum = 0f;
+                for (int k = 0; k < notes.Length; k++)
+                {
+                    float tk = t - k * 0.16f;
+                    if (tk < 0f) continue;
+                    float f = notes[k];
+                    sum += (Mathf.Sin(2f * Mathf.PI * f * tk) + 0.35f * Mathf.Sin(2f * Mathf.PI * f * 2.76f * tk) * Mathf.Exp(-tk * 6f))
+                           * Mathf.Exp(-tk * 1.6f) * Mathf.Min(1f, tk * 400f);
+                }
+                return sum * 0.11f;
+            });
             MenuBack = Make("MenuBack", 0.12f, (t, i) => Mathf.Sin(2f * Mathf.PI * (t < 0.05f ? 987.8f : 659.3f) * t) * Mathf.Exp(-t * 24f) * 0.2f);
         }
 

@@ -66,10 +66,13 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         /// <summary>Save (or replace) the mesh as an asset so scenes and builds keep it.</summary>
-        public Mesh Save(string name)
+        public Mesh Save(string name) => Save(name, MeshDir);
+
+        /// <summary>Save into another folder (the village's meshes, VS-5).</summary>
+        public Mesh Save(string name, string dir)
         {
-            Directory.CreateDirectory(MeshDir);
-            string path = $"{MeshDir}/{name}.asset";
+            Directory.CreateDirectory(dir);
+            string path = $"{dir}/{name}.asset";
             var fresh = ToMesh(name);
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing == null) { AssetDatabase.CreateAsset(fresh, path); return fresh; }

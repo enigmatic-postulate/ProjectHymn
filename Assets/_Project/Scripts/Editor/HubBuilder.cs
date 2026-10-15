@@ -31,6 +31,7 @@ namespace ProjectHymn.EditorTools
         const string ArenaPath = SceneDir + "/Arena.unity";
         const string YardPath = SceneDir + "/Yard.unity";
         const string SpringPath = SceneDir + "/Spring.unity";
+        const string EndingPath = SceneDir + "/Ending.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
@@ -43,6 +44,7 @@ namespace ProjectHymn.EditorTools
             CliffsideBuilder.BuildSpring();
             BuildVillage();
             BuildTitle();
+            BuildEnding();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
             Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit, the Arena and Starlit Spring are first in File ▸ Build Profiles. " +
@@ -399,30 +401,13 @@ namespace ProjectHymn.EditorTools
             shop.prompt = "Shop";
             var trainer = Figure(people, "Trainer", "Rogue_Hooded", new Vector3(VillageLayout.TrainerX + 1.5f, top, npcZ), art).AddComponent<ClassTrainer>();
             trainer.prompt = "Mentor"; trainer.speaker = "Mentor";
-            var talk = new (string name, string model, string[] lines, string lore)[]
-            {
-                ("Elder", "Mage", new[]
-                {
-                    "So you're the new cantor. Good. The cliffs have been restless.",
-                    "Strike on the beat and the blow lands true. Strike off it and you're only waving a sword.",
-                    "Here, let me tell you the old song...",
-                }, "lore_village"),
-                ("Fisher", "Rogue", new[]
-                {
-                    "Bone knights on the tiers again. They lift that blade a whole bar before it comes down.",
-                    "Count it. Guard on the beat it lands and they reel. That's when you cut.",
-                }, ""),
-                ("Lookout", "Ranger", new[]
-                {
-                    "Path to the cliffs is through the gate, east end of the street. New to the beat? Try the practice yard first.",
-                    "The arena's through there too, if you want a fight without the climb. Three waves, and they don't wait for you to be ready.",
-                }, ""),
-            };
+            // VS-5: the villagers follow the story (Progression/Story.cs): their lines change as verses come home.
+            var talk = new (string name, string model)[] { ("Elder", "Mage"), ("Fisher", "Rogue"), ("Lookout", "Ranger"), ("Lamplighter", "Barbarian") };
             for (int i = 0; i < talk.Length && i < VillageLayout.Villagers.Length; i++)
             {
                 var t = talk[i];
                 var npc = Figure(people, t.name, t.model, new Vector3(VillageLayout.Villagers[i].X, top, npcZ), art).AddComponent<NpcTalk>();
-                npc.speaker = t.name; npc.lines = t.lines; npc.givesLore = t.lore; npc.prompt = "Talk";
+                npc.speaker = t.name; npc.storyId = t.name; npc.prompt = "Talk";
             }
 
             // The way out: the gate opens onto every stage (Belfry Ridge once Cliffside is cleared; the Arena always).
@@ -449,11 +434,22 @@ namespace ProjectHymn.EditorTools
             var vcam = BuildCamera(start, 12f, 2.6f);
             BuildGameUi(hub: true);
             StageLook.Apply(level, vcam.GetComponent<Camera>(), StageLook.Evening, "Village");      // VS-4: evening, lanterns on the beat
+            // VS-5: what the verses bring back (lanterns, bunting, the star), and the waltz with a layer per verse.
+            EditorTools.Art.VillageArt.Build(level, top);
+            StageLook.PulseLights();
+            new GameObject("Verse Restoration", typeof(VerseRestoration));
             var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(VillageClipPath);
             if (clip != null)
             {
-                var music = new GameObject("Village Music", typeof(AudioSource), typeof(MusicLoop));
-                music.GetComponent<AudioSource>().clip = clip;
+                var music = new GameObject("Village Music", typeof(LayeredMusic)).GetComponent<LayeredMusic>();
+                music.baseClip = clip;
+                music.bpm = 88f; music.beatsPerBar = 3; music.firstBeat = 0f;
+                for (int v = 1; v <= Progression.Story.Verses; v++)
+                {
+                    var layer = AssetDatabase.LoadAssetAtPath<AudioClip>(VillageClipPath.Replace(".wav", $"_Verse{v}.wav"));
+                    if (layer != null) music.layers.Add(new LayeredMusic.Layer { clip = layer, verse = v });
+                    else Debug.LogWarning($"[Project Hymn] Village verse layer {v} missing (Tools/compose_village.py).");
+                }
             }
             else Debug.LogWarning("[Project Hymn] Village music missing: " + VillageClipPath);
 
@@ -565,11 +561,66 @@ namespace ProjectHymn.EditorTools
             Debug.Log("[Project Hymn] Title built.");
         }
 
+        // ---------------- Ending (VS-5) ----------------
+
+        /// <summary>
+        /// The ending: the cantor on a headland at night looking out over the sea, while the ending's cards and then the
+        /// credits play over the battle theme (EndingDirector); then back to the village.
+        /// </summary>
+        [MenuItem("Project Hymn/Build Ending", priority = 12)]
+        public static void BuildEnding()
+        {
+            EnvironmentArt.MeshScope = "Ending";
+            PrepareContent();
+            ArtLibrary.EnsureImportSettings();
+            AssetDatabase.Refresh();
+            bool art = ArtLibrary.HasKayKit, village = ArtLibrary.HasVillage;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var weapons = art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
+            EnsureDatabase(weapons);
+            CliffsideBuilder.BuildLighting();
+            var set = new GameObject("Set").transform;
+            Slab(set, "Headland", new Vector3(-12f, -9f, -6f), new Vector3(4.5f, 0f, 9f), village, ground: true);
+            Slab(set, "Headland Step", new Vector3(-12f, -9f, 9f), new Vector3(1f, 1.2f, 16f), village, ground: true);
+            BuildVillageBackdrop(set, village);
+            if (art)
+            {
+                KayKitBuilder.BuildFigure(set, "Cantor", "Knight", new Vector3(1.2f, 0f, 1.6f), 20f, "Idle_A", null, 1.85f, "Sword", "Shield");
+                KayKitBuilder.BuildFigure(set, "Elder", "Mage", new Vector3(-1.6f, 0f, 3.2f), 40f, "Idle_A", null, 1.75f);
+            }
+            else Figure(set, "Cantor", "Knight", new Vector3(1.2f, 0f, 1.6f), false);
+
+            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
+            camGo.tag = "MainCamera";
+            var cam = camGo.GetComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.05f, 0.05f, 0.12f);
+            cam.fieldOfView = 38f;
+            cam.farClipPlane = 400f;
+            camGo.transform.position = new Vector3(-3.6f, 2.1f, -5.2f);
+            camGo.transform.rotation = Quaternion.LookRotation(new Vector3(3.4f, 3.2f, 8f) - camGo.transform.position, Vector3.up);
+
+            var conductor = BuildConductor(LoadTheme());
+            var cso = new SerializedObject(conductor);
+            cso.FindProperty("metronome").boolValue = false;
+            cso.FindProperty("startDelay").floatValue = 0.3f;
+            cso.ApplyModifiedPropertiesWithoutUndo();
+
+            StageLook.Apply(set, cam, StageLook.Night, "Ending");
+            var drift = camGo.AddComponent<CameraDrift>();
+            drift.amplitude = new Vector3(0.4f, 0.15f, 0.25f);
+            drift.period = 18f;
+            new GameObject("Ending Director", typeof(EndingDirector));
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, EndingPath);
+            Debug.Log("[Project Hymn] Ending built.");
+        }
+
         // ---------------- Build order ----------------
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath, SpringPath };
+            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath, SpringPath, EndingPath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)
