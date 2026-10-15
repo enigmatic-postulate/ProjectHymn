@@ -29,6 +29,11 @@ namespace ProjectHymn.Gameplay
             base.Awake();
         }
 
+        // Its own halo hides a glow behind it: the attack aura draws in front with a ring, and bigger.
+        protected override bool AuraInFront => true;
+        protected override float AuraSize => 2.3f;
+        protected override Vector3 AuraCenter => core != null ? core.position : transform.position;
+
         bool Vulnerable => IsStaggered || Phase == AttackPhase.Recover || Phase == AttackPhase.Active;
 
         protected override void Tick(bool live)

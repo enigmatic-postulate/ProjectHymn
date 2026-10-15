@@ -80,7 +80,7 @@ namespace ProjectHymn.Gameplay
         MaterialPropertyBlock _mpb;
         Color[][] _baseColors, _baseEmission;
         TextMesh _count;
-        SpriteRenderer _aura;
+        SpriteRenderer _aura, _auraRing;
         Transform _barRoot, _barFill;
 
         public string DisplayName => displayName;
@@ -406,6 +406,7 @@ namespace ProjectHymn.Gameplay
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
             if (_barRoot != null) _barRoot.gameObject.SetActive(false);
             if (_count != null) _count.gameObject.SetActive(false);
+            ClearWarning();
             Died?.Invoke(this);
             AnyDied?.Invoke(this);
             OnDied();
@@ -550,8 +551,19 @@ namespace ProjectHymn.Gameplay
             auraGo.transform.SetParent(transform, false);
             _aura = auraGo.GetComponent<SpriteRenderer>();
             _aura.sprite = UI.ProceduralSprites.Glow;
-            _aura.sortingOrder = -5;
+            _aura.sortingOrder = AuraInFront ? 20 : -5;
             _aura.enabled = false;
+            if (AuraInFront)
+            {
+                // A bright body that glows on its own (the wisp) would swallow a soft glow behind it: these draw a red
+                // ring and wash in front of the body instead.
+                var ringGo = new GameObject("Galvanize Ring", typeof(SpriteRenderer));
+                ringGo.transform.SetParent(transform, false);
+                _auraRing = ringGo.GetComponent<SpriteRenderer>();
+                _auraRing.sprite = UI.ProceduralSprites.Ring;
+                _auraRing.sortingOrder = 21;
+                _auraRing.enabled = false;
+            }
 
             _barRoot = new GameObject("HP Bar").transform;
             _barRoot.SetParent(transform, false);
@@ -602,21 +614,61 @@ namespace ProjectHymn.Gameplay
             if (_barRoot != null) _barRoot.position = transform.position + Vector3.up * barHeight;
         }
 
+        /// <summary>Draw the galvanize aura in front of the body with a ring (bodies that glow on their own, like the wisp).</summary>
+        protected virtual bool AuraInFront => false;
+        /// <summary>The aura's size relative to the body's height.</summary>
+        protected virtual float AuraSize => 1f;
+        /// <summary>Where the aura centres.</summary>
+        protected virtual Vector3 AuraCenter => transform.position + Vector3.up * (barHeight * 0.45f);
+
         void UpdateAura(Quaternion rot)
         {
             if (_aura == null) return;
             float g = Galvanize;
-            bool on = g > 0f;
+            bool on = g > 0f && !IsDead;
             if (_aura.enabled != on) _aura.enabled = on;
+            if (_auraRing != null && _auraRing.enabled != on) _auraRing.enabled = on;
             if (!on) return;
             bool unblockable = Plan.IsValid && Plan.Pattern.Unblockable;
             var c = unblockable ? new Color(0.72f, 0.45f, 1f) : new Color(1f, 0.16f, 0.08f);
             float pulse = 1f + 0.18f * Mathf.Exp(-BeatPhase * 5f);
-            c.a = 0.35f + 0.5f * g;
+            float size = barHeight * AuraSize * (0.9f + 0.5f * g) * pulse;
+            // Behind the body normally; in front (toward the camera) for glowing bodies.
+            var toward = rot * Vector3.forward * (AuraInFront ? -0.9f : 0.6f);
+            c.a = AuraInFront ? 0.22f + 0.33f * g : 0.35f + 0.5f * g;
             _aura.color = c;
-            _aura.transform.position = transform.position + Vector3.up * (barHeight * 0.45f) + rot * Vector3.forward * 0.6f;
+            _aura.transform.position = AuraCenter + toward;
             _aura.transform.rotation = rot;
-            _aura.transform.localScale = Vector3.one * (barHeight * (0.9f + 0.5f * g) * pulse);
+            _aura.transform.localScale = Vector3.one * size;
+            if (_auraRing != null)
+            {
+                var rc = c;
+                rc.a = 0.55f + 0.45f * g;
+                _auraRing.color = rc;
+                _auraRing.transform.position = AuraCenter + toward * 1.05f;
+                _auraRing.transform.rotation = rot;
+                _auraRing.transform.localScale = Vector3.one * (size * 0.8f);
+            }
+        }
+
+        /// <summary>Death clears the attack warning at once: no aura, no red tint left on the body as it falls.</summary>
+        void ClearWarning()
+        {
+            if (_aura != null) _aura.enabled = false;
+            if (_auraRing != null) _auraRing.enabled = false;
+            _flash = 0f;
+            for (int i = 0; i < flashRenderers.Length; i++)
+            {
+                var r = flashRenderers[i];
+                if (r == null) continue;
+                for (int m = 0; m < _baseColors[i].Length; m++)
+                {
+                    _mpb.Clear();
+                    _mpb.SetColor(BaseColorId, _baseColors[i][m]);
+                    _mpb.SetColor(EmissionId, _baseEmission[i][m]);
+                    r.SetPropertyBlock(_mpb, m);
+                }
+            }
         }
 
         protected virtual void OnDrawGizmosSelected()
