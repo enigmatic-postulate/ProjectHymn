@@ -21,12 +21,19 @@ namespace ProjectHymn.Gameplay
         string _scene = "";
         string _out = "smoke-report.txt";
 
+        /// <summary>This run is the build check's smoke run (playtest logs are not written).</summary>
+        public static bool Active { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Active = false;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Boot()
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "-hymnSmoke");
             if (i < 0) return;
+            Active = true;
             var go = new GameObject("Smoke Run");
             DontDestroyOnLoad(go);
             var s = go.AddComponent<SmokeRun>();

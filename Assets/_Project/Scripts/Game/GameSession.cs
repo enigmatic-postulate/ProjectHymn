@@ -148,19 +148,30 @@ namespace ProjectHymn.Gameplay
         {
             if (Data == null || UiState.Blocking) return;
             bool shift;
-            bool f8, f10, f11, f12;
+            bool f8, f9, f10, f11, f12;
 #if ENABLE_INPUT_SYSTEM && HYMN_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb == null) return;
             shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
-            f8 = kb.f8Key.wasPressedThisFrame;
+            f8 = kb.f8Key.wasPressedThisFrame; f9 = kb.f9Key.wasPressedThisFrame;
             f10 = kb.f10Key.wasPressedThisFrame; f11 = kb.f11Key.wasPressedThisFrame; f12 = kb.f12Key.wasPressedThisFrame;
 #else
             shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            f8 = Input.GetKeyDown(KeyCode.F8);
+            f8 = Input.GetKeyDown(KeyCode.F8); f9 = Input.GetKeyDown(KeyCode.F9);
             f10 = Input.GetKeyDown(KeyCode.F10); f11 = Input.GetKeyDown(KeyCode.F11); f12 = Input.GetKeyDown(KeyCode.F12);
 #endif
             if (f8) { DebugCycleClass(shift ? -1 : 1); return; }
+            if (f9)
+            {
+                // VS-5 Part C: F9 opens the playtest logs folder; Shift+F9 turns the "how did that feel?" question on or off.
+                if (shift)
+                {
+                    PlaytestLogs.AskFeel = !PlaytestLogs.AskFeel;
+                    ProjectHymn.UI.GameHud.Toast(PlaytestLogs.AskFeel ? "Playtest: asking how each stage felt" : "Playtest: not asking how stages felt");
+                }
+                else PlaytestLogs.OpenFolder();
+                return;
+            }
             var rules = Db != null ? Db.Rules : ProgressionRules.Default;
             if (f10)
             {

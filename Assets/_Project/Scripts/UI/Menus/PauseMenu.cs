@@ -132,7 +132,7 @@ namespace ProjectHymn.UI
                 for (int i = d.history.Count - 1; i >= from; i--) sb.Append($"{d.history[i].stage} {d.history[i].rank}{(i > from ? ", " : "")}");
                 sb.Append("</color>\n");
             }
-            sb.Append("\n<color=#6a6478>Playtest keys: F8 / Shift+F8 next / previous class, F10 experience to the next level, F11 level up, Shift+F11 level down, F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints</color>");
+            sb.Append("\n<color=#6a6478>Playtest keys: F8 / Shift+F8 next / previous class, F10 experience to the next level, F11 level up, Shift+F11 level down, F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints, F9 open the playtest logs, Shift+F9 ask how stages felt on / off</color>");
             UiKit.Line(col, sb.ToString(), 22, UiKit.Text, 560f, TextAnchor.UpperLeft);
             var back = UiKit.Button(col, "Back", Main);
             UiKit.Button(col, "Debug: switch class (playtest)", DebugClass, 22, 44f);

@@ -47,6 +47,12 @@ namespace ProjectHymn.Gameplay
         int _enemies;
         bool _finished, _restarting, _lostLevelThisRun;
 
+        // The playtest log for this attempt (VS-5 Part C), written once when it ends.
+        RunLog _run;
+        System.DateTime _runStarted;
+        double _nextSample;
+        bool _runWritten;
+
         public PlaystyleLog Log { get; } = new PlaystyleLog();
         public double Seconds { get; private set; }
         public StageTargets Targets => new StageTargets(parSeconds, _enemies, perfectAttacks, hitsAllowedForS, hitsAllowedForA);
@@ -72,6 +78,48 @@ namespace ProjectHymn.Gameplay
             }
             ApplyCheckpointRule();
             AnnounceMeter();
+            BeginRunLog();
+        }
+
+        // ---------------- Playtest log ----------------
+
+        void BeginRunLog()
+        {
+            var s = GameSession.Instance;
+            _runStarted = System.DateTime.Now;
+            _run = new RunLog
+            {
+                build = Application.version,
+                stage = stageId,
+                started = _runStarted.ToString("yyyy-MM-dd HH:mm:ss"),
+                slot = s.Slot,
+                freePlay = s.FreePlay,
+                classId = s.Data.classId,
+                level = s.Data.level,
+                weapon = s.Data.weaponId,
+                par = parSeconds,
+                enemies = _enemies,
+            };
+        }
+
+        Vector3 PlayerAt => _player != null ? _player.transform.position : Vector3.zero;
+
+        void RunEvent(string kind, string detail = "")
+        {
+            if (_run == null || _runWritten) return;
+            var p = PlayerAt;
+            _run.Event((float)Seconds, kind, p.x, p.y, detail);
+        }
+
+        /// <summary>Write this attempt's log once, ending as <paramref name="outcome"/> unless it already has one.</summary>
+        void EndRunLog(string outcome)
+        {
+            if (_run == null || _runWritten) return;
+            _runWritten = true;
+            if (string.IsNullOrEmpty(_run.outcome)) _run.outcome = outcome;
+            if (_run.seconds <= 0f) _run.seconds = (float)Seconds;
+            _run.Fill(Log);
+            PlaytestLogs.Write(_run, _runStarted);
         }
 
         /// <summary>Name the stage and its time signature as it starts (and warn a Fighter off-common-time).</summary>
@@ -93,6 +141,7 @@ namespace ProjectHymn.Gameplay
 
         void OnDestroy()
         {
+            EndRunLog("quit");                 // left by the menu (or the game closed) mid-run
             BeatEnemy.AnyDied -= OnEnemyDied;
             if (goal != null) goal.Reached -= OnGoal;
             if (_player != null) _player.FellOut -= OnFellOut;
@@ -113,7 +162,16 @@ namespace ProjectHymn.Gameplay
 
         void Update()
         {
-            if (!_finished && !_restarting) Seconds += Time.deltaTime;
+            if (!_finished && !_restarting)
+            {
+                Seconds += Time.deltaTime;
+                if (_run != null && Seconds >= _nextSample)
+                {
+                    _nextSample = Seconds + RunLog.SampleEvery;
+                    var p = PlayerAt;
+                    _run.Sample((float)Seconds, p.x, p.y);
+                }
+            }
             if (UiState.Blocking) return;
             if (KeyPressed(7))
             {
@@ -124,6 +182,7 @@ namespace ProjectHymn.Gameplay
             if (KeyPressed(12) && ShiftHeld() && !_finished && !_restarting)
             {
                 GameHud.Toast("Debug: stage finished");
+                if (_run != null) _run.debug = true;
                 Finish();
             }
         }
@@ -159,12 +218,13 @@ namespace ProjectHymn.Gameplay
         {
             if (_finished) return;
             Log.AddHurt(hearts);
+            RunEvent("hurt", hearts.ToString());
             if (Log.HalfHeartsLost) LevelDownOnce("lost half your hearts");
         }
 
         void OnEnemyDied(BeatEnemy e)
         {
-            if (!_finished) Log.AddKill();
+            if (!_finished) { Log.AddKill(); RunEvent("kill", e != null ? e.name : ""); }
             int n = Rewards.RollNotes(notesPerEnemy.x, notesPerEnemy.y, _rng);
             GameSession.Instance.AddNotes(n);
             if (_popups != null) _popups.Show(e.transform.position + Vector3.up * 2.2f, $"+{n} Notes", new Color(1f, 0.85f, 0.4f), 1.2f);
@@ -185,13 +245,16 @@ namespace ProjectHymn.Gameplay
 
         void OnPlayerDied()
         {
+            RunEvent("died", GameSettings.TestCheckpoints ? "test checkpoint" : "");
             if (GameSettings.TestCheckpoints) return;
+            if (_run != null) _run.outcome = "died";
             LevelDownOnce("died");
             Restart();
         }
 
         void OnFellOut()
         {
+            RunEvent("fell");
             if (fallCostsAHeart && _player != null)
             {
                 bool hurt = _health != null && _health.Damage(1, _player.transform.position + Vector3.down);
@@ -201,6 +264,7 @@ namespace ProjectHymn.Gameplay
                 return;
             }
             LevelDownOnce("fell");
+            if (_run != null && !GameSettings.TestCheckpoints) _run.outcome = "fell";
             Restart();
         }
 
@@ -209,6 +273,7 @@ namespace ProjectHymn.Gameplay
         {
             if (_restarting) return;
             _restarting = true;
+            EndRunLog("restart");
             GameHud.Toast("Restarting the stage");
             Invoke(nameof(Reload), restartDelay);
         }
@@ -239,30 +304,41 @@ namespace ProjectHymn.Gameplay
             if (s.DebugRank.HasValue && result.Rank != s.DebugRank.Value)
                 result = new StageResult(result.Seconds, result.TimeRank, s.DebugRank.Value, result.Caps, result.Efficiency, result.Clean);
             var outcome = s.RecordClear(stageId, result, Log, _levelDowns);
-            StageResultsPanel.Show(string.IsNullOrEmpty(stageName) ? stageId : stageName, result, Log, targets, outcome, () =>
+            if (_run != null)
             {
-                if (outcome.Failed) { Restart(); return; }
-                if (outcome.Offer != null)
+                _run.Grade(result, parSeconds);
+                if (s.DebugRank.HasValue) _run.debug = true;
+                RunEvent("goal", result.Rank.ToString());
+            }
+            StageResultsPanel.Show(string.IsNullOrEmpty(stageName) ? stageId : stageName, result, Log, targets, outcome, () =>
+                FeelPrompt.Ask(feel => { if (_run != null) _run.feel = feel; EndRunLog("clear"); AfterResults(outcome); }));
+        }
+
+        /// <summary>After the results (and the playtest question): replay a C, offer a class change, or go home.</summary>
+        void AfterResults(RunOutcome outcome)
+        {
+            var s = GameSession.Instance;
+            if (outcome.Failed) { Restart(); return; }
+            if (outcome.Offer != null)
+            {
+                string current = s.Data.classId;
+                var options = ClassMenu.ClassOptions(outcome.Offer.Choices, current, outcome.Offer.Recommended);
+                ClassMenu.Open($"Level {outcome.Offer.Level}: change class?", outcome.Offer.Reason, options, outcome.Offer.Recommended, id =>
                 {
-                    string current = s.Data.classId;
-                    var options = ClassMenu.ClassOptions(outcome.Offer.Choices, current, outcome.Offer.Recommended);
-                    ClassMenu.Open($"Level {outcome.Offer.Level}: change class?", outcome.Offer.Reason, options, outcome.Offer.Recommended, id =>
+                    if (id != current)
                     {
-                        if (id != current)
-                        {
-                            var learned = new List<string>();
-                            string granted = s.SetClass(id, learned);
-                            var w = granted != null && s.Db != null ? s.Db.Weapon(granted) : null;
-                            var lines = new List<string>();
-                            if (w != null) lines.Add($"The {s.ClassName(id)} takes up the {w.displayName}");
-                            if (learned.Count > 0) lines.Add($"Learned: {Sequences.Names(learned)}");
-                            if (lines.Count > 0) GameHud.Toast(string.Join("\n", lines), 3.5f);
-                        }
-                        ReturnToHub();
-                    });
-                }
-                else ReturnToHub();
-            });
+                        var learned = new List<string>();
+                        string granted = s.SetClass(id, learned);
+                        var w = granted != null && s.Db != null ? s.Db.Weapon(granted) : null;
+                        var lines = new List<string>();
+                        if (w != null) lines.Add($"The {s.ClassName(id)} takes up the {w.displayName}");
+                        if (learned.Count > 0) lines.Add($"Learned: {Sequences.Names(learned)}");
+                        if (lines.Count > 0) GameHud.Toast(string.Join("\n", lines), 3.5f);
+                    }
+                    ReturnToHub();
+                });
+            }
+            else ReturnToHub();
         }
 
         void ReturnToHub()

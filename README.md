@@ -56,6 +56,13 @@ Built by **Project Hymn → Build Hub & Loop** (the village, the title and the n
 - **The ending:** the Summit's first clear plays three painted ending cards, then the **credits** roll over the battle theme (hold Enter to speed up, Esc to skip), then you're back in Saltmere for the last verse's celebration. Keep playing afterwards to rank up.
 - **Art and sound:** the cards are painted by `Tools/paint_story.py` into `Resources/UI/Story/`; the lanterns, bunting and star are built by `Editor/Art/VillageArt.cs`; story sounds (voice blip, page turn, verse chime) are synthesized in `Gameplay/Sfx.cs`.
 
+### Part C: playtest logs
+
+- **Every stage attempt writes a log** (one JSON file) when it ends: cleared with a rank, failed on a C, died, fell, restarted or quit. It holds the class, level and weapon, the time against par, the rank and **why it missed S**, the attack tally (timing grades, sequences), parries, blocks, dodges and hits taken, events with where they happened (hurt, died, fell, kills, the goal), and the player's position twice a second. Runs finished with playtest keys (F12 / Shift+F12) are marked and left out of the numbers. The build check's smoke run writes none.
+- **"How did that feel?"** after each stage's results: 1 (rough) to 5 (great), number keys answer, or skip. **Shift+F9** turns the question on or off; "Stop asking" turns it off too.
+- **Where the logs are:** **F9** opens the folder (on Windows `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Project Hymn\Playtests`). Another playtester zips theirs and sends them; drop the files into `Logs/Playtest/inbox`.
+- **The summary:** **Project Hymn → Playtest Summary** in the editor copies every log into `Logs/Playtest/runs` and writes `Logs/Playtest/summary.md`: for each stage, how runs ended, clear times against par with a **suggested par** (the time the fastest third of clears made), ranks, why runs missed S, timing, where players got hurt, died and fell across six stretches of the stage, time spent in each, and how it felt. Code in `Progression/RunLog.cs` and `Progression/PlaytestSummary.cs` (tested).
+
 ### Part B: the road and save slots
 
 - **The road from Saltmere:** the village gate opens a map instead of a list. The story path runs left to right (Practice Yard, Cliffside, Belfry Ridge, the Summit), each opening when the one before is cleared; the side roads branch below what opens them (**the Arena after Cliffside, Starlit Spring after Belfry Ridge**). Each stop shows its time signature, the verse it holds and your best rank as a big coloured letter; the next story stop is marked NEXT and selected. The rules live in `Progression/StageRoute.cs`; free play opens everything.
