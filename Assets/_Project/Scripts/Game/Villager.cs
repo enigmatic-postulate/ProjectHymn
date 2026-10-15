@@ -19,6 +19,9 @@ namespace ProjectHymn.Gameplay
         [SerializeField] float restYaw = 180f;
         [SerializeField] float turnSpeed = 240f;
 
+        /// <summary>Turn to face the camera (restYaw) whatever the player does: set while they're talking (VS-5 portraits).</summary>
+        [System.NonSerialized] public bool facingViewer;
+
         ClipPose _pose;
         Transform _player;
         float _offset, _blend;
@@ -50,6 +53,7 @@ namespace ProjectHymn.Gameplay
                     yaw = d.x >= 0f ? 115f : -115f;      // toward the player, a little toward the camera
                 }
             }
+            if (facingViewer) yaw = restYaw;
             if (body != null)
             {
                 float cur = body.localEulerAngles.y;

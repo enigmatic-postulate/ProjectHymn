@@ -27,6 +27,7 @@ namespace ProjectHymn.UI
         Camera _portraitCam;
         RenderTexture _portraitTex;
         Light _portraitLight;
+        Villager _villager;
 
         public static bool IsOpen => _open != null;
 
@@ -118,19 +119,25 @@ namespace ProjectHymn.UI
 
         bool BuildPortrait(RectTransform inner, Transform face)
         {
+            // They turn to the camera while they talk, so the portrait sees them from the front.
+            _villager = face.GetComponent<Villager>();
+            if (_villager != null) _villager.facingViewer = true;
             var head = FindHead(face);
-            // KayKit heads are big: the head bone sits at the neck, the face about a third of a metre above it.
+            // KayKit heads are big: the head bone sits at the neck, the face about a third of a metre above it. Frame the
+            // head and shoulders from straight in front (toward the viewer, a touch above).
             Vector3 eye = head != null ? head.position + Vector3.up * 0.3f : face.position + Vector3.up * 1.6f;
+            Vector3 aim = eye + Vector3.down * 0.18f;
+            const float Distance = 2.3f;
             _portraitTex = new RenderTexture(384, 384, 24) { name = "Portrait" };
             var camGo = new GameObject("Portrait Camera", typeof(Camera));
             camGo.transform.SetParent(transform, false);
-            // In front of the face, toward the viewer and a little to the side; the player (on the lane in front) stays
-            // behind the near plane.
-            camGo.transform.position = eye + new Vector3(0.38f, 0.08f, -1.25f);
-            camGo.transform.rotation = Quaternion.LookRotation(eye - camGo.transform.position, Vector3.up);
+            camGo.transform.position = new Vector3(face.position.x, aim.y + 0.12f, face.position.z - Distance);
+            camGo.transform.rotation = Quaternion.LookRotation(aim - camGo.transform.position, Vector3.up);
             _portraitCam = camGo.GetComponent<Camera>();
             _portraitCam.fieldOfView = 30f;
-            _portraitCam.nearClipPlane = 0.25f;
+            // The player stands on the lane between this camera and the speaker: clip everything nearer than the speaker's
+            // front so they never block the face.
+            _portraitCam.nearClipPlane = Distance - 0.75f;
             _portraitCam.farClipPlane = 60f;
             _portraitCam.clearFlags = CameraClearFlags.SolidColor;
             _portraitCam.backgroundColor = new Color(0.16f, 0.12f, 0.24f);
@@ -139,7 +146,7 @@ namespace ProjectHymn.UI
             // A soft warm light on their face while they talk.
             var lightGo = new GameObject("Portrait Light", typeof(Light));
             lightGo.transform.SetParent(transform, false);
-            lightGo.transform.position = eye + new Vector3(-0.4f, 0.35f, -0.7f);
+            lightGo.transform.position = eye + new Vector3(-0.5f, 0.4f, -0.9f);
             _portraitLight = lightGo.GetComponent<Light>();
             _portraitLight.type = LightType.Point;
             _portraitLight.range = 2.2f;
@@ -167,6 +174,7 @@ namespace ProjectHymn.UI
 
         void ReleasePortrait()
         {
+            if (_villager != null) { _villager.facingViewer = false; _villager = null; }
             if (_portraitCam != null) _portraitCam.targetTexture = null;
             if (_portraitTex != null) { _portraitTex.Release(); Destroy(_portraitTex); _portraitTex = null; }
         }
