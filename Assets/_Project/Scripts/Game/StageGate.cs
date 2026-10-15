@@ -1,67 +1,14 @@
-using System.Collections.Generic;
-using ProjectHymn.Progression;
 using ProjectHymn.UI;
 
 namespace ProjectHymn.Gameplay
 {
     /// <summary>
-    /// The village gate (VS-2): pick a stage, Mega Man style. Each stage shows its time signature and your best rank; a
-    /// stage opens once the one before it is cleared (Belfry Ridge after Cliffside). Free play opens everything.
+    /// The village gate: opens the road out of Saltmere (VS-5 Part B, <see cref="StageMap"/>). The stops and what opens them
+    /// are in Progression/StageRoute.cs: the story path Practice Yard, Cliffside, Belfry Ridge, the Summit, and the side roads
+    /// (the Arena after Cliffside, Starlit Spring after Belfry Ridge). Free play opens everything.
     /// </summary>
     public class StageGate : Interactable
     {
-        [System.Serializable]
-        public class Destination
-        {
-            public string stageId = "Cliffside";
-            public string scene = "Cliffside";
-            public string label = "Cliffside";
-            public string meter = "4/4";
-            [UnityEngine.Tooltip("Stage that must be cleared first (empty = always open).")]
-            public string requires = "";
-        }
-
-        public List<Destination> stages = new List<Destination>();
-        public string speaker = "Gatewarden";
-
-        bool Open(Destination d)
-        {
-            var s = GameSession.Instance;
-            return s.FreePlay || string.IsNullOrEmpty(d.requires) || s.Data.HasCleared(d.requires);
-        }
-
-        static bool IsCleared(GameSession s, string id) =>
-            id == "Yard" ? s.Data.tutorialDone || s.Data.HasCleared("Cliffside") : s.Data.HasCleared(id);
-
-        public override void Interact(PlayerInteractor who)
-        {
-            var s = GameSession.Instance;
-            var options = new List<ClassMenu.Option>();
-            string select = null;
-            foreach (var d in stages)
-            {
-                bool open = Open(d);
-                bool yard = d.stageId == "Yard";           // the Practice Yard is unranked
-                bool cleared = yard ? s.Data.tutorialDone || s.Data.HasCleared("Cliffside") : s.Data.HasCleared(d.stageId);
-                string best = yard ? (s.Data.tutorialDone ? "done" : "new here? start here") : s.Data.TryBestRank(d.stageId, out StageRank r) ? $"best {r}" : "not cleared";
-                string label = open ? $"{d.label}   <color=#8a84a0>{d.meter} · {best}</color>" : $"<color=#6a6478>{d.label}   (locked)</color>";
-                var rec = s.Data.Record(d.stageId);
-                string info = yard
-                    ? "The basics, with a metronome on screen: the beat, notes and sequences, guarding, parrying, dodging, and one real fight. Unranked; skip any time."
-                    : open
-                    ? $"Time signature {d.meter}.\n{(rec != null ? $"Best {rec.bestRank} in {(int)(rec.bestSeconds / 60.0)}:{rec.bestSeconds % 60.0:00.0}, cleared {rec.clears}×." : "Not cleared yet.")}"
-                    : $"Clear {d.requires} to open the road.";
-                options.Add(new ClassMenu.Option(d.stageId, label, info));
-                // Highlight the first open road not yet cleared (the Yard for a new player), else the first open one.
-                if (open && (select == null || (!cleared && IsCleared(s, select)))) select = d.stageId;
-            }
-            ClassMenu.Open("Where to?", "Each road is fought in its own time.", options, select, id =>
-            {
-                var d = stages.Find(x => x.stageId == id);
-                if (d == null) return;
-                if (!Open(d)) { DialogueBox.Show(speaker, new[] { $"The road to {d.label} is closed. Clear {d.requires} first." }, null); return; }
-                s.Travel(d.scene, "Start");
-            }, () => { });
-        }
+        public override void Interact(PlayerInteractor who) => StageMap.Open();
     }
 }

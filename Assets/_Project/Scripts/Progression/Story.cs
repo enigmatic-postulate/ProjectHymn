@@ -155,11 +155,12 @@ namespace ProjectHymn.Progression
                 new[]
                 {
                     "The cliffs are through the gate, east end of the street. New to the beat? Try the practice yard first.",
-                    "The arena's through there too, if you want a fight without the climb. Three waves, and they don't wait for you.",
+                    "Clear the cliffs and the arena road opens too, if you want a fight without the climb. Three waves, and they don't wait.",
                 },
                 new[]
                 {
                     "Cliffs are quiet. The ridge road to the belfry is open now, past the gate. Mind your count: they waltz up there.",
+                    "And the arena's open, if you want a fight without the climb.",
                 },
                 new[]
                 {

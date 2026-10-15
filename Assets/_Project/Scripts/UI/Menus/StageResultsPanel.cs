@@ -115,7 +115,7 @@ namespace ProjectHymn.UI
             UiKit.Select(UiKit.Button(col, label, Continue, 32, 64f));
         }
 
-        static Color RankColor(StageRank r) => r switch
+        public static Color RankColor(StageRank r) => r switch
         {
             StageRank.S => new Color(1f, 0.85f, 0.35f),
             StageRank.A => new Color(0.55f, 1f, 0.7f),

@@ -16,7 +16,6 @@ namespace ProjectHymn.Gameplay
     /// </summary>
     public class GameSession : MonoBehaviour
     {
-        const string SaveFile = "hymn_save.json";
         static GameSession _instance;
 
         public static GameSession Instance
@@ -43,8 +42,58 @@ namespace ProjectHymn.Gameplay
         CanvasGroup _fade;
         bool _saveOnArrival;
 
-        public static string SavePath => Path.Combine(Application.persistentDataPath, SaveFile);
-        public static bool HasSave => File.Exists(SavePath);
+        /// <summary>The save slot in use (VS-5: three slots, 1 to 3).</summary>
+        public int Slot { get; private set; } = 1;
+
+        public static string SlotPath(int slot) => Path.Combine(Application.persistentDataPath, SaveSlots.FileName(slot));
+        public string SavePath => SlotPath(Slot);
+        public static bool SlotUsed(int slot) => File.Exists(SlotPath(slot));
+        /// <summary>Any slot holds a save.</summary>
+        public static bool HasSave
+        {
+            get
+            {
+                MigrateLegacySave();
+                for (int i = 1; i <= SaveSlots.Count; i++) if (SlotUsed(i)) return true;
+                return false;
+            }
+        }
+
+        /// <summary>When a slot was last written, or null if it's empty.</summary>
+        public static DateTime? SavedAt(int slot) => SlotUsed(slot) ? File.GetLastWriteTime(SlotPath(slot)) : (DateTime?)null;
+
+        /// <summary>The slot saved most recently (Continue), or 0.</summary>
+        public static int LatestSlot()
+        {
+            MigrateLegacySave();
+            var at = new DateTime?[SaveSlots.Count];
+            for (int i = 0; i < at.Length; i++) at[i] = SavedAt(i + 1);
+            return SaveSlots.Latest(at);
+        }
+
+        /// <summary>Read a slot for the title's list without loading it; null if empty or unreadable.</summary>
+        public static SaveData Peek(int slot)
+        {
+            try
+            {
+                if (!SlotUsed(slot)) return null;
+                var d = JsonUtility.FromJson<SaveData>(File.ReadAllText(SlotPath(slot)));
+                d?.Normalize();
+                return d;
+            }
+            catch (Exception) { return null; }
+        }
+
+        /// <summary>Builds before VS-5 kept one save file: move it into slot 1 (once).</summary>
+        static void MigrateLegacySave()
+        {
+            try
+            {
+                string legacy = Path.Combine(Application.persistentDataPath, SaveSlots.LegacyFile);
+                if (File.Exists(legacy) && !File.Exists(SlotPath(1))) File.Move(legacy, SlotPath(1));
+            }
+            catch (Exception e) { Debug.LogWarning($"[Project Hymn] Could not move the old save into slot 1: {e.Message}"); }
+        }
         public ClassDefinition Class => Db != null ? Db.Class(Data.classId) : null;
         public WeaponSet Weapon => Db != null ? Db.Weapon(Data.weaponId) : null;
         public string SceneName => SceneManager.GetActiveScene().name;
@@ -173,9 +222,10 @@ namespace ProjectHymn.Gameplay
 
         // ---------------- Game flow ----------------
 
-        /// <summary>A new game: everyone starts as the Minstrel with the sword, at level 1.</summary>
-        public void NewGame()
+        /// <summary>A new game in <paramref name="slot"/>: everyone starts as the Minstrel with the sword, at level 1.</summary>
+        public void NewGame(int slot = 1)
         {
+            Slot = SaveSlots.Clamp(slot);
             var cls = Db != null ? Db.Class(ProgressionRules.Minstrel) : null;
             Data = SaveData.NewGame(ProgressionRules.Minstrel, cls != null ? cls.startingSequences : null);
             Data.weaponId = ProgressionRules.Sword;
@@ -183,8 +233,17 @@ namespace ProjectHymn.Gameplay
             Travel(Db != null ? Db.hubScene : "Village", "Start", saveOnArrival: true);
         }
 
+        /// <summary>Carry on from the slot saved most recently.</summary>
         public bool Continue()
         {
+            int latest = LatestSlot();
+            return latest > 0 && LoadSlot(latest);
+        }
+
+        /// <summary>Load a slot and go to where it was saved.</summary>
+        public bool LoadSlot(int slot)
+        {
+            Slot = SaveSlots.Clamp(slot);
             if (!Load()) return false;
             FreePlay = false;
             string scene = string.IsNullOrEmpty(Data.scene) ? (Db != null ? Db.hubScene : "Village") : Data.scene;
@@ -282,7 +341,7 @@ namespace ProjectHymn.Gameplay
         /// <summary>Write progress without moving the saved place (level-downs and clears in a stage).</summary>
         public bool SaveProgress()
         {
-            if (FreePlay || !HasSave && string.IsNullOrEmpty(Data.scene)) return false;
+            if (FreePlay || !SlotUsed(Slot) && string.IsNullOrEmpty(Data.scene)) return false;
             try
             {
                 File.WriteAllText(SavePath, JsonUtility.ToJson(Data, true));
@@ -295,7 +354,8 @@ namespace ProjectHymn.Gameplay
         {
             try
             {
-                if (!HasSave) return false;
+                MigrateLegacySave();
+                if (!SlotUsed(Slot)) return false;
                 var d = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
                 if (d == null) return false;
                 d.Normalize();

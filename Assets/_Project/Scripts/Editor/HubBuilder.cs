@@ -410,21 +410,12 @@ namespace ProjectHymn.EditorTools
                 npc.speaker = t.name; npc.storyId = t.name; npc.prompt = "Talk";
             }
 
-            // The way out: the gate opens onto every stage (Belfry Ridge once Cliffside is cleared; the Arena always).
+            // The way out: the gate opens the road map (VS-5: Progression/StageRoute.cs decides what's open).
             var doorGo = new GameObject("Stage Gate", typeof(StageGate));
             doorGo.transform.SetParent(level, false);
             doorGo.transform.position = new Vector3(VillageLayout.GateX, top, 0f);
             var gate = doorGo.GetComponent<StageGate>();
             gate.prompt = "Leave the village"; gate.range = 2.2f;
-            gate.stages = new List<StageGate.Destination>
-            {
-                new StageGate.Destination { stageId = "Yard", scene = "Yard", label = "Practice Yard (optional: the basics)", meter = "4/4" },
-                new StageGate.Destination { stageId = "Cliffside", scene = "Cliffside", label = "Cliffside", meter = "4/4" },
-                new StageGate.Destination { stageId = "Belfry", scene = "Belfry", label = "Belfry Ridge", meter = "3/4", requires = "Cliffside" },
-                new StageGate.Destination { stageId = "Summit", scene = "Summit", label = "The Summit (boss)", meter = "4/4 · 3/4 · 7/8", requires = "Belfry" },
-                new StageGate.Destination { stageId = "Arena", scene = "Arena", label = "The Arena (waves)", meter = "4/4" },
-                new StageGate.Destination { stageId = "Spring", scene = "Spring", label = "Starlit Spring (brawl)", meter = "4/4" },
-            };
 
             // Spawns, players, camera, UI
             var spawns = new GameObject("Spawns").transform;

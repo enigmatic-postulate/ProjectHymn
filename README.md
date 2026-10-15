@@ -56,6 +56,11 @@ Built by **Project Hymn → Build Hub & Loop** (the village, the title and the n
 - **The ending:** the Summit's first clear plays three painted ending cards, then the **credits** roll over the battle theme (hold Enter to speed up, Esc to skip), then you're back in Saltmere for the last verse's celebration. Keep playing afterwards to rank up.
 - **Art and sound:** the cards are painted by `Tools/paint_story.py` into `Resources/UI/Story/`; the lanterns, bunting and star are built by `Editor/Art/VillageArt.cs`; story sounds (voice blip, page turn, verse chime) are synthesized in `Gameplay/Sfx.cs`.
 
+### Part B: the road and save slots
+
+- **The road from Saltmere:** the village gate opens a map instead of a list. The story path runs left to right (Practice Yard, Cliffside, Belfry Ridge, the Summit), each opening when the one before is cleared; the side roads branch below what opens them (**the Arena after Cliffside, Starlit Spring after Belfry Ridge**). Each stop shows its time signature, the verse it holds and your best rank as a big coloured letter; the next story stop is marked NEXT and selected. The rules live in `Progression/StageRoute.cs`; free play opens everything.
+- **Three save slots:** the title has **Continue** (the slot saved most recently), **New Game** (choose a slot; a used one asks first) and **Load Game**. Each slot shows level, class, verses home, play time and when it was saved. Files are `hymn_save_1.json` to `_3.json` in the persistent data folder; the old single save moves into slot 1 the first time the game starts.
+
 ## Look & Sound (vertical slice milestone VS-4)
 
 - **Every stage has a look.** `Editor/Art/StageLook.cs` gives each scene a painted sky (the `Project Hymn/Sky` shader, now with clouds and a sun), matching fog, animated water in place of the flat sea, and its own post-processing volume in `Art/Generated/Looks/` (bloom, ACES tonemapping, grading, vignette). Presets: **Day** (Cliffside, Arena), **Morning** (Yard), **Dusk** (Belfry), **Night** (Summit), **Evening** (title and village). Point lights and glowing props **pulse on the beat**. Re-run **Build Hub & Loop** after pulling to regenerate the scenes.
