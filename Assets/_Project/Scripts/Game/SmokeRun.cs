@@ -11,7 +11,8 @@ namespace ProjectHymn.Gameplay
     /// The build check's smoke run (Slice 12): when the player starts with <c>-hymnSmoke</c>, it opens every scene in the
     /// build in turn (free play), lets each run for a few seconds with the music going, records every error and
     /// exception, writes them to the file after <c>-hymnSmokeOut</c> and quits (exit code 0 clean, 1 otherwise). Does
-    /// nothing in normal play.
+    /// nothing in normal play. It ends by restoring borderless fullscreen, since the build check runs it windowed and the
+    /// player would otherwise keep that window mode for the next launch.
     /// </summary>
     public class SmokeRun : MonoBehaviour
     {
@@ -71,6 +72,12 @@ namespace ProjectHymn.Gameplay
             lines.Add(_problems.Count == 0 ? "RESULT: PASS" : "RESULT: FAIL");
             if (_problems.Count > 0) { lines.Add(""); lines.Add($"Problems ({_problems.Count}, first 80):"); lines.AddRange(_problems.GetRange(0, Math.Min(80, _problems.Count))); }
             try { File.WriteAllLines(_out, lines); } catch (Exception e) { Debug.Log("Smoke report not written: " + e.Message); }
+            // The build check starts this run in a 1280x720 window, and Windows players remember the last window mode and
+            // size for the next launch. Put the game back to borderless fullscreen at the screen's own resolution (the
+            // project's setting) before quitting, so a normal launch afterwards is fullscreen again.
+            Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, FullScreenMode.FullScreenWindow);
+            yield return null;
+            yield return null;
             Application.Quit(_problems.Count == 0 ? 0 : 1);
         }
     }
