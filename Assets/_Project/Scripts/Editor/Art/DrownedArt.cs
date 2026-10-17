@@ -472,6 +472,86 @@ namespace ProjectHymn.EditorTools.Art
             return ps;
         }
 
+        // ---------------- The apse (the boss stage) ----------------
+
+        /// <summary>
+        /// The Sunken Apse behind the boss's floor: a great bronze bell hung from a beam, swinging once across every bar
+        /// (it tops its swing on each downbeat, whatever the meter), the drowned lectern, and a ring of glowing anemones.
+        /// </summary>
+        public static void Apse(Transform level, float x0, float x1, float top)
+        {
+            var root = new GameObject("Apse").transform;
+            root.SetParent(level, false);
+            float cx = (x0 + x1) * 0.5f;
+            var bronze = ArtLibrary.Textured("Drowned_Bronze", null, null, new Color(0.42f, 0.5f, 0.36f), 0.65f);
+            bronze.SetFloat("_Metallic", 0.8f);
+            // The beam and its two posts
+            var post = MeshKit.Lathe(new[]
+            {
+                new Vector2(0f, 14f), new Vector2(0.55f, 14f), new Vector2(0.45f, 13.4f), new Vector2(0.4f, 0.6f), new Vector2(0.6f, 0f), new Vector2(0f, 0f),
+            }, 16, Vector3.one, 3f).Save("ApsePost", MeshDir);
+            Part(root, "Post W", post, StoneMat, new Vector3(cx - 7f, top, 6.5f));
+            Part(root, "Post E", post, StoneMat, new Vector3(cx + 7f, top, 6.5f));
+            var beam = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(beam.GetComponent<Collider>());
+            beam.name = "Beam";
+            beam.transform.SetParent(root, false);
+            beam.transform.position = new Vector3(cx, top + 14.2f, 6.5f);
+            beam.transform.localScale = new Vector3(15.5f, 0.9f, 1.1f);
+            beam.GetComponent<MeshRenderer>().sharedMaterial = DarkStoneMat;
+            // The bell on a swinging pivot under the beam
+            var pivot = new GameObject("Great Bell", typeof(BellSwing)).transform;
+            pivot.SetParent(root, false);
+            pivot.position = new Vector3(cx, top + 13.7f, 6.5f);
+            var so = new SerializedObject(pivot.GetComponent<BellSwing>());
+            so.FindProperty("amplitude").floatValue = 14f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            var bellMesh = MeshKit.Lathe(new[]
+            {
+                new Vector2(0f, 0f), new Vector2(0.9f, 0f), new Vector2(1.5f, -0.6f), new Vector2(1.75f, -2.2f), new Vector2(2.1f, -4.1f),
+                new Vector2(2.75f, -5.1f), new Vector2(2.85f, -5.4f), new Vector2(2.55f, -5.35f), new Vector2(1.9f, -4.4f),
+                new Vector2(1.55f, -2.4f), new Vector2(1.3f, -0.8f), new Vector2(0.75f, -0.35f), new Vector2(0f, -0.35f),
+            }, 40, Vector3.one).Save("GreatBell", MeshDir);
+            var bell = new GameObject("Bell", typeof(MeshFilter), typeof(MeshRenderer));
+            bell.transform.SetParent(pivot, false);
+            bell.GetComponent<MeshFilter>().sharedMesh = bellMesh;
+            bell.GetComponent<MeshRenderer>().sharedMaterial = bronze;
+            var clapper = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.DestroyImmediate(clapper.GetComponent<Collider>());
+            clapper.name = "Clapper";
+            clapper.transform.SetParent(pivot, false);
+            clapper.transform.localPosition = new Vector3(0f, -4.8f, 0f);
+            clapper.transform.localScale = Vector3.one * 0.6f;
+            clapper.GetComponent<MeshRenderer>().sharedMaterial = Glow("Apse_Clapper", new Color(0.3f, 0.9f, 1f) * 2f,
+                                                                       new Color(0.8f, 1f, 1f) * 2.5f, -0.3f, 0.3f, Color.white * 1.5f, 0.6f);
+            var lg = new GameObject("Bell Light", typeof(Light));
+            lg.transform.SetParent(pivot, false);
+            lg.transform.localPosition = new Vector3(0f, -5.2f, -2.5f);
+            var l = lg.GetComponent<Light>();
+            l.type = LightType.Point; l.range = 12f; l.intensity = 2f; l.color = new Color(0.45f, 0.95f, 1f);
+            // The drowned lectern at the back of the floor
+            var lectern = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(lectern.GetComponent<Collider>());
+            lectern.name = "Lectern";
+            lectern.transform.SetParent(root, false);
+            lectern.transform.position = new Vector3(cx + 9f, top + 0.8f, 3.2f);
+            lectern.transform.localScale = new Vector3(0.9f, 1.6f, 0.7f);
+            lectern.GetComponent<MeshRenderer>().sharedMaterial = bronze;
+            // Anemones: small glowing domes along the back of the floor, pulsing with the beat
+            var dome = MeshKit.Lathe(new[] { new Vector2(0f, 0.5f), new Vector2(0.3f, 0.42f), new Vector2(0.45f, 0.15f), new Vector2(0.4f, 0f), new Vector2(0f, 0f) },
+                                     16, Vector3.one).Save("Anemone", MeshDir);
+            var rng = new System.Random(66);
+            var anemone = Glow("Apse_Anemone", new Color(0.9f, 0.3f, 0.7f) * 1.6f, new Color(1f, 0.85f, 0.6f) * 2f, 0f, 0.5f, new Color(1f, 0.6f, 0.9f), 0.5f);
+            for (float x = x0 + 1.5f; x < x1 - 1f; x += 2.2f + (float)rng.NextDouble() * 2f)
+            {
+                float z = 2.2f + (float)rng.NextDouble() * 2.5f;
+                float s = 0.7f + (float)rng.NextDouble() * 0.7f;
+                var r = Part(root, "Anemone", dome, anemone, new Vector3(x, top, z), null, Vector3.one * s);
+                r.gameObject.isStatic = false;
+                r.gameObject.AddComponent<BeatPulse>();
+            }
+        }
+
         // ---------------- The way out ----------------
 
         /// <summary>The stage's way out: a ruined arch with a hymnal of light hovering in it.</summary>

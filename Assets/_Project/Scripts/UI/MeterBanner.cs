@@ -27,7 +27,8 @@ namespace ProjectHymn.UI
             _big.supportRichText = true;
         }
 
-        static Color Tint(string sig) => sig.StartsWith("3/") ? new Color(0.65f, 0.85f, 1f) : sig.StartsWith("7/") ? new Color(1f, 0.6f, 0.85f) : UiKit.Gold;
+        static Color Tint(string sig) => sig.StartsWith("3/") ? new Color(0.65f, 0.85f, 1f) : sig.StartsWith("7/") ? new Color(1f, 0.6f, 0.85f)
+                                       : sig.StartsWith("6/") ? new Color(0.45f, 0.95f, 0.9f) : sig.StartsWith("9/") ? new Color(0.75f, 0.7f, 1f) : UiKit.Gold;
 
         void Update()
         {

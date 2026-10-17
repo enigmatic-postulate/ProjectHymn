@@ -29,6 +29,7 @@ namespace ProjectHymn.EditorTools
         static bool IsYard => L.Id == "Yard";
         static bool IsSpring => L.Id == "Spring";
         static bool Drowned => L.Drowned;
+        static bool IsApse => L.Id == "Apse";
         static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
@@ -62,6 +63,9 @@ namespace ProjectHymn.EditorTools
         [MenuItem("Project Hymn/Build Choir Loft", priority = 8)]
         public static void BuildLoft() => BuildStage(StageLayout.Loft);
 
+        [MenuItem("Project Hymn/Build Sunken Apse (Precentor)", priority = 9)]
+        public static void BuildApse() => BuildStage(StageLayout.Apse);
+
         /// <summary>
         /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
         /// bone dancers, dusk light and the belfry). Safe to re-run.
@@ -77,7 +81,7 @@ namespace ProjectHymn.EditorTools
             _art = ArtLibrary.HasKayKit;
             _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var theme = Drowned ? LoadNaveTheme() : Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : IsYard ? LoadPracticeTheme() : LoadTheme();
+            var theme = IsApse ? LoadPrecentorTheme() : Drowned ? LoadNaveTheme() : Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : IsYard ? LoadPracticeTheme() : LoadTheme();
             var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
@@ -104,6 +108,7 @@ namespace ProjectHymn.EditorTools
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
             if (Boss) BuildArena(level);
+            if (IsApse) DrownedArt.Apse(level, ApseLayout.ArenaXMin, ApseLayout.ArenaXMax, ApseLayout.ArenaTop);
 
             foreach (var b in L.Secrets) BuildBlock(level, b);
             var conductor = BuildConductor(theme);
@@ -436,6 +441,12 @@ namespace ProjectHymn.EditorTools
         /// <summary>The Bone Cantor holds the arena (it never leaves the crown).</summary>
         static BeatEnemy BuildBoss(Transform level, CliffsideLayout.Marker m, Conductor conductor)
         {
+            if (IsApse)
+            {
+                // VS-6: the Drowned Precentor holds the apse floor. Two verses inside a 0:25 par.
+                var apse = new Vector2(ApseLayout.ArenaXMin + 3f, ApseLayout.ArenaXMax - 1.5f);
+                return DrownedEnemies.Precentor(level, m.Name, new Vector3(m.X, m.Y, 0f), apse, conductor, 240f);
+            }
             var bounds = new Vector2(SummitLayout.ArenaXMin + 3f, SummitLayout.ArenaXMax - 1.5f);
             var pos = new Vector3(m.X, m.Y, 0f);
             const float Hp = 200f;          // Slice 8: two phases inside the 0:15 par

@@ -74,5 +74,26 @@ namespace ProjectHymn.EditorTools.Art
             body.rotation = Quaternion.Euler(0f, -90f + 14f, 0f);
             return c;
         }
+        /// <summary>
+        /// VS-6's boss, the Drowned Precentor: the skeleton mage in drowned bone, 3.6 m, with a staff; the one-handed
+        /// clips for his strokes, the jump chop for the Great Bell, the taunt for conducting.
+        /// </summary>
+        public static DrownedPrecentor BuildDrownedPrecentor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            const string Diag = "Melee_1H_Attack_Slice_Diagonal", Horiz = "Melee_1H_Attack_Slice_Horizontal",
+                         Chop = "Melee_1H_Attack_Chop", Stab = "Melee_1H_Attack_Stab", Jump = "Melee_1H_Attack_Jump_Chop";
+            return SkeletonCantor<DrownedPrecentor>(parent, name, position, bounds, conductor, maxHp, DrownedBone, 3.6f,
+                new (string, string[])[]
+                {
+                    ("Toll", new[] { Chop }),
+                    ("Rocking", new[] { Diag, Horiz }),
+                    ("Hemiola", new[] { Diag, Horiz, Chop }),
+                    ("Long Rock", new[] { Diag, Horiz, Stab }),
+                    ("Barcarolle", new[] { Diag, Horiz, Diag, Chop }),
+                    ("Suspension", new[] { Chop, Diag }),
+                    ("Great Bell", new[] { Jump }),
+                    ("Riptide", new[] { Diag, Horiz, Diag, Horiz, Diag, Stab }),
+                });
+        }
     }
 }

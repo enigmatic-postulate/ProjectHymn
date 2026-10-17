@@ -545,21 +545,40 @@ namespace ProjectHymn.EditorTools.Art
         /// </summary>
         public static BoneCantor BuildSkeletonCantor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
         {
-            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneCantor));
+            const string Diag = "Melee_1H_Attack_Slice_Diagonal", Horiz = "Melee_1H_Attack_Slice_Horizontal",
+                         Chop = "Melee_1H_Attack_Chop", Stab = "Melee_1H_Attack_Stab", Jump = "Melee_1H_Attack_Jump_Chop";
+            return SkeletonCantor<BoneCantor>(parent, name, position, bounds, conductor, maxHp, Mat("KayKit_Skeleton", "skeleton_texture.png"), 3.4f,
+                new (string, string[])[]
+                {
+                    ("Gavel", new[] { Chop }),
+                    ("Down-Up", new[] { Diag, Horiz }),
+                    ("Waltz", new[] { Diag, Horiz, Chop }),
+                    ("Limp", new[] { Diag, Horiz, Stab }),
+                    ("Four on the Floor", new[] { Diag, Horiz, Diag, Chop }),
+                    ("Hesitation", new[] { Chop, Diag }),
+                    ("Shockwave", new[] { Jump }),
+                    ("Limp Run", new[] { Diag, Horiz, Diag, Stab }),
+                });
+        }
+
+        /// <summary>A conducting skeleton boss of type <typeparamref name="T"/>: the mage rig at a height, a staff, and a clip per hit of each named attack.</summary>
+        internal static T SkeletonCantor<T>(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp,
+                                            Material mat, float height, (string pattern, string[] hits)[] clips) where T : BoneCantor
+        {
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(T));
             root.transform.SetParent(parent, false);
             root.transform.position = position;
             var cap = root.GetComponent<CapsuleCollider>();
-            cap.radius = 0.7f; cap.height = 3.4f; cap.center = new Vector3(0f, 1.7f, 0f);
+            cap.radius = 0.7f * height / 3.4f; cap.height = height; cap.center = new Vector3(0f, height * 0.5f, 0f);
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
-            var mat = Mat("KayKit_Skeleton", "skeleton_texture.png");
             string fbx = File.Exists(ArtLibrary.SkeletonMageFbx) ? ArtLibrary.SkeletonMageFbx : ArtLibrary.SkeletonFbx;
-            var (fit, rigRoot, model) = Place(fbx, body, 3.4f, mat);
+            var (fit, rigRoot, model) = Place(fbx, body, height, mat);
             string W(string f) => $"{ArtLibrary.KayKit}/Weapons/{f}";
             string staff = File.Exists(W("Skeleton_Staff.fbx")) ? W("Skeleton_Staff.fbx") : W("Skeleton_Blade.fbx");
             Attach(staff, ArtLibrary.FindDeep(rigRoot, "handslot.r"), "Staff", mat);
 
-            var b = root.GetComponent<BoneCantor>();
+            var b = root.GetComponent<T>();
             SetRef(b, "conductor", conductor);
             SetRef(b, "body", body);
             SetRef(b, "rigRoot", rigRoot);
@@ -575,21 +594,8 @@ namespace ProjectHymn.EditorTools.Art
             so.FindProperty("aggroRange").floatValue = 16f;
             so.FindProperty("aggroHeight").floatValue = 4f;
             so.FindProperty("leashRange").floatValue = 40f;
-            so.FindProperty("barHeight").floatValue = 3.9f;
+            so.FindProperty("barHeight").floatValue = height + 0.5f;
             so.FindProperty("bounds").vector2Value = bounds;
-            const string Diag = "Melee_1H_Attack_Slice_Diagonal", Horiz = "Melee_1H_Attack_Slice_Horizontal",
-                         Chop = "Melee_1H_Attack_Chop", Stab = "Melee_1H_Attack_Stab", Jump = "Melee_1H_Attack_Jump_Chop";
-            var clips = new (string pattern, string[] hits)[]
-            {
-                ("Gavel", new[] { Chop }),
-                ("Down-Up", new[] { Diag, Horiz }),
-                ("Waltz", new[] { Diag, Horiz, Chop }),
-                ("Limp", new[] { Diag, Horiz, Stab }),
-                ("Four on the Floor", new[] { Diag, Horiz, Diag, Chop }),
-                ("Hesitation", new[] { Chop, Diag }),
-                ("Shockwave", new[] { Jump }),
-                ("Limp Run", new[] { Diag, Horiz, Diag, Stab }),
-            };
             var list = so.FindProperty("attackClips");
             list.arraySize = clips.Length;
             for (int p = 0; p < clips.Length; p++)

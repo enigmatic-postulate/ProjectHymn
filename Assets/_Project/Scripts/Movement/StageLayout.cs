@@ -67,7 +67,8 @@ namespace ProjectHymn.Movement
         public static StageLayout Spring => SpringLayout.Stage;
         public static StageLayout Nave => NaveLayout.Stage;
         public static StageLayout Loft => LoftLayout.Stage;
-        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena, Spring, Nave, Loft };
+        public static StageLayout Apse => ApseLayout.Stage;
+        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena, Spring, Nave, Loft, Apse };
 
         /// <summary>Every floor an enemy (or the player) can stand on: the route and the platforms.</summary>
         public FloorMap Floors()

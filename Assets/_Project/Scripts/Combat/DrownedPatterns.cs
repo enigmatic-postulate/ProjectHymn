@@ -28,5 +28,23 @@ namespace ProjectHymn.Combat
             new EnemyAttackPattern("Heavy Cut", new[] { 0.0 }, 6, 6, 2),
             new EnemyAttackPattern("Lilt", new[] { 0.0, 3.0 }, 6, 6, 1),
         };
+
+        /// <summary>
+        /// The Drowned Precentor (the region's boss) conducts "Canticle of the Precentor": 6/8, then the same bar bent into a
+        /// 3/4 hemiola (a beat is a quarter there), then 9/8. Each move fits one meter (0 = any): in 6/8 he strikes on the big
+        /// beats, in 3/4 on all three quarters, in 9/8 on all three big beats. His second verse (below half health) adds
+        /// the barcarolle's long-short swing, the suspension, the 9/8 riptide and the Great Bell, a toll no guard stops.
+        /// </summary>
+        public static List<BossMove> Precentor() => new List<BossMove>
+        {
+            new BossMove(new EnemyAttackPattern("Toll", new[] { 0.0 }, 6, 6, 2), 0),
+            new BossMove(new EnemyAttackPattern("Rocking", new[] { 0.0, 3.0 }, 6, 6, 1), 6),
+            new BossMove(new EnemyAttackPattern("Hemiola", new[] { 0.0, 1.0, 2.0 }, 3, 3, 1), 3),
+            new BossMove(new EnemyAttackPattern("Long Rock", new[] { 0.0, 3.0, 6.0 }, 9, 6, 1), 9),
+            new BossMove(new EnemyAttackPattern("Barcarolle", new[] { 0.0, 2.0, 3.0, 5.0 }, 6, 6, 1), 6, 1),
+            new BossMove(new EnemyAttackPattern("Suspension", new[] { 0.0, 2.0 }, 3, 3, 1), 3, 1),
+            new BossMove(new EnemyAttackPattern("Great Bell", new[] { 0.0 }, 6, 6, 2).WithUnblockable(), 0, 1),
+            new BossMove(new EnemyAttackPattern("Riptide", new[] { 0.0, 2.0, 3.0, 5.0, 6.0, 8.0 }, 9, 6, 1), 9, 1),
+        };
     }
 }

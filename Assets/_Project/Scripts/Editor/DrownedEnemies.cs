@@ -82,6 +82,19 @@ namespace ProjectHymn.EditorTools
             return c;
         }
 
+        /// <summary>The Drowned Precentor (the boss), with a primitive fallback (sea-green robe, pale bone, a cyan orb).</summary>
+        public static DrownedPrecentor Precentor(Transform parent, string name, Vector3 at, Vector2 bounds, Conductor conductor, float maxHp)
+        {
+            DrownedPrecentor p = ArtLibrary.HasSkeleton
+                ? KayKitBuilder.BuildDrownedPrecentor(parent, name, at, bounds, conductor, maxHp)
+                : EnemyBuilder.BuildCantor<DrownedPrecentor>(parent, name, at, bounds, conductor, maxHp, 0xbcd8cc, 0x1e4a4a, 0x9ab89a, 0x70f0ff);
+            var so = new SerializedObject(p);
+            so.FindProperty("galvanizeBeats").floatValue = 2f;
+            so.FindProperty("warnColor").colorValue = new Color(1f, 0.3f, 0.4f);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return p;
+        }
+
         /// <summary>The Bell Jelly: a lathed, glowing bell with a bright core and seven swaying tentacles.</summary>
         public static BellJelly Jelly(Transform parent, Vector3 at, Vector2 bounds, Conductor conductor, Material additive)
         {

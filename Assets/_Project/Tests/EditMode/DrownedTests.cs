@@ -64,5 +64,72 @@ namespace ProjectHymn.Tests
             foreach (var x in new[] { DrownedPatterns.Jelly(), DrownedPatterns.Chorister(), k })
                 foreach (var a in x) Assert.AreEqual(6, a.LeadBeats, a.Name + ": a bar of count-in");
         }
+
+        static Dictionary<string, BossMove> ByName(List<BossMove> moves)
+        {
+            var d = new Dictionary<string, BossMove>();
+            foreach (var m in moves) d[m.Pattern.Name] = m;
+            return d;
+        }
+
+        /// <summary>Plan the Precentor's attacks back to back through the whole canticle in one verse; returns the patterns used.</summary>
+        static List<string> FightThrough(int phase)
+        {
+            var map = Precentor();
+            var moves = DrownedPatterns.Precentor();
+            var meterOf = ByName(moves);
+            var used = new List<string>();
+            int turn = 0;
+            double now = 0;
+            for (int guard = 0; guard < 60 && now < 140; guard++)
+            {
+                var plan = BossPlanner.Plan(map, moves, phase, ref turn, now, now);
+                Assert.IsTrue(plan.IsValid, "an attack at beat " + now);
+                var name = plan.Pattern.Name;
+                var move = meterOf[name];
+                long first = (long)System.Math.Round(plan.FirstHitBeat);
+                var info = map.GetBeat(first);
+                Assert.IsTrue(info.IsDownbeat, name + " lands on a downbeat");
+                Assert.IsTrue(move.Meter == 0 || move.Meter == info.BeatsPerMeasure, name + " fits " + info.Signature);
+                Assert.LessOrEqual(move.MinPhase, phase, name + " belongs to a later verse");
+                long tele = (long)System.Math.Floor(plan.TelegraphBeat + 1e-6);
+                Assert.AreEqual(info.SectionIndex, map.GetBeat(tele).SectionIndex, name + " is counted in, in the meter it lands in");
+                for (int i = 0; i < plan.HitCount; i++)
+                    Assert.AreEqual(info.SectionIndex, map.GetBeat((long)System.Math.Round(plan.HitBeat(i))).SectionIndex, name + " never crosses a change");
+                used.Add(name);
+                now = plan.HitBeat(plan.HitCount - 1) + plan.Pattern.RecoverBeats;
+            }
+            return used;
+        }
+
+        [Test]
+        public void ThePrecentorFightsInEachMeterOfHisSong()
+        {
+            var first = FightThrough(0);
+            CollectionAssert.Contains(first, "Rocking", "6/8: the two big beats");
+            CollectionAssert.Contains(first, "Hemiola", "3/4: three quarters across the same bar");
+            CollectionAssert.Contains(first, "Long Rock", "9/8: the three big beats");
+            CollectionAssert.DoesNotContain(first, "Great Bell", "the bell waits for the second verse");
+            var second = FightThrough(1);
+            CollectionAssert.Contains(second, "Great Bell");
+            CollectionAssert.Contains(second, "Riptide");
+        }
+
+        [Test]
+        public void TheGreatBellCannotBeGuardedAndTheHemiolaKeepsTheBar()
+        {
+            var d = ByName(DrownedPatterns.Precentor());
+            Assert.IsTrue(d["Great Bell"].Pattern.Unblockable);
+            Assert.AreEqual(1, d["Great Bell"].MinPhase);
+            foreach (var m in d.Values)
+            {
+                if (m.Pattern.Name == "Great Bell") continue;
+                Assert.IsFalse(m.Pattern.Unblockable, m.Pattern.Name + " can be guarded");
+                if (m.Meter != 0) Assert.Less(m.Pattern.Span, m.Meter, m.Pattern.Name + " fits inside one bar");
+            }
+            // The hemiola's three quarters take exactly as long as a bar of the 6/8 around it.
+            var map = Precentor();
+            Assert.AreEqual(map.BeatToTime(48) - map.BeatToTime(42), map.BeatToTime(51) - map.BeatToTime(48), 1e-6);
+        }
     }
 }

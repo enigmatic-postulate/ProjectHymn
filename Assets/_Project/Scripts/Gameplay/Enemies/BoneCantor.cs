@@ -68,9 +68,17 @@ namespace ProjectHymn.Gameplay
             new BossMove(new EnemyAttackPattern("Limp Run", new[] { 0.0, 2.0, 4.0, 6.0 }, 7, 6, 1), 7, 1),
         };
 
+        /// <summary>The boss's moves (a subclass, like the Drowned Precentor, has its own).</summary>
+        protected virtual List<BossMove> Moves() => DefaultMoves();
+        protected virtual string SecondVerseToast => "The Cantor's second verse: four on the floor, shockwaves (jump or dodge), the full seven";
+        protected virtual string FallToast => "The Bone Cantor falls silent. The way down is open.";
+        protected virtual Color RingColor => new Color(0.8f, 0.6f, 1f, 0.9f);
+        /// <summary>Beats per felt pulse for the clips' timing: 1 in simple meters; a subclass in 6/8 or 9/8 returns 3.</summary>
+        protected virtual float PoseScale => 1f;
+
         protected override void Awake()
         {
-            _moves.AddRange(DefaultMoves());
+            _moves.AddRange(Moves());
             base.Awake();
             if (rigRoot != null) _pose = new ClipPose(rigRoot.GetComponentsInChildren<Transform>(true), "root");
             _lastX = transform.position.x;
@@ -100,7 +108,7 @@ namespace ProjectHymn.Gameplay
             {
                 _phase = want;
                 _phaseT = 0f;
-                GameHud.Toast("The Cantor's second verse: four on the floor, shockwaves (jump or dodge), the full seven");
+                GameHud.Toast(SecondVerseToast);
             }
 
             _conducting = live && Map != null && !attacking && BossPlanner.Cue(Map, BeatNow).Changing;
@@ -154,12 +162,13 @@ namespace ProjectHymn.Gameplay
             if (named != null && !IsStaggered)
             {
                 int n = Plan.HitCount;
+                float ps = Mathf.Max(0.01f, PoseScale);
                 for (int i = 0; i < n; i++)
                 {
                     var hc = named.hits.Count > 0 ? named.hits[i % named.hits.Count] : null;
                     if (hc == null || hc.clip == null) continue;
-                    float tau = SinceHit(i);
-                    float gap = i + 1 < n ? (float)(Plan.HitBeat(i + 1) - Plan.HitBeat(i)) : 2f;
+                    float tau = SinceHit(i) / ps;
+                    float gap = i + 1 < n ? (float)(Plan.HitBeat(i + 1) - Plan.HitBeat(i)) / ps : 2f;
                     float post = i == n - 1 ? 1.4f : Mathf.Min(0.6f, gap * 0.6f);
                     float pre = i == 0 ? 1f : Mathf.Min(0.6f, gap * 0.6f);
                     float u = ClipTiming.Warp(tau, -pre, post, 0f, hc.hit, 1f);
@@ -183,7 +192,7 @@ namespace ProjectHymn.Gameplay
             if (phase == AttackPhase.Active || phase == AttackPhase.Recover)
                 for (int i = 0; i < Plan.HitCount; i++)
                 {
-                    float s = SinceHit(i);
+                    float s = SinceHit(i) / Mathf.Max(0.01f, PoseScale);
                     if (s > -0.12f && s < 0.5f) target = 22f * (1f - Smooth(s / 0.5f));
                 }
             if (_conducting) target = -8f + 6f * Mathf.Sin(BeatPhase * Mathf.PI * 2f);
@@ -203,7 +212,7 @@ namespace ProjectHymn.Gameplay
             ring.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             var sr = ring.GetComponent<SpriteRenderer>();
             sr.sprite = ProceduralSprites.Ring;
-            sr.color = new Color(0.8f, 0.6f, 1f, 0.9f);
+            sr.color = RingColor;
             sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             ring.SetActive(false);
             _ring = ring.transform;
@@ -260,7 +269,7 @@ namespace ProjectHymn.Gameplay
 
         protected override void OnDied()
         {
-            GameHud.Toast("The Bone Cantor falls silent. The way down is open.", 3.5f);
+            GameHud.Toast(FallToast, 3.5f);
             StartCoroutine(Fall());
         }
 

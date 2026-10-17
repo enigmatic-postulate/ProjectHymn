@@ -114,10 +114,14 @@ namespace ProjectHymn.EditorTools
         }
 
         /// <summary>VS-3's summit boss as placeholder primitives: a robed giant with a staff (he leans and slams on his hits).</summary>
-        public static BoneCantor BuildCantor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp)
+        public static BoneCantor BuildCantor(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp) =>
+            BuildCantor<BoneCantor>(parent, name, position, bounds, conductor, maxHp, 0xe8e0cc, 0x3a2a5a, 0xd8a840, 0xb0a0ff);
+
+        /// <summary>A conducting boss of type <typeparamref name="T"/> in primitives, in the given bone, robe, trim and orb colours.</summary>
+        public static T BuildCantor<T>(Transform parent, string name, Vector3 position, Vector2 bounds, Conductor conductor, float maxHp,
+                                       uint Bone, uint Robe, uint Trim, uint OrbColor) where T : BoneCantor
         {
-            const uint Bone = 0xe8e0cc, Robe = 0x3a2a5a, Trim = 0xd8a840;
-            var root = new GameObject(name, typeof(CapsuleCollider), typeof(BoneCantor));
+            var root = new GameObject(name, typeof(CapsuleCollider), typeof(T));
             root.transform.SetParent(parent, false);
             root.transform.position = position;
             var cap = root.GetComponent<CapsuleCollider>();
@@ -130,8 +134,8 @@ namespace ProjectHymn.EditorTools
             renderers.Add(Part(PrimitiveType.Sphere, "Skull", torso, new Vector3(0f, 3.1f, 0f), new Vector3(0.55f, 0.6f, 0.55f), Bone));
             renderers.Add(Part(PrimitiveType.Cube, "Stole", torso, new Vector3(0f, 2.2f, 0.32f), new Vector3(0.3f, 1.3f, 0.04f), Trim));
             renderers.Add(Part(PrimitiveType.Cylinder, "Staff", torso, new Vector3(0.7f, 1.9f, 0.35f), new Vector3(0.08f, 1.6f, 0.08f), 0x6a4a2a));
-            renderers.Add(Part(PrimitiveType.Sphere, "Orb", torso, new Vector3(0.7f, 3.55f, 0.35f), new Vector3(0.3f, 0.3f, 0.3f), 0xb0a0ff, 0.9f));
-            var b = root.GetComponent<BoneCantor>();
+            renderers.Add(Part(PrimitiveType.Sphere, "Orb", torso, new Vector3(0.7f, 3.55f, 0.35f), new Vector3(0.3f, 0.3f, 0.3f), OrbColor, 0.9f));
+            var b = root.GetComponent<T>();
             SetRef(b, "conductor", conductor);
             SetRef(b, "body", body);
             SetArray(b, "flashRenderers", renderers.ToArray());
