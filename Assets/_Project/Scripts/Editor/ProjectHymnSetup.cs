@@ -104,6 +104,7 @@ namespace ProjectHymn.EditorTools
             EnsureWaltz();
             EnsureSummitTheme();
             EnsurePracticeTheme();
+            EnsureDrownedThemes();
             Sword.SwordContent.Ensure();
             Sword.SwordContent.EnsureLocomotion();
             Sword.SwordsmanBuilder.BuildSwordsman();
@@ -125,6 +126,41 @@ namespace ProjectHymn.EditorTools
         internal const string PracticeClipPath = Root + "/Audio/Generated/Practice_in_the_Yard.wav";
         /// <summary>The village's evening loop (VS-4), rendered by Tools/compose_village.py; played off the beat grid.</summary>
         internal const string VillageClipPath = Root + "/Audio/Generated/Evening_in_the_Village.wav";
+
+        // ---------------- VS-6: the Drowned Nave (Tools/compose_drowned.py) ----------------
+
+        /// <summary>The stages' battle theme: 24 bars of 6/8, eighth = 225 (a dotted-quarter lilt of 75), D minor.</summary>
+        internal const string NaveClipPath = Root + "/Audio/Generated/Barcarolle_of_the_Drowned_Nave.wav";
+        /// <summary>The boss theme: 8 bars of 6/8 (eighth 225), 8 of 3/4 (quarter 112.5, the same bar), 8 of 9/8 (eighth 225).</summary>
+        internal const string PrecentorClipPath = Root + "/Audio/Generated/Canticle_of_the_Precentor.wav";
+        /// <summary>The Air Bell hub: 16 bars of 6/8 at eighth = 150 with three verse layers; played off the beat grid.</summary>
+        internal const string AirBellClipPath = Root + "/Audio/Generated/Hush_of_the_Air_Bell.wav";
+
+        internal static SongData LoadNaveTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/NaveBarcarolle.asset");
+        internal static SongData LoadPrecentorTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/PrecentorCanticle.asset");
+
+        static void EnsureDrownedThemes()
+        {
+            EnsureGeneratedSong("NaveBarcarolle", NaveClipPath, "Tools/compose_drowned.py (original placeholder)", 2, true,
+                new TempoSection(24, 225f, 6, 8));
+            EnsureGeneratedSong("PrecentorCanticle", PrecentorClipPath, "Tools/compose_drowned.py (original placeholder)", 2, true,
+                new TempoSection(8, 225f, 6, 8), new TempoSection(8, 112.5f, 3), new TempoSection(8, 225f, 9, 8));
+            // Layered hub music must stay sample-locked: import every loop as PCM, decompressed on load.
+            foreach (var path in new[] { VillageClipPath, AirBellClipPath })
+                for (int v = 0; v <= 3; v++) EnsurePcm(v == 0 ? path : path.Replace(".wav", $"_Verse{v}.wav"));
+        }
+
+        /// <summary>Import a clip as uncompressed PCM, decompressed on load (sample-exact loops and lock-step layers).</summary>
+        internal static void EnsurePcm(string clipPath)
+        {
+            if (!(AssetImporter.GetAtPath(clipPath) is AudioImporter ai)) return;
+            var ss = ai.defaultSampleSettings;
+            if (ss.compressionFormat == AudioCompressionFormat.PCM && ss.loadType == AudioClipLoadType.DecompressOnLoad) return;
+            ss.compressionFormat = AudioCompressionFormat.PCM;
+            ss.loadType = AudioClipLoadType.DecompressOnLoad;
+            ai.defaultSampleSettings = ss;
+            ai.SaveAndReimport();
+        }
 
         internal static SongData LoadPracticeTheme() => AssetDatabase.LoadAssetAtPath<SongData>($"{SongDir}/PracticeYard.asset");
         static void EnsurePracticeTheme() =>

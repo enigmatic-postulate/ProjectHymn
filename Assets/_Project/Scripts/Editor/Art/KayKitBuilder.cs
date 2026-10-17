@@ -17,7 +17,7 @@ namespace ProjectHymn.EditorTools.Art
     /// impact frame (measured from the hand's peak speed) is placed on the beat by the RhythmAnimator. The shield-knight
     /// enemy is the Skeleton Warrior with blade and large shield, driven the same way.
     /// </summary>
-    public static class KayKitBuilder
+    public static partial class KayKitBuilder
     {
         const string DataDir = "Assets/_Project/Data/KayKit";
         const double ReferenceSpb = 60.0 / 130.0;
@@ -78,6 +78,10 @@ namespace ProjectHymn.EditorTools.Art
                     ["Judgement"] = new[] { "Chop", "LeapChop", "Diagonal", "Chop" },
                     ["Crusade"] = new[] { "Chop", "Diagonal", "Chop", "Horizontal", "LeapChop", "Diagonal", "Stab" },
                     ["Tempest"] = new[] { "Diagonal", "Horizontal", "Diagonal", "Kick", "Horizontal", "Diagonal", "Stab" },
+                    ["Swell"] = new[] { "Chop", "Horizontal", "Diagonal" },
+                    ["Barcarolle"] = new[] { "Chop", "Horizontal", "Diagonal", "Chop", "Horizontal", "Stab" },
+                    ["Undertow"] = new[] { "Horizontal", "Diagonal", "ShieldBash" },             // the bash pushes
+                    ["Riptide"] = new[] { "Chop", "Diagonal", "Horizontal", "Chop", "Diagonal", "Horizontal", "LeapChop", "Diagonal", "Stab" },
                 });
             // Heft 1.0 on the moves; the weapon's damage scale (1.3) gives the greatsword its weight (weapons are
             // separate from classes since Rank & Class).
@@ -108,6 +112,10 @@ namespace ProjectHymn.EditorTools.Art
                     ["Judgement"] = new[] { "Chop", "Whirl", "Slice", "Chop" },
                     ["Crusade"] = new[] { "Chop", "Slice", "Chop", "Stab", "Whirl", "Slice", "Spin" },
                     ["Tempest"] = new[] { "Slice", "Stab", "Slice", "Kick", "Stab", "Slice", "Spin" },
+                    ["Swell"] = new[] { "Chop", "Slice", "Stab" },
+                    ["Barcarolle"] = new[] { "Chop", "Slice", "Stab", "Chop", "Whirl", "Spin" },
+                    ["Undertow"] = new[] { "Stab", "Slice", "Kick" },                             // the kick pushes
+                    ["Riptide"] = new[] { "Chop", "Slice", "Stab", "Chop", "Slice", "Whirl", "Chop", "Slice", "Spin" },
                 });
             sword.id = "sword";
             great.id = "greatsword";

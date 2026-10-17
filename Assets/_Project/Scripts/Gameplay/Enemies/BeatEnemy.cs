@@ -31,6 +31,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] protected bool oneBarCountIn = true;
         [Tooltip("The red galvanize aura flares this many beats before each hit (one beat for every enemy for now; varied per enemy later).")]
         [SerializeField] protected float galvanizeBeats = 1f;
+        [Tooltip("Beats per felt pulse for posing (1 in simple meters; 3 in 6/8 and 9/8, where a beat is an eighth), so swings and wind-ups keep their speed.")]
+        [SerializeField] protected float poseBeatScale = 1f;
         [Header("Stagger")]
         [SerializeField] protected int staggerBeats = 2;
         [SerializeField] protected float staggerDamageMultiplier = 1.5f;
@@ -489,6 +491,8 @@ namespace ProjectHymn.Gameplay
         }
         /// <summary>0..1 through the wind-up (1 = the hit).</summary>
         protected float Windup => Plan.IsValid ? (float)Plan.TelegraphProgress(BeatNow) : 0f;
+        /// <summary>Like <see cref="SinceHit"/> but in felt pulses (<see cref="poseBeatScale"/>), for animation timing.</summary>
+        protected float PoseSince(int index) => SinceHit(index) / Mathf.Max(0.01f, poseBeatScale);
         /// <summary>Beats since the most recent hit of the plan (negative before the first).</summary>
         protected float SinceHit(int index) => Plan.IsValid && index < Plan.HitCount ? (float)(BeatNow - Plan.HitBeat(index)) : -99f;
         protected double SecondsPerBeat => conductor != null && conductor.IsPlaying ? conductor.CurrentBeat.SecondsPerBeat : 0.46;

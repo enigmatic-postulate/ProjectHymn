@@ -42,15 +42,20 @@ namespace ProjectHymn.Tests
         [Test]
         public void TheTreesInTheSlice()
         {
-            CollectionAssert.AreEqual(new[] { "CrossingCuts", "Powerslice", "RisingVerse" }, SequenceLibrary.TreeKeys(SequenceLibrary.Minstrel));
+            CollectionAssert.AreEqual(new[] { "CrossingCuts", "Powerslice", "RisingVerse", "Swell", "Barcarolle" }, SequenceLibrary.TreeKeys(SequenceLibrary.Minstrel));
             Assert.IsTrue(SequenceLibrary.Tree(SequenceLibrary.Fighter).All(e => e.Meter == SequenceLibrary.Common), "the Fighter's tree is 4/4 by design");
             Assert.AreEqual(SequenceLibrary.Waltz, SequenceLibrary.Find("LanternStep").Meter);
             Assert.AreEqual(SequenceLibrary.Seven, SequenceLibrary.Find("Crusade").Meter);
             Assert.AreEqual(SequenceLibrary.Balladeer, SequenceLibrary.Find("Tempest").Tree);
             Assert.AreEqual(SequenceEffect.Launch, SequenceLibrary.Find("RisingVerse").Effect);
             Assert.AreEqual(SequenceEffect.Push, SequenceLibrary.Find("Bulwark").Effect);
-            foreach (var t in new[] { SequenceLibrary.Minstrel, SequenceLibrary.Fighter, SequenceLibrary.Warden, SequenceLibrary.Crusader })
-                Assert.AreEqual(3, SequenceLibrary.Tree(t).Count, t);
+            Assert.AreEqual(5, SequenceLibrary.Tree(SequenceLibrary.Minstrel).Count);
+            Assert.AreEqual(3, SequenceLibrary.Tree(SequenceLibrary.Fighter).Count);
+            Assert.AreEqual(4, SequenceLibrary.Tree(SequenceLibrary.Warden).Count);
+            Assert.AreEqual(4, SequenceLibrary.Tree(SequenceLibrary.Crusader).Count);
+            Assert.AreEqual(SequenceLibrary.Six, SequenceLibrary.Find("Barcarolle").Meter);
+            Assert.AreEqual(SequenceLibrary.Nine, SequenceLibrary.Find("Riptide").Meter);
+            Assert.AreEqual(SequenceEffect.Push, SequenceLibrary.Find("Undertow").Effect);
             Assert.AreEqual(ProgressionRules.Minstrel, SequenceLibrary.Minstrel);
             Assert.AreEqual(ProgressionRules.Crusader, SequenceLibrary.Crusader);
         }
@@ -136,6 +141,35 @@ namespace ProjectHymn.Tests
             for (int i = 0; i < notes.Length; i++) last = chain.Register(i, notes[i], true, "7/8");
             Assert.IsTrue(last.Completed);
             Assert.AreEqual("Crusade", chain.Sequences[last.Sequence].Name);
+        }
+
+        [Test]
+        public void BarcarolleCarriesOnFromSwellInSixEight()
+        {
+            var chain = ChainOf("Swell", "Barcarolle", "Undertow");
+            var notes = new[] { B, A, A, B, A, A };
+            var steps = new List<ChainStep>();
+            for (int i = 0; i < notes.Length; i++) steps.Add(chain.Register(i, notes[i], true, "6/8"));
+            Assert.IsTrue(steps[2].Completed, "Swell finishes on the third note");
+            Assert.AreEqual("Swell", chain.Sequences[steps[2].Sequence].Name);
+            Assert.IsTrue(steps[5].Completed, "and Barcarolle on the sixth");
+            Assert.AreEqual("Barcarolle", chain.Sequences[steps[5].Sequence].Name);
+
+            var other = ChainOf("Swell", "CrossingCuts");
+            ChainStep last = default;
+            for (int i = 0; i < 3; i++) last = other.Register(i, new[] { B, A, A }[i], true, "4/4");
+            Assert.IsFalse(last.Completed, "Swell is a 6/8 sequence: nothing in 4/4");
+        }
+
+        [Test]
+        public void RiptideIsNineEighthsOnly()
+        {
+            var chain = ChainOf("Riptide");
+            var notes = new[] { B, A, A, B, A, A, B, A, A };
+            ChainStep last = default;
+            for (int i = 0; i < notes.Length; i++) last = chain.Register(i, notes[i], true, "9/8");
+            Assert.IsTrue(last.Completed);
+            Assert.AreEqual(3.0f, SequenceLibrary.Find("Riptide").Finisher);
         }
 
         // ---------------- Learning ----------------

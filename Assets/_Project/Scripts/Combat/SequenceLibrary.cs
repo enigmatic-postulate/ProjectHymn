@@ -41,12 +41,13 @@ namespace ProjectHymn.Combat
     /// in that meter, so a 4/4 sequence does nothing in a 3/4 phase. Taking a class learns its tree, and a learned
     /// sequence works for every class (multiclassing grows the library). The finisher scales with length. No two
     /// sequences in one meter share a pattern, so "longest match wins" never has to choose. Names, patterns and
-    /// multipliers are drafts. The slice builds the Minstrel, Fighter, Warden and Crusader trees; Tempest moved to the
+    /// multipliers are drafts. VS-6 adds the Drowned Nave's compound meters: 6/8 (Swell, Barcarolle, Undertow) and 9/8
+    /// (Riptide), each counted in eighths. The slice builds the Minstrel, Fighter, Warden and Crusader trees; Tempest moved to the
     /// Balladeer, a later class, so nobody learns it yet.
     /// </summary>
     public static class SequenceLibrary
     {
-        public const string Common = "4/4", Waltz = "3/4", Seven = "7/8";
+        public const string Common = "4/4", Waltz = "3/4", Seven = "7/8", Six = "6/8", Nine = "9/8";
         public const string Minstrel = "minstrel", Fighter = "fighter", Warden = "warden", Crusader = "crusader", Balladeer = "balladeer";
 
         public static readonly IReadOnlyList<SequenceEntry> All = new[]
@@ -55,6 +56,9 @@ namespace ProjectHymn.Combat
             new SequenceEntry("CrossingCuts", "Crossing Cuts", Minstrel, Common, "1-2-1", 1.8f, 0xffd27a),
             new SequenceEntry("Powerslice", "Powerslice", Minstrel, Common, "2-2", 1.6f, 0xff7a5a),
             new SequenceEntry("RisingVerse", "Rising Verse", Minstrel, Common, "1-1-2", 1.7f, 0x8ad8ff, SequenceEffect.Launch, "launches the enemy"),
+            // Minstrel, VS-6: the Drowned Nave's 6/8, heavy on each big beat (1 and 4); Barcarolle carries on from Swell
+            new SequenceEntry("Swell", "Swell", Minstrel, Six, "2-1-1", 1.8f, 0x7ad0e8),
+            new SequenceEntry("Barcarolle", "Barcarolle", Minstrel, Six, "2-1-1-2-1-1", 2.4f, 0x9af0ff),
             // Fighter (4/4 only, by design)
             new SequenceEntry("Drill", "Drill", Fighter, Common, "1-1-1-1", 1.8f, 0xd8d8d8),
             new SequenceEntry("Hammerfall", "Hammerfall", Fighter, Common, "2-2-2", 2.0f, 0xff9a4a),
@@ -63,10 +67,12 @@ namespace ProjectHymn.Combat
             new SequenceEntry("Bulwark", "Bulwark", Warden, Common, "2-1-1", 1.7f, 0x9ab8ff, SequenceEffect.Push, "the bash pushes the enemy back a beat"),
             new SequenceEntry("Counterpoint", "Counterpoint", Warden, Common, "1-2-2-1", 2.0f, 0x7ac8ff),
             new SequenceEntry("LanternStep", "Lantern Step", Warden, Waltz, "1-2-2", 1.8f, 0xffe6a0),
+            new SequenceEntry("Undertow", "Undertow", Warden, Six, "1-1-2", 1.8f, 0x5ab0d8, SequenceEffect.Push, "the last blow pulls the enemy off its feet and back a beat"),
             // Crusader
             new SequenceEntry("Brandish", "Brandish", Crusader, Common, "2-1", 1.5f, 0xffc860),
             new SequenceEntry("Judgement", "Judgement", Crusader, Common, "2-2-1-2", 2.2f, 0xfff0b0),
             new SequenceEntry("Crusade", "Crusade", Crusader, Seven, "2-1-2-1-2-1-2", 2.6f, 0xffffff),
+            new SequenceEntry("Riptide", "Riptide", Crusader, Nine, "2-1-1-2-1-1-2-1-1", 3.0f, 0x40d8ff),
             // Balladeer (a later class): Tempest moved here
             new SequenceEntry("Tempest", "Tempest", Balladeer, Common, "1-1-1-2-1-1-1", 2.5f, 0x7affc8),
         };

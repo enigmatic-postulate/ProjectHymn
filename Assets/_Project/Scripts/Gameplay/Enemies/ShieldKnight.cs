@@ -119,7 +119,7 @@ namespace ProjectHymn.Gameplay
             const float Lead = 0.08f;   // the swing starts just before the beat so the blade passes horizontal on it
             int last = -1;
             if (phase == AttackPhase.Telegraph || phase == AttackPhase.Active || phase == AttackPhase.Recover)
-                for (int i = 0; i < Plan.HitCount; i++) if (SinceHit(i) >= -Lead) last = i;
+                for (int i = 0; i < Plan.HitCount; i++) if (PoseSince(i) >= -Lead) last = i;
             if (phase == AttackPhase.Telegraph && last < 0)
             {
                 float w = Smooth(Windup);
@@ -128,14 +128,14 @@ namespace ProjectHymn.Gameplay
             }
             else if (last >= 0)
             {
-                float s = SinceHit(last) + Lead;
+                float s = PoseSince(last) + Lead;
                 float k0 = Smooth(s / (2f * Lead));
                 target = Mathf.Lerp(Raised, Struck, k0);
                 lean = Mathf.Lerp(-10f, 18f, k0);
                 int next = last + 1;
                 if (next < Plan.HitCount)
                 {
-                    float sn = SinceHit(next);                       // negative: beats until the next hit
+                    float sn = PoseSince(next);                       // negative: beats until the next hit
                     if (sn > -0.7f) { float k = Smooth((sn + 0.7f) / 0.55f); target = Mathf.Lerp(Struck, -155f, k); lean = Mathf.Lerp(18f, -8f, k); }
                 }
                 else if (s > 0.4f)
@@ -191,7 +191,7 @@ namespace ProjectHymn.Gameplay
                     var clip = n == 1 ? cutClip : i == 0 ? flurryAClip : flurryBClip;
                     float hit = n == 1 ? cutHit : i == 0 ? flurryAHit : flurryBHit;
                     if (clip == null) continue;
-                    float tau = SinceHit(i);
+                    float tau = PoseSince(i);
                     float post = i == n - 1 ? 1.4f : 0.6f;
                     float pre = i == 0 ? windBeats : 0.7f;
                     float u = ClipTiming.Warp(tau, -pre, post, 0f, hit, 1f);

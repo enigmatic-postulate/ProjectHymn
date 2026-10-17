@@ -41,3 +41,6 @@ sysinfo.txt
 /Assets/_Project/Audio/Music/*
 !/Assets/_Project/Audio/Music/README.md
 !/Assets/_Project/Audio/Music/README.md.meta
+
+# Python caches (Tools scripts)
+__pycache__/
