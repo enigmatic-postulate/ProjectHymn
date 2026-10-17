@@ -9,6 +9,9 @@ namespace ProjectHymn.Gameplay
     /// </summary>
     public class StageGate : Interactable
     {
-        public override void Interact(PlayerInteractor who) => StageMap.Open();
+        [UnityEngine.Tooltip("The region whose map this gate opens (0 = Saltmere, 1 = the Drowned Nave, from the Air Bell).")]
+        public int region;
+
+        public override void Interact(PlayerInteractor who) => StageMap.Open(region);
     }
 }

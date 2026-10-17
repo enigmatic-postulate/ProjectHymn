@@ -16,11 +16,17 @@ namespace ProjectHymn.Gameplay
         public float scrollSpeed = 70f;
         bool _leaving;
 
+        /// <summary>The stage whose ending to play (set on the way here; VS-6: "Apse" plays chapter two's). Defaults to the Summit's.</summary>
+        public static string ForStage = "Summit";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => ForStage = "Summit";
+
         void Start()
         {
             UiState.Reset();
             Time.timeScale = 1f;
-            StoryCards.Play(Story.Ending, () => StartCoroutine(Credits()));
+            StoryCards.Play(Story.EndingCards(ForStage), () => StartCoroutine(Credits()));
         }
 
         IEnumerator Credits()
@@ -88,7 +94,9 @@ namespace ProjectHymn.Gameplay
             if (_leaving) return;
             _leaving = true;
             var s = GameSession.Instance;
-            s.Travel(s.Db != null ? s.Db.hubScene : "Village", "Start", saveOnArrival: true);
+            string hub = Story.EndingHub(ForStage);
+            if (hub == "Village" && s.Db != null) hub = s.Db.hubScene;
+            s.Travel(hub, "Start", saveOnArrival: true);
         }
     }
 }

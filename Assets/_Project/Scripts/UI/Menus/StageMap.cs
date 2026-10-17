@@ -12,7 +12,8 @@ namespace ProjectHymn.UI
     /// Cliffside, Belfry Ridge, the Summit) with the side roads branching below the stage that opens them. Each stop shows
     /// its time signature, whether it holds a verse, and your best rank as a big coloured letter; locked ones are dimmed.
     /// The next story stop is marked NEXT and selected. Details for the highlighted stop sit along the bottom. Arrow keys
-    /// or the stick choose, Enter goes, Esc steps back.
+    /// or the stick choose, Enter goes, Esc steps back. VS-6: each region has its own page (the Air Bell's gate opens the
+    /// Drowned Nave's), and a road between the two hubs once the Drowned Nave is open.
     /// </summary>
     public class StageMap : MonoBehaviour
     {
@@ -22,14 +23,16 @@ namespace ProjectHymn.UI
         Text _info;
         RectTransform _nextTag;
         float _openedAt;
+        int _region;
 
         static readonly Color Line = new Color(0.85f, 0.68f, 0.32f, 0.85f), LineDim = new Color(0.4f, 0.36f, 0.5f, 0.6f);
         static readonly Color Locked = new Color(0.42f, 0.4f, 0.5f);
 
-        public static void Open()
+        public static void Open(int region = 0)
         {
             if (_open != null) return;
             _open = new GameObject("Stage Map").AddComponent<StageMap>();
+            _open._region = Mathf.Clamp(region, 0, StageRoute.Regions - 1);
             _open.Build();
         }
 
@@ -43,38 +46,57 @@ namespace ProjectHymn.UI
             dim.gameObject.AddComponent<Image>().color = new Color(0.02f, 0.01f, 0.05f, 0.55f);
             var panel = UiKit.Panel("Map", c.transform, new Vector2(1640f, 880f));
 
-            var title = UiKit.Label(panel, "THE ROAD FROM SALTMERE", 40, TextAnchor.UpperCenter, UiKit.Gold);
+            var path = StageRoute.PathOf(_region);
+            var sides = new List<RouteStop>(StageRoute.SideRoadsOf(_region));
+            var title = UiKit.Label(panel, StageRoute.RegionTitles[_region], 40, TextAnchor.UpperCenter, UiKit.Gold);
             ((RectTransform)title.transform).offsetMax = new Vector2(0f, -26f);
             var sub = UiKit.Label(panel, "Each road is fought in its own time. Clear a stage to open the next.", 24, TextAnchor.UpperCenter, UiKit.Dim);
             ((RectTransform)sub.transform).offsetMax = new Vector2(0f, -80f);
 
             // The story path, left to right, and the side roads below what opens them.
             var pos = new Dictionary<string, Vector2>();
-            float[] xs = { -570f, -190f, 190f, 570f };
-            for (int i = 0; i < StageRoute.Path.Length; i++) pos[StageRoute.Path[i].Id] = new Vector2(xs[i], 170f);
-            foreach (var r in StageRoute.SideRoads)
+            float spacing = 380f, x0 = -spacing * (path.Length - 1) * 0.5f;
+            for (int i = 0; i < path.Length; i++) pos[path[i].Id] = new Vector2(x0 + spacing * i, 170f);
+            foreach (var r in sides)
                 pos[r.Id] = pos.TryGetValue(r.Requires, out var above) ? above + new Vector2(0f, -250f) : new Vector2(0f, -80f);
 
             // Roads first, so the stops draw over them.
-            for (int i = 0; i + 1 < StageRoute.Path.Length; i++)
+            for (int i = 0; i + 1 < path.Length; i++)
             {
-                var b = StageRoute.Path[i + 1];
-                Bar(panel, pos[StageRoute.Path[i].Id], pos[b.Id], StageRoute.IsOpen(s.Data, b, s.FreePlay));
+                var b = path[i + 1];
+                Bar(panel, pos[path[i].Id], pos[b.Id], StageRoute.IsOpen(s.Data, b, s.FreePlay));
             }
-            foreach (var r in StageRoute.SideRoads)
+            foreach (var r in sides)
                 if (pos.TryGetValue(r.Requires, out var from)) Bar(panel, from, pos[r.Id], StageRoute.IsOpen(s.Data, r, s.FreePlay));
 
             var next = StageRoute.Next(s.Data, s.FreePlay);
             Button select = null;
             foreach (var r in StageRoute.All)
             {
+                if (!pos.ContainsKey(r.Id)) continue;
                 var b = Stop(panel, r, pos[r.Id], s);
                 if (next != null && r.Id == next.Id) { select = b; _nextTag = NextTag(panel, pos[r.Id]); }
+            }
+
+            // The road to the other region's hub, once the Drowned Nave is open.
+            int other = 1 - _region;
+            if (StageRoute.RegionOpen(s.Data, 1, s.FreePlay))
+            {
+                bool nextThere = next != null && next.Region == other;
+                string label = other == 1 ? "Down to the Air Bell  ▸" : "◂  Up to Saltmere";
+                if (nextThere) label += "   <color=#ffd56a>NEXT</color>";
+                var travel = UiKit.Button(panel, label, () => TravelTo(other), 26, 0f);
+                var trt = (RectTransform)travel.transform;
+                trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0.5f);
+                trt.sizeDelta = new Vector2(420f, 64f);
+                trt.anchoredPosition = new Vector2(560f, -110f);
+                travel.gameObject.AddComponent<SelectHint>().OnSelected = () => _info.text = TravelInfo(other);
+                if (select == null && nextThere) select = travel;
             }
             if (select == null)
             {
                 // The story is done (or nothing is open): start on the last stop played on the path.
-                foreach (var r in StageRoute.Path) if (StageRoute.IsOpen(s.Data, r, s.FreePlay)) select = _stops[r.Id];
+                foreach (var r in path) if (StageRoute.IsOpen(s.Data, r, s.FreePlay)) select = _stops[r.Id];
             }
 
             var infoFrame = UiKit.Rect("Info", panel, new Vector2(0f, 0f), new Vector2(1f, 0f));
@@ -162,6 +184,16 @@ namespace ProjectHymn.UI
                     : "<color=#8a84a0>Not cleared yet.</color>");
             }
             return sb.ToString();
+        }
+
+        static string TravelInfo(int region) => region == 1
+            ? "<color=#ffd56a><size=32>The Air Bell</size></color>   <color=#8a84a0>6/8</color>\nDown the harbour chain to the divers' camp in the drowned cathedral's great bell. The deep's stages start from there."
+            : "<color=#ffd56a><size=32>Saltmere</size></color>   <color=#8a84a0>3/4</color>\nBack up the chain to the village, the cliffs and the summit road.";
+
+        void TravelTo(int region)
+        {
+            Close();
+            GameSession.Instance.Travel(StageRoute.RegionHubs[region], region == 1 ? "Start" : "FromCliffside", saveOnArrival: true);
         }
 
         void Choose(RouteStop r)

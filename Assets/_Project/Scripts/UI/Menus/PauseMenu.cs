@@ -86,11 +86,15 @@ namespace ProjectHymn.UI
             UiKit.Button(col, "Weapon", Weapons);
             UiKit.Button(col, "Settings", Settings);
             var s = GameSession.Instance;
-            bool inHub = s.Db != null && s.SceneName == s.Db.hubScene;
+            // VS-6: the Drowned Nave's stages return to the Air Bell, Saltmere's to the village.
+            bool deep = Progression.StageRoute.RegionOfScene(s.SceneName) == 1;
+            string hub = deep ? Progression.StageRoute.RegionHubs[1] : s.Db != null ? s.Db.hubScene : "Village";
+            bool inHub = s.Db != null && (s.SceneName == s.Db.hubScene || s.SceneName == Progression.StageRoute.RegionHubs[1]);
             if (allowReturnToVillage && !inHub && s.Db != null)
-                UiKit.Button(col, "Return to the village", () => { Close(); s.Travel(s.Db.hubScene, "FromCliffside", saveOnArrival: true); });
+                UiKit.Button(col, deep ? "Return to the Air Bell" : "Return to the village",
+                             () => { Close(); s.Travel(hub, deep ? "FromNave" : "FromCliffside", saveOnArrival: true); });
             UiKit.Button(col, "Quit to title", () => { Close(); s.ToTitle(); });
-            UiKit.Line(col, s.FreePlay ? "Free play (started from the editor): nothing is saved." : "Rest at the inn to save. Returning to the village saves too.", 22, UiKit.Dim, 40f);
+            UiKit.Line(col, s.FreePlay ? "Free play (started from the editor): nothing is saved." : "Rest at the inn to save. Returning to a hub saves too.", 22, UiKit.Dim, 40f);
             UiKit.Select(resume);
         }
 

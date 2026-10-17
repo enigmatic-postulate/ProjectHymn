@@ -109,6 +109,8 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(3, Story.Ending.Length);
             foreach (var c in Story.Intro) Assert.IsTrue(!string.IsNullOrEmpty(c.Image) && c.Text.Length > 20 && c.Text.Length <= 200, c.Image);
             foreach (var c in Story.Ending) Assert.IsTrue(!string.IsNullOrEmpty(c.Image) && c.Text.Length > 20 && c.Text.Length <= 200, c.Image);
+            foreach (var c in Story.DeepIntro) Assert.IsTrue(!string.IsNullOrEmpty(c.Image) && c.Text.Length > 20 && c.Text.Length <= 200, c.Image);
+            foreach (var c in Story.DeepEnding) Assert.IsTrue(!string.IsNullOrEmpty(c.Image) && c.Text.Length > 20 && c.Text.Length <= 200, c.Image);
             Assert.AreEqual(Story.Verses, Story.VerseStages.Length);
             Assert.AreEqual(Story.Verses, Story.VerseNames.Length);
             Assert.AreEqual("The Verse of the Tide", Story.VerseTitle(1));
@@ -117,6 +119,61 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(0, Story.VerseOf("Arena"));
             for (int v = 1; v <= Story.Verses; v++) Assert.IsTrue(Story.RevealLine(v).Length > 0);
             Assert.IsTrue(Story.Credits.Length > 10);
+        }
+
+        [Test]
+        public void ChapterTwoHoldsVersesFourToSix()
+        {
+            var s = Cleared("Cliffside", "Belfry", "Summit");
+            Assert.AreEqual(3, Story.Chapter(s));
+            Story.MarkRevealed(s, 3);
+            s.ClearStage("Nave");
+            Assert.AreEqual(4, Story.Chapter(s));
+            Assert.AreEqual(4, Story.VerseToReveal(s), "the Air Bell celebrates it");
+            Assert.AreEqual(1, Story.RegionOf(4));
+            Assert.AreEqual(0, Story.RegionOf(3));
+            Assert.AreEqual(4, Story.VerseOf("Nave"));
+            Assert.AreEqual(6, Story.VerseOf("Apse"));
+            Assert.AreEqual("The Verse of the Deep", Story.VerseTitle(6));
+            Assert.AreEqual(3, Story.Chapter(Cleared("Cliffside", "Belfry", "Summit", "Loft")), "the deep counts in order too");
+        }
+
+        [Test]
+        public void EachChapterHasItsOwnEnding()
+        {
+            var s = Cleared("Cliffside", "Belfry", "Summit");
+            Assert.IsTrue(Story.EndingDue(s, "Summit"));
+            s.MarkStory(Story.EndingFlag("Summit"));
+            Assert.IsFalse(Story.EndingDue(s, "Summit"));
+            Assert.IsFalse(Story.EndingDue(s, "Apse"), "not cleared yet");
+            s.ClearStage("Nave"); s.ClearStage("Loft"); s.ClearStage("Apse");
+            Assert.IsTrue(Story.EndingDue(s, "Apse"));
+            Assert.IsFalse(Story.EndingDue(s, "Loft"));
+            s.MarkStory(Story.EndingFlag("Apse"));
+            Assert.IsFalse(Story.EndingDue(s, "Apse"));
+            Assert.AreEqual(Story.DeepEnding, Story.EndingCards("Apse"));
+            Assert.AreEqual(Story.Ending, Story.EndingCards("Summit"));
+            Assert.AreEqual("AirBell", Story.EndingHub("Apse"));
+            Assert.AreEqual("Village", Story.EndingHub("Summit"));
+            Assert.AreEqual("", Story.EndingFlag("Arena"));
+        }
+
+        [Test]
+        public void TheDiversSpeakFromChapterThree()
+        {
+            foreach (var d in Story.Divers)
+            {
+                Assert.AreEqual(3, Story.FirstChapterOf(d));
+                for (int ch = 0; ch <= Story.Verses; ch++)
+                {
+                    var lines = Story.LinesFor(d, ch);
+                    Assert.IsTrue(lines.Length > 0, $"{d}, chapter {ch}");
+                    foreach (var l in lines) Assert.IsTrue(l.Length <= 160, $"{d}, chapter {ch}: too long ({l.Length}): {l}");
+                }
+                Assert.AreEqual(Story.LinesFor(d, 0), Story.LinesFor(d, 3), d + ": before the summit they say their first lines");
+                Assert.AreNotEqual(Story.LinesFor(d, 3)[0], Story.LinesFor(d, 6)[0], d + ": their lines change as deep verses come home");
+            }
+            Assert.AreEqual(0, Story.FirstChapterOf("Elder"));
         }
     }
 }

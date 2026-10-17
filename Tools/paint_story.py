@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Paints the story cards for Project Hymn (VS-5 Part A): four for the intro on New Game and three for the ending after the
-Summit. Everything is procedural (gradients, fractal ridgelines, stars, glows and silhouettes, finished with a painted
+Summit; VS-6 adds chapter two's two-card prologue (the first visit to the Air Bell) and three-card ending (the Sunken Apse). Everything is procedural (gradients, fractal ridgelines, stars, glows and silhouettes, finished with a painted
 grain and a vignette), in the palette of the stages: Saltmere's evening violet and gold, the cliffs' sea blue, the
 summit's night. Original placeholders; no reference images.
 
@@ -583,6 +583,157 @@ def card_end_home():
     return finish(img, 7, warm=0.04)
 
 
+# ---------------- Chapter two: the Drowned Nave (VS-6) ----------------
+
+def god_rays(img, seed, x_top, spread, color, strength=0.25, count=9):
+    """Soft shafts of light falling from the surface, fanning out and fading with depth."""
+    rng = np.random.default_rng(seed)
+    rays = np.zeros((H, W))
+    for _ in range(count):
+        x0 = x_top + rng.uniform(-spread, spread)
+        slope = rng.uniform(-0.35, 0.35)
+        width = rng.uniform(18, 60)
+        centre = x0 + slope * YY
+        rays += np.exp(-((XX - centre) / (width + YY * 0.08)) ** 2) * rng.uniform(0.4, 1.0)
+    rays *= np.clip(1.1 - YY / H, 0, 1) ** 1.4
+    return add(img, rgb(color), rays * strength)
+
+
+def bell_shape(d, s, cx, base, w, h):
+    """A great bell standing mouth-down, its lip at y = base."""
+    prof = [(0.0, 1.0), (0.18, 0.99), (0.3, 0.94), (0.36, 0.8), (0.4, 0.5), (0.46, 0.22), (0.56, 0.06), (0.58, 0.0)]
+    pts = [(cx + px * w, base - py * h) for px, py in prof] + [(cx - px * w, base - py * h) for px, py in reversed(prof)]
+    d.polygon([(x * s, y * s) for x, y in pts], fill=255)
+
+
+def nave(d, s, x, base, w, h):
+    """A drowned cathedral's silhouette: a long nave, two west towers with spires, buttresses and a broken roof."""
+    d.rectangle([x * s, (base - h * 0.5) * s, (x + w) * s, base * s], fill=255)
+    for tx in (x, x + w * 0.12):
+        d.rectangle([tx * s, (base - h) * s, (tx + w * 0.1) * s, base * s], fill=255)
+        d.polygon([(tx * s, (base - h) * s), ((tx + w * 0.05) * s, (base - h * 1.35) * s), ((tx + w * 0.1) * s, (base - h) * s)], fill=255)
+    for i in range(6):
+        bx = x + w * (0.3 + i * 0.12)
+        d.polygon([(bx * s, (base - h * 0.5) * s), ((bx + w * 0.04) * s, (base - h * 0.62) * s), ((bx + w * 0.06) * s, (base - h * 0.5) * s)], fill=255)
+    d.polygon([((x + w * 0.85) * s, (base - h * 0.5) * s), ((x + w) * s, (base - h * 0.75) * s), ((x + w) * s, (base - h * 0.5) * s)], fill=255)
+
+
+def card_deep_descent():
+    img = vgrad([(0, "#5ab8c0"), (0.18, "#2a7a8e"), (0.55, "#0e3a52"), (1.0, "#04121e")])
+    img = god_rays(img, 81, W * 0.45, 380, "#bff6ff", 0.22, 12)
+    # The sea floor and the cathedral on it
+    img, _, line = ridge(img, H * 0.82, 18, 83, "#06141c", scale=0.003, top_light="#3a8a9a", light_amount=0.35)
+    church = poly_mask(lambda d, s: nave(d, s, 470, line[700] + 6, 560, 260))
+    img = blend(img, rgb("#0a2230"), church)
+    img = add(img, rgb("#4ab0c0"), np.clip(church - np.roll(soft(church, 2), 3, axis=0), 0, 1) * 0.6)
+    img = glow(img, 540, line[540] - 170, 28, "#9ff0ff", 0.9, 1.6)          # the rose window in the west front
+    img = glow(img, 760, line[760] - 70, 220, "#2a9ab0", 0.25, 1.6)
+    # The harbour chain from the surface, and the cantor climbing down it
+    chain = poly_mask(lambda d, s: [d.ellipse([(345 - 5) * s, (y - 9) * s, (345 + 5) * s, (y + 9) * s], outline=255, width=int(2 * s))
+                                    for y in range(-10, 420, 16)])
+    img = blend(img, rgb("#0a1a22"), chain * 0.9)
+    fig = poly_mask(lambda d, s: hero(d, s, 345, 470, 70, facing=1, sword_up=False))
+    img = blend(img, rgb("#081620"), fig)
+    img = add(img, rgb("#bff6ff"), np.clip(fig - np.roll(soft(fig, 2), 3, axis=0), 0, 1) * 0.9)
+    # Bubbles rising from him, and marine snow everywhere
+    rng = np.random.default_rng(85)
+    for _ in range(26):
+        img = glow(img, 345 + rng.normal(0, 14), rng.uniform(40, 420), rng.uniform(2, 6), "#dffcff", 0.7, 1.2)
+    img = stars(img, 86, 500, 1.0, 0.45, tint="#bfe8f0", fade_by_y=False)
+    return finish(img, 81, vignette=0.6)
+
+
+def card_deep_airbell():
+    img = vgrad([(0, "#0c3446"), (0.5, "#072030"), (1.0, "#02080e")])
+    img = god_rays(img, 91, W * 0.5, 500, "#8fe0f0", 0.1, 8)
+    floor_y = H * 0.84
+    img, _, line = ridge(img, floor_y, 10, 93, "#05101a", scale=0.003)
+    # The great bell from outside, and cut open: the lamplit air pocket and the camp inside it
+    cx, base, bw, bh = W * 0.5, floor_y + 4, 520, 470
+    bell = poly_mask(lambda d, s: bell_shape(d, s, cx, base, bw, bh))
+    inner = poly_mask(lambda d, s: bell_shape(d, s, cx, base - 14, bw * 0.92, bh * 0.92))
+    img = blend(img, vgrad([(0.2, "#3a2a1a"), (0.9, "#1a120a")]), bell)
+    pocket = np.clip(inner * (YY < base - 60), 0, 1)
+    img = blend(img, vgrad([(0.2, "#5a3a1e"), (0.8, "#8a5a2a")]), pocket)
+    img = add(img, rgb("#c08a4a"), np.clip(bell - np.roll(soft(bell, 2), 3, axis=0), 0, 1) * 0.7)
+    water = np.clip(inner * (YY >= base - 60), 0, 1)
+    img = blend(img, rgb("#0e4a5a"), water * 0.9)
+    img = add(img, rgb("#6ae0f0"), water * np.exp(-((YY - (base - 60)) / 6) ** 2) * 1.2)
+    for lx in (cx - 170, cx - 40, cx + 110):
+        img = glow(img, lx, base - 200, 150, "#ffb060", 0.55, 1.8)
+        img = glow(img, lx, base - 200, 12, "#fff0c0", 1.4, 1.5)
+    people = poly_mask(lambda d, s: (hero(d, s, cx - 110, base - 60, 64, facing=1),
+                                     hero(d, s, cx + 20, base - 60, 60, facing=-1, sword_up=False, shield=False, cape=False),
+                                     hero(d, s, cx + 170, base - 60, 54, facing=-1, sword_up=False, shield=False, cape=False)))
+    img = blend(img, rgb("#1a0e06"), people * pocket.clip(0, 1))
+    return finish(img, 91, warm=0.03, vignette=0.6)
+
+
+def card_end2_precentor():
+    img = vgrad([(0, "#0a2a3a"), (0.5, "#0e3e50"), (1.0, "#041018")])
+    img = god_rays(img, 101, W * 0.5, 160, "#aef2ff", 0.3, 7)
+    img, _, line = ridge(img, H * 0.78, 6, 103, "#08161e", scale=0.002, top_light="#5ac8d8", light_amount=0.5)
+    # The great bell hanging still behind them
+    bell = poly_mask(lambda d, s: bell_shape(d, s, W * 0.5, H * 0.5, 180, 210))
+    img = blend(img, rgb("#1e3030"), bell * 0.85)
+    img = add(img, rgb("#7ad8d0"), np.clip(bell - np.roll(soft(bell, 2), 3, axis=0), 0, 1) * 0.6)
+    x0 = 520
+    fig = poly_mask(lambda d, s: (conductor(d, s, x0, line[x0] + 4, 74, staff_up=False),
+                                  hero(d, s, x0 + 200, line[x0 + 200] + 2, 112, facing=-1, sword_up=False)))
+    img = blend(img, rgb("#061018"), fig)
+    img = add(img, rgb("#aef2ff"), np.clip(fig - np.roll(soft(fig, 2), 3, axis=0), 0, 1) * 1.1)
+    img = stars(img, 104, 400, 1.0, 0.35, tint="#bfe8f0", fade_by_y=False)
+    return finish(img, 101, vignette=0.65)
+
+
+def card_end2_bell():
+    img = vgrad([(0, "#2a6a7a"), (0.4, "#0e3446"), (1.0, "#020a12")])
+    cx, cy = W * 0.5, H * 0.66
+    bell = poly_mask(lambda d, s: bell_shape(d, s, cx, cy, 200, 230))
+    # Rings of sound spreading through the water
+    for k, r in enumerate((150, 230, 330, 450, 590)):
+        ring = np.exp(-((np.sqrt((XX - cx) ** 2 + ((YY - (cy - 110)) * 1.25) ** 2) - r) / (6 + k * 2)) ** 2)
+        img = add(img, rgb("#7ae8f0"), ring * (0.5 - k * 0.07))
+    img = blend(img, vgrad([(0.4, "#6a5a3a"), (0.8, "#2a2014")]), bell)
+    img = add(img, rgb("#ffe0a0"), np.clip(bell - np.roll(soft(bell, 2), 3, axis=0), 0, 1) * 1.0)
+    img = glow(img, cx, cy - 120, 260, "#ffd890", 0.35, 1.6)
+    # Three verses rising to the light: ribbons of gold
+    for i, (dx, ph) in enumerate(((-120, 0.0), (0, 1.3), (120, 2.6))):
+        ribbon = np.zeros((H, W))
+        for t in np.linspace(0, 1, 260):
+            x = cx + dx * (1 - t * 0.5) + math.sin(t * 10 + ph) * 26
+            y = cy - 240 - t * (cy - 220)
+            ribbon += radial(x, y, 9 + 6 * (1 - t), 2.0) * 0.7
+        img = add(img, rgb("#ffd37a"), np.clip(ribbon, 0, 1) * 1.1)
+        img = add(img, rgb("#ff9a6a"), soft(np.clip(ribbon, 0, 1), 14) * 0.5)
+    img = god_rays(img, 111, cx, 260, "#cff8ff", 0.18, 8)
+    return finish(img, 111, warm=0.02, vignette=0.6)
+
+
+def card_end2_road():
+    img = vgrad([(0, "#0c0c28"), (0.4, "#26224e"), (0.55, "#3a3060")])
+    img = stars(img, 121, 600, 0.55, 1.0)
+    sea = int(H * 0.56)
+    # Saltmere's cliffs on the left, lit windows; the sea below, and the deep's answer glowing under it
+    img, _, line = ridge(img, H * 0.42, 40, 123, "#14122a", scale=0.002, top_light="#8a7ad0", light_amount=0.3)
+    img[sea:] = vgrad([(0.5, "#0e2a3a"), (0.75, "#08202e"), (1.0, "#020810")])[sea:]
+    img = glow(img, W * 0.62, H * 0.86, 360, "#3ac0d0", 0.6, 1.6)
+    img = glow(img, W * 0.62, H * 0.86, 60, "#bff6ff", 0.8, 1.6)
+    for k, r in enumerate((90, 160, 250)):
+        ring = np.exp(-((np.sqrt((XX - W * 0.62) ** 2 + ((YY - H * 0.86) * 2.2) ** 2) - r) / 5) ** 2) * (YY > sea)
+        img = add(img, rgb("#7ae8f0"), ring * (0.45 - k * 0.1))
+    img = add(img, rgb("#c0d8ff"), np.exp(-((YY - sea) / 2.0) ** 2) * 0.5)
+    rng = np.random.default_rng(125)
+    for _ in range(22):
+        x = rng.uniform(80, 520)
+        y = line[int(x)] + rng.uniform(6, 50)
+        img = glow(img, x, y, rng.uniform(4, 10), "#ffc070", 1.0, 1.8)
+    for _ in range(40):
+        x, y = rng.uniform(60, 1200), rng.uniform(sea + 4, sea + 60)
+        img = glow(img, x, y, rng.uniform(2, 5), "#ffd890", 0.35, 1.4)
+    return finish(img, 121, warm=0.02)
+
+
 CARDS = {
     "intro_song": card_intro_song,
     "intro_saltmere": card_intro_saltmere,
@@ -591,6 +742,11 @@ CARDS = {
     "end_summit": card_end_summit,
     "end_verses": card_end_verses,
     "end_home": card_end_home,
+    "deep_descent": card_deep_descent,
+    "deep_airbell": card_deep_airbell,
+    "end2_precentor": card_end2_precentor,
+    "end2_bell": card_end2_bell,
+    "end2_road": card_end2_road,
 }
 
 

@@ -41,6 +41,12 @@ namespace ProjectHymn.Tests
             Assert.AreEqual("Belfry", StageRoute.Next(s).Id);
             s.ClearStage("Belfry");
             s.ClearStage("Summit");
+            Assert.AreEqual("Nave", StageRoute.Next(s).Id, "VS-6: the summit opens the way down");
+            s.ClearStage("Nave");
+            Assert.AreEqual("Loft", StageRoute.Next(s).Id);
+            s.ClearStage("Loft");
+            Assert.AreEqual("Apse", StageRoute.Next(s).Id);
+            s.ClearStage("Apse");
             Assert.IsNull(StageRoute.Next(s), "the story is done");
         }
 
@@ -92,7 +98,7 @@ namespace ProjectHymn.Tests
             s.level = 4;
             s.playSeconds = 3727;
             s.ClearStage("Cliffside");
-            Assert.AreEqual("Level 4 Fighter · 1 of 3 verses · 1:02:07", SaveSlots.Summary(s, "Fighter"));
+            Assert.AreEqual("Level 4 Fighter · 1 of 6 verses · 1:02:07", SaveSlots.Summary(s, "Fighter"));
             s.MarkStory(Story.EndingSeen);
             StringAssert.Contains("the Hymn restored", SaveSlots.Summary(s, "Fighter"));
             Assert.AreEqual("4:05", SaveSlots.PlayTime(245));
@@ -105,6 +111,29 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(0, SaveSlots.Latest(new DateTime?[] { null, null, null }));
             Assert.AreEqual(2, SaveSlots.Latest(new DateTime?[] { t, t.AddHours(1), null }));
             Assert.AreEqual(3, SaveSlots.Latest(new DateTime?[] { t, null, t.AddMinutes(5) }));
+        }
+
+        [Test]
+        public void TheDrownedNaveOpensAfterTheSummit()
+        {
+            var s = Fresh();
+            Assert.IsTrue(StageRoute.RegionOpen(s, 0));
+            Assert.IsFalse(StageRoute.RegionOpen(s, 1), "the deep waits for the summit");
+            Assert.IsTrue(StageRoute.RegionOpen(s, 1, freePlay: true));
+            s.ClearStage("Cliffside"); s.ClearStage("Belfry"); s.ClearStage("Summit");
+            Assert.IsTrue(StageRoute.RegionOpen(s, 1));
+            Assert.IsTrue(StageRoute.IsOpen(s, StageRoute.Find("Nave")));
+            Assert.IsFalse(StageRoute.IsOpen(s, StageRoute.Find("Loft")));
+            foreach (var r in StageRoute.DeepPath)
+            {
+                Assert.AreEqual(1, r.Region, r.Id);
+                Assert.AreEqual(1, StageRoute.RegionOfScene(r.Scene), r.Id);
+                Assert.Greater(r.Verse, 3, r.Id + " holds a deep verse");
+            }
+            Assert.AreEqual(0, StageRoute.RegionOfScene("Village"));
+            Assert.AreEqual(1, StageRoute.RegionOfScene("AirBell"));
+            Assert.AreEqual(0, StageRoute.RegionOfScene("Belfry"));
+            Assert.AreEqual(-1, StageRoute.RegionOfScene("Title"));
         }
     }
 }

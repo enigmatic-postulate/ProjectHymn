@@ -346,11 +346,13 @@ namespace ProjectHymn.Gameplay
         void ReturnToHub()
         {
             var s = GameSession.Instance;
-            // VS-5: the Summit's first clear plays the ending (cards and credits) on the way home.
+            // VS-5: the Summit's first clear plays the ending (cards and credits) on the way home; VS-6: the Sunken
+            // Apse's first clear plays chapter two's.
             if (Story.EndingDue(s.Data, stageId))
             {
-                s.Data.MarkStory(Story.EndingSeen);
+                s.Data.MarkStory(Story.EndingFlag(stageId));
                 s.SaveProgress();
+                EndingDirector.ForStage = stageId;
                 s.Travel(EndingScene, "Start");
                 return;
             }

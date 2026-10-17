@@ -472,6 +472,218 @@ namespace ProjectHymn.EditorTools.Art
             return ps;
         }
 
+        // ---------------- The Air Bell (the region's hub) ----------------
+
+        /// <summary>Inside the great bell: lamplight on bronze, a dim cool spill from the dive pool, a short warm fog.</summary>
+        public static void AirBellLighting()
+        {
+            var key = new GameObject("Lamplight Key", typeof(Light));
+            key.transform.rotation = Quaternion.Euler(40f, 24f, 0f);
+            var l = key.GetComponent<Light>();
+            l.type = LightType.Directional; l.intensity = 0.55f; l.color = new Color(1f, 0.82f, 0.6f);
+            l.shadows = LightShadows.Soft; l.shadowStrength = 0.5f;
+            RenderSettings.skybox = null;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.42f, 0.32f, 0.22f);
+            RenderSettings.ambientEquatorColor = new Color(0.2f, 0.24f, 0.24f);
+            RenderSettings.ambientGroundColor = new Color(0.06f, 0.16f, 0.18f);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.12f, 0.12f, 0.12f);
+            RenderSettings.fogStartDistance = 24f;
+            RenderSettings.fogEndDistance = 75f;
+        }
+
+        /// <summary>
+        /// The Air Bell's set: the bell's bronze curving overhead and behind (seen from inside), the stone deck's caustics,
+        /// the dive pool glowing behind the deck, the harbour chain you came down, lamps, crates and diving helmets, and
+        /// three <see cref="VerseGroup"/>s for the deep's verses: sea-glass lamps (4), the choir's ribbons (5), the crown's
+        /// ring of light (6).
+        /// </summary>
+        public static void AirBell(Transform level, float x0, float x1, float top, float bellX, float bellZ, float radius)
+        {
+            Mats.Clear();
+            Directory.CreateDirectory(MeshDir);
+            AssetDatabase.Refresh();
+            PrepareTextures();
+            var root = new GameObject("Air Bell Art").transform;
+            root.SetParent(level, false);
+            var bronze = ArtLibrary.Textured("Drowned_BellBronze", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), new Color(0.62f, 0.48f, 0.3f), 0.55f);
+            bronze.SetFloat("_Metallic", 0.75f);
+
+            // The bell from inside: its profile walked from the lip up to the crown, so the faces (and normals) point inward.
+            float h = radius * 1.05f;
+            var profile = new[]
+            {
+                new Vector2(radius, -2f), new Vector2(radius * 0.93f, h * 0.12f), new Vector2(radius * 0.74f, h * 0.38f),
+                new Vector2(radius * 0.62f, h * 0.66f), new Vector2(radius * 0.52f, h * 0.86f), new Vector2(radius * 0.32f, h * 0.97f), new Vector2(0f, h),
+            };
+            var inside = MeshKit.Lathe(profile, 64, Vector3.one, 10f).Save("AirBellInside", MeshDir);
+            var bell = Part(root, "Bell Bronze", inside, bronze, new Vector3(bellX, top, bellZ));
+            bell.shadowCastingMode = ShadowCastingMode.Off;
+            // Bronze hoops round the inside (the bell's sound-bow and waist), slightly proud of the wall.
+            foreach (var (y, k) in new[] { (h * 0.12f, 0.92f), (h * 0.38f, 0.735f), (h * 0.66f, 0.615f) })
+            {
+                var hoop = MeshKit.Lathe(new[] { new Vector2(radius * k - 0.5f, y + 0.4f), new Vector2(radius * k - 0.6f, y), new Vector2(radius * k - 0.5f, y - 0.4f) },
+                                         64, Vector3.one, 12f).Save($"AirBellHoop_{(int)y}", MeshDir);
+                var hr = Part(root, "Hoop", hoop, DarkStoneMat, new Vector3(bellX, top, bellZ));
+                hr.shadowCastingMode = ShadowCastingMode.Off;
+            }
+
+            // Caustics on the deck, and the dive pool glowing behind it.
+            CausticsOn(root, new CliffsideLayout.Block("Deck", x0, x1, top, CliffsideLayout.Kind.Ground));
+            var pool = new MeshKit();
+            int a = pool.Vert(new Vector3(bellX - radius, 0f, 6.6f), Vector3.up, new Vector2(0f, 0f));
+            int b = pool.Vert(new Vector3(bellX + radius, 0f, 6.6f), Vector3.up, new Vector2(1f, 0f));
+            int c = pool.Vert(new Vector3(bellX + radius, 0f, bellZ + radius), Vector3.up, new Vector2(1f, 1f));
+            int d = pool.Vert(new Vector3(bellX - radius, 0f, bellZ + radius), Vector3.up, new Vector2(0f, 1f));
+            pool.Quad(a, b, c, d);
+            var poolR = Part(root, "Dive Pool", pool.Save("AirBellPool", MeshDir),
+                             Glow("AirBell_Pool", new Color(0.02f, 0.2f, 0.26f), new Color(0.2f, 0.75f, 0.85f), -1f, 1f, new Color(0.3f, 0.9f, 1f), 0.15f),
+                             new Vector3(0f, top - 0.6f, 0f));
+            poolR.shadowCastingMode = ShadowCastingMode.Off;
+            var poolCaustics = Part(root, "Pool Caustics", pool.Save("AirBellPoolCaustics", MeshDir), Caustics(), new Vector3(0f, top - 0.55f, 0f));
+            poolCaustics.shadowCastingMode = ShadowCastingMode.Off;
+            foreach (var px in new[] { x0 + 6f, bellX, x1 - 4f })
+            {
+                var pl = new GameObject("Pool Light", typeof(Light));
+                pl.transform.SetParent(root, false);
+                pl.transform.position = new Vector3(px, top - 0.2f, 12f);
+                var pll = pl.GetComponent<Light>();
+                pll.type = LightType.Point; pll.range = 16f; pll.intensity = 1.2f; pll.color = new Color(0.35f, 0.85f, 0.95f);
+            }
+
+            // The harbour chain you came down, hanging from the crown to the west end of the deck.
+            var chain = new GameObject("Harbour Chain").transform;
+            chain.SetParent(root, false);
+            var linkMesh = MeshKit.Lathe(new[] { new Vector2(0.28f, 0.12f), new Vector2(0.36f, 0f), new Vector2(0.28f, -0.12f), new Vector2(0.2f, 0f), new Vector2(0.28f, 0.12f) },
+                                         14, new Vector3(1f, 1f, 1f)).Save("ChainLink", MeshDir);
+            var iron = ArtLibrary.Textured("Drowned_Iron", null, null, new Color(0.22f, 0.24f, 0.24f), 0.5f);
+            float chainX = x0 + 3f;
+            for (float y = top + 0.3f, i = 0; y < top + h * 0.8f; y += 0.55f, i++)
+            {
+                var link = Part(chain, "Link", linkMesh, iron, new Vector3(chainX, y, 1.8f), Quaternion.Euler(90f, i % 2 == 0 ? 0f : 90f, 0f), new Vector3(1f, 1.6f, 1f));
+                link.shadowCastingMode = ShadowCastingMode.Off;
+            }
+
+            // The camp: crates, diving helmets, hanging lamps.
+            var camp = new GameObject("Camp").transform;
+            camp.SetParent(root, false);
+            var wood = ArtLibrary.Textured("Drowned_Wood", null, null, new Color(0.42f, 0.3f, 0.2f), 0.2f);
+            var rng = new System.Random(81);
+            foreach (var cx in new[] { x0 + 6f, x0 + 7.2f, 6f, 20f, 21.1f })
+            {
+                float sz = 0.8f + (float)rng.NextDouble() * 0.3f;
+                var crate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(crate.GetComponent<Collider>());
+                crate.name = "Crate";
+                crate.transform.SetParent(camp, false);
+                crate.transform.position = new Vector3(cx, top + sz * 0.5f, 3.2f + (float)rng.NextDouble());
+                crate.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 40f - 20f, 0f);
+                crate.transform.localScale = Vector3.one * sz;
+                crate.GetComponent<MeshRenderer>().sharedMaterial = wood;
+                if (rng.NextDouble() < 0.6)
+                {
+                    var helmet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Object.DestroyImmediate(helmet.GetComponent<Collider>());
+                    helmet.name = "Diving Helmet";
+                    helmet.transform.SetParent(camp, false);
+                    helmet.transform.position = crate.transform.position + Vector3.up * (sz * 0.5f + 0.3f);
+                    helmet.transform.localScale = Vector3.one * 0.62f;
+                    helmet.GetComponent<MeshRenderer>().sharedMaterial = bronze;
+                    var port = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Object.DestroyImmediate(port.GetComponent<Collider>());
+                    port.name = "Port";
+                    port.transform.SetParent(helmet.transform, false);
+                    port.transform.localPosition = new Vector3(0f, 0.02f, -0.42f);
+                    port.transform.localScale = new Vector3(0.5f, 0.5f, 0.2f);
+                    port.GetComponent<MeshRenderer>().sharedMaterial = Glow("AirBell_Port", new Color(0.1f, 0.3f, 0.32f), new Color(0.5f, 0.9f, 0.9f), -0.5f, 0.5f, new Color(0.7f, 1f, 1f), 0f);
+                }
+            }
+            var lampGlass = Glow("AirBell_Lamp", new Color(1f, 0.6f, 0.25f) * 1.8f, new Color(1f, 0.9f, 0.6f) * 2.4f, -0.3f, 0.3f, new Color(1f, 0.8f, 0.5f), 0.4f);
+            foreach (var lx in new[] { x0 + 7f, 0f, 11f, 24f })
+                HangingLamp(camp, new Vector3(lx, top + 4.4f, 1.6f), top + h * 0.7f, lampGlass, iron, new Color(1f, 0.72f, 0.42f), 2.2f);
+
+            // The deep's verses.
+            var glass = Glow("AirBell_SeaGlass", new Color(0.2f, 0.9f, 0.7f) * 1.6f, new Color(0.7f, 1f, 0.9f) * 2.4f, -0.3f, 0.3f, new Color(0.6f, 1f, 0.9f), 0.5f);
+            var v4 = Verse(root, "Verse 4 Sea-glass Lamps", 4);
+            for (float x = x0 + 2f; x < x1 - 2f; x += 6.5f)
+                HangingLamp(v4, new Vector3(x + 1.5f, top + 2.6f, 4.6f), top + 7f, glass, iron, new Color(0.45f, 1f, 0.85f), 1.6f);
+            var v5 = Verse(root, "Verse 5 Choir Ribbons", 5);
+            var ribbon = Frond(7f, 0.7f, "ChoirRibbon");
+            var ribbonMat = Kelp("AirBell_Ribbon", new Color(0.35f, 0.12f, 0.2f), new Color(0.95f, 0.75f, 0.45f), 7f);
+            for (float x = x0 + 4f; x < x1; x += 4.2f)
+            {
+                var piece = new GameObject("Ribbon").transform;
+                piece.SetParent(v5, false);
+                piece.position = new Vector3(x, top + h * 0.55f, 6f + (float)rng.NextDouble() * 4f);
+                var r = Part(piece, "Ribbon", ribbon, ribbonMat, piece.position, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 180f));
+                r.gameObject.isStatic = false;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+            }
+            var v6 = Verse(root, "Verse 6 Crown Ring", 6);
+            var crown = new GameObject("Crown").transform;
+            crown.SetParent(v6, false);
+            crown.position = new Vector3(bellX, top + h * 0.9f, bellZ);
+            var ringMesh = MeshKit.Lathe(new[] { new Vector2(radius * 0.4f, 0.5f), new Vector2(radius * 0.4f + 0.6f, 0f), new Vector2(radius * 0.4f, -0.5f), new Vector2(radius * 0.4f - 0.6f, 0f), new Vector2(radius * 0.4f, 0.5f) },
+                                         64, Vector3.one).Save("AirBellCrownRing", MeshDir);
+            var ring = Part(crown, "Ring of Light", ringMesh, Glow("AirBell_Crown", new Color(1f, 0.8f, 0.4f) * 2f, new Color(0.6f, 1f, 1f) * 3f, -0.6f, 0.6f, Color.white * 2f, 0.6f), crown.position);
+            ring.gameObject.isStatic = false;
+            ring.shadowCastingMode = ShadowCastingMode.Off;
+            var crownLight = new GameObject("Crown Light", typeof(Light));
+            crownLight.transform.SetParent(crown, false);
+            crownLight.transform.localPosition = new Vector3(0f, -2f, -bellZ);
+            var cl = crownLight.GetComponent<Light>();
+            cl.type = LightType.Point; cl.range = 30f; cl.intensity = 1.6f; cl.color = new Color(1f, 0.88f, 0.65f);
+
+            // Dust motes in the lamplight (the air pocket), and bubbles breaking from the pool.
+            Emitter(root, "Motes", new Vector3((x0 + x1) * 0.5f, top + 6f, 4f), new Vector3(x1 - x0, 10f, 8f), SparkMat(), 18f, (8f, 14f), (0.02f, 0.08f),
+                    (0.03f, 0.07f), new Color(1f, 0.85f, 0.6f, 0.5f), new Color(1f, 0.95f, 0.8f, 0.35f), 0f, 0.1f, Vector3.zero);
+            var bub = Particle("Drowned_Bubble", Tex("Bubble"), false);
+            foreach (var bx in new[] { x0 + 4f, bellX + 3f, x1 - 6f })
+                Emitter(root, "Pool Bubbles", new Vector3(bx, top - 0.6f, 12f), new Vector3(6f, 0.1f, 6f), bub, 3f, (0.6f, 1.2f), (0.4f, 0.8f),
+                        (0.08f, 0.2f), new Color(0.85f, 1f, 1f, 0.9f), new Color(0.7f, 0.95f, 1f, 0.6f), -0.02f, 0.2f, Vector3.zero);
+            AssetDatabase.SaveAssets();
+        }
+
+        static Transform Verse(Transform root, string name, int verse)
+        {
+            var go = new GameObject(name, typeof(VerseGroup));
+            go.transform.SetParent(root, false);
+            go.GetComponent<VerseGroup>().verse = verse;
+            return go.transform;
+        }
+
+        /// <summary>A lamp on a rod hung from <paramref name="ceiling"/>: glass, a cap, and a point light (one piece under its parent).</summary>
+        static void HangingLamp(Transform parent, Vector3 at, float ceiling, Material glass, Material iron, Color light, float intensity)
+        {
+            var piece = new GameObject("Lamp").transform;
+            piece.SetParent(parent, false);
+            piece.position = at;
+            var rod = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Object.DestroyImmediate(rod.GetComponent<Collider>());
+            rod.name = "Rod";
+            rod.transform.SetParent(piece, false);
+            float len = Mathf.Max(0.5f, ceiling - at.y);
+            rod.transform.position = at + Vector3.up * (len * 0.5f + 0.3f);
+            rod.transform.localScale = new Vector3(0.05f, len * 0.5f, 0.05f);
+            rod.GetComponent<MeshRenderer>().sharedMaterial = iron;
+            rod.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            var bulb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.DestroyImmediate(bulb.GetComponent<Collider>());
+            bulb.name = "Glass";
+            bulb.transform.SetParent(piece, false);
+            bulb.transform.position = at;
+            bulb.transform.localScale = new Vector3(0.42f, 0.56f, 0.42f);
+            bulb.GetComponent<MeshRenderer>().sharedMaterial = glass;
+            bulb.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            var lg = new GameObject("Lamp Light", typeof(Light));
+            lg.transform.SetParent(piece, false);
+            lg.transform.position = at + new Vector3(0f, -0.2f, -0.8f);
+            var l = lg.GetComponent<Light>();
+            l.type = LightType.Point; l.range = 7f; l.intensity = intensity; l.color = light;
+        }
+
         // ---------------- The apse (the boss stage) ----------------
 
         /// <summary>

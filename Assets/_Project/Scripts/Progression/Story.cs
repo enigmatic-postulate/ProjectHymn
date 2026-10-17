@@ -22,12 +22,26 @@ namespace ProjectHymn.Progression
     {
         // Save flags (SaveData.story)
         public const string EndingSeen = "ending";
+        /// <summary>VS-6: the second chapter's ending (after the Sunken Apse) and its prologue (first arrival at the Air Bell).</summary>
+        public const string DeepEndingSeen = "ending2", DeepIntroSeen = "chapter2";
         public static string VerseShownFlag(int verse) => "verse" + verse;
 
-        /// <summary>The stages that hold a verse, in story order (the Yard, the Arena and Starlit Spring hold none).</summary>
-        public static readonly string[] VerseStages = { "Cliffside", "Belfry", "Summit" };
-        public static readonly string[] VerseNames = { "the Verse of the Tide", "the Verse of the Bell", "the Verse of the Summit" };
-        public const int Verses = 3;
+        /// <summary>
+        /// The stages that hold a verse, in story order (the Yard, the Arena and Starlit Spring hold none). Verses 1 to 3 are
+        /// Saltmere's (chapter one); 4 to 6 lie in the Drowned Nave (VS-6, chapter two) and are celebrated at the Air Bell.
+        /// </summary>
+        public static readonly string[] VerseStages = { "Cliffside", "Belfry", "Summit", "Nave", "Loft", "Apse" };
+        public static readonly string[] VerseNames =
+        {
+            "the Verse of the Tide", "the Verse of the Bell", "the Verse of the Summit",
+            "the Verse of the Swell", "the Verse of the Choir", "the Verse of the Deep",
+        };
+        public const int Verses = 6;
+        /// <summary>Verses per region: Saltmere holds 1 to 3, the Drowned Nave 4 to 6.</summary>
+        public const int VersesPerRegion = 3;
+
+        /// <summary>The region a verse belongs to (0 = Saltmere, 1 = the Drowned Nave).</summary>
+        public static int RegionOf(int verse) => verse <= 0 ? 0 : (verse - 1) / VersesPerRegion;
 
         /// <summary>How many verses are home: the story stages cleared, in order (0 to 3). The story's chapter.</summary>
         public static int Chapter(SaveData s)
@@ -61,9 +75,21 @@ namespace ProjectHymn.Progression
             for (int v = 1; v <= verse && v <= Verses; v++) s.MarkStory(VerseShownFlag(v));
         }
 
-        /// <summary>The ending plays once, after the Summit's first clear.</summary>
-        public static bool EndingDue(SaveData s, string stageCleared) =>
-            s != null && stageCleared == VerseStages[Verses - 1] && s.HasCleared(stageCleared) && !s.HasStory(EndingSeen);
+        /// <summary>The save flag of the ending a stage closes (the Summit ends chapter one, the Sunken Apse chapter two), or empty.</summary>
+        public static string EndingFlag(string stage) => stage == "Summit" ? EndingSeen : stage == "Apse" ? DeepEndingSeen : "";
+
+        /// <summary>A chapter's ending plays once, after the first clear of its last stage.</summary>
+        public static bool EndingDue(SaveData s, string stageCleared)
+        {
+            string flag = EndingFlag(stageCleared);
+            return s != null && flag.Length > 0 && s.HasCleared(stageCleared) && !s.HasStory(flag);
+        }
+
+        /// <summary>The ending's cards for the stage that closed the chapter.</summary>
+        public static StoryCard[] EndingCards(string stage) => stage == "Apse" ? DeepEnding : Ending;
+
+        /// <summary>Where an ending sends you afterwards: the hub of the chapter it closed.</summary>
+        public static string EndingHub(string stage) => stage == "Apse" ? "AirBell" : "Village";
 
         // ---------------- The intro and the ending ----------------
 
@@ -82,6 +108,21 @@ namespace ProjectHymn.Progression
             new StoryCard("end_home", "The Hymn isn't whole. Other towns kept other verses, and other conductors still count in the dark. But tonight, Saltmere sings."),
         };
 
+        /// <summary>Chapter two's prologue, the first time you reach the Air Bell.</summary>
+        public static readonly StoryCard[] DeepIntro =
+        {
+            new StoryCard("deep_descent", "Below Saltmere's harbour the old cathedral lies under the sea. Its bells still ring down there, slow, in sixes."),
+            new StoryCard("deep_airbell", "Divers live in its great bell, in the air trapped under the bronze. They heard the summit fall silent, and they have been waiting for you."),
+        };
+
+        /// <summary>Chapter two's ending, after the Drowned Precentor falls.</summary>
+        public static readonly StoryCard[] DeepEnding =
+        {
+            new StoryCard("end2_precentor", "The Precentor lowers his hand. The sixes stop rocking, and the water in the nave goes still."),
+            new StoryCard("end2_bell", "The great bell hums on its own, low and long, and three more verses rise through the water toward the light."),
+            new StoryCard("end2_road", "Six verses home. Up on the cliffs, Saltmere hears the deep answer. The rest of the Hymn is still out there, counting."),
+        };
+
         /// <summary>The credits, one line each ("# " starts a heading, an empty string is a gap).</summary>
         public static readonly string[] Credits =
         {
@@ -92,7 +133,8 @@ namespace ProjectHymn.Progression
             "# Characters and animation", "KayKit by Kay Lousberg (CC0)", "",
             "# Village and environment", "Quaternius Medieval Village MegaKit (CC0)", "Poly Haven (CC0)", "",
             "# Music", "Battle Theme 1: placeholder reference track",
-            "Evening in the Village, Waltz of the Belfry, Hymn of the Summit,", "Practice in the Yard: placeholders written for Project Hymn", "",
+            "Evening in the Village, Waltz of the Belfry, Hymn of the Summit,", "Practice in the Yard, Barcarolle of the Drowned Nave,",
+            "Canticle of the Precentor, Hush of the Air Bell: placeholders written for Project Hymn", "",
             "# Story", "Placeholder, to be rewritten", "", "",
             "Thanks for playing.",
         };
@@ -102,7 +144,13 @@ namespace ProjectHymn.Progression
         /// <summary>The villagers who follow the story (HubBuilder places them; the Mentor, Innkeeper and Merchant have their own menus).</summary>
         public static readonly string[] Villagers = { "Elder", "Fisher", "Lookout", "Lamplighter" };
 
-        /// <summary>What each villager says, by chapter (0 = no verse home yet, 3 = all three).</summary>
+        /// <summary>The divers at the Air Bell (VS-6). Their lines start at chapter 3 (the summit cleared), not 0.</summary>
+        public static readonly string[] Divers = { "Diver", "Bellwarden", "Novice" };
+
+        /// <summary>The chapter a speaker's first lines belong to (3 for the divers, 0 for Saltmere).</summary>
+        public static int FirstChapterOf(string speaker) => Array.IndexOf(Divers, speaker) >= 0 ? 3 : 0;
+
+        /// <summary>What each villager says, by chapter (0 = no verse home yet, 3 = all three); a diver's lines count from chapter 3.</summary>
         static readonly Dictionary<string, string[][]> Lines = new Dictionary<string, string[][]>
         {
             ["Elder"] = new[]
@@ -170,6 +218,7 @@ namespace ProjectHymn.Progression
                 {
                     "Nothing moving on the summit tonight. First time in my watch.",
                     "The arena's still open if you miss the fighting. And there's a spring up in the stars, they say, if you can find the way.",
+                    "And the divers sent word up the harbour chain: there's a way down to the drowned cathedral now. It's on the map at the gate.",
                 },
             },
             ["Lamplighter"] = new[]
@@ -192,12 +241,76 @@ namespace ProjectHymn.Progression
                     "Look up. That star over the gate wasn't there yesterday. I didn't put it there. I think the song did.",
                 },
             },
+            ["Diver"] = new[]
+            {
+                new[]
+                {
+                    "You came down the chain? Then the summit really is quiet. Welcome to the Air Bell.",
+                    "Everything below rocks in sixes. Count ONE-two-three FOUR-five-six, and lean on the one and the four.",
+                },
+                new[]
+                {
+                    "The swell verse is back. Listen: the water outside the bronze has a pulse again.",
+                    "The choir loft is open above the transept. The singers still sing. Guard their answers and they fly home.",
+                },
+                new[]
+                {
+                    "Two verses down here. Only the apse is left, and the Precentor keeps it.",
+                    "He bends the bar into threes and then stretches it to nine. Watch his hand: he lifts it a bar before he turns.",
+                },
+                new[]
+                {
+                    "Six verses. I never thought I'd hear the old song with a bell under it.",
+                    "There are other cathedrals, they say. Other towns. Get some sleep first.",
+                },
+            },
+            ["Bellwarden"] = new[]
+            {
+                new[]
+                {
+                    "Mind the bronze, it rings if you so much as breathe on it. This bell is all the air we have.",
+                    "Rest by my lamp if you need it. The deck's safe. The water isn't.",
+                },
+                new[]
+                {
+                    "The lamps took the flame on their own last night. Sea-glass, burning. Never seen the like.",
+                },
+                new[]
+                {
+                    "The ribbons from the old choir moved in the still air. All of them, the same way, in time.",
+                },
+                new[]
+                {
+                    "Hear that hum? That's the bell itself. Three hundred years I've kept it and it's never sung before.",
+                },
+            },
+            ["Novice"] = new[]
+            {
+                new[]
+                {
+                    "The jellies hang high and sting on the big beats. When they sink after, that's your moment. Cut.",
+                    "The knights down here swing heavy on the one. Guard it. Don't try to outrun it.",
+                },
+                new[]
+                {
+                    "I followed you as far as the transept. Then a chorister held one long note and the floor rang. I jumped. Barely.",
+                },
+                new[]
+                {
+                    "If the Precentor tolls the great bell, nothing stops it. Not your guard, not anything. Get off the floor.",
+                },
+                new[]
+                {
+                    "Can I come up to Saltmere? Just to see it. I've only ever seen the sea from underneath.",
+                },
+            },
         };
 
         /// <summary>A villager's lines for a chapter (the nearest earlier chapter if none are written); empty if unknown.</summary>
         public static string[] LinesFor(string villager, int chapter)
         {
             if (string.IsNullOrEmpty(villager) || !Lines.TryGetValue(villager, out var byChapter)) return new string[0];
+            chapter = Math.Max(0, chapter - FirstChapterOf(villager));
             for (int c = Math.Min(chapter, byChapter.Length - 1); c >= 0; c--)
                 if (byChapter[c] != null && byChapter[c].Length > 0) return byChapter[c];
             return new string[0];
@@ -214,6 +327,9 @@ namespace ProjectHymn.Progression
                 case 1: return "The lanterns of Saltmere take the flame.";
                 case 2: return "Banners go up along the street, and the bell's tune joins the song.";
                 case 3: return "A star rises over the gate. The Hymn of Saltmere is whole.";
+                case 4: return "Sea-glass lamps light up along the divers' deck.";
+                case 5: return "The old choir's ribbons stir under the bronze, and its chant joins the hush.";
+                case 6: return "The crown of the great bell shines. The deep verses are home.";
                 default: return "";
             }
         }

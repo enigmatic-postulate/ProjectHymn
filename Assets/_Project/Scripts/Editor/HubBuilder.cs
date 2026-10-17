@@ -32,6 +32,10 @@ namespace ProjectHymn.EditorTools
         const string YardPath = SceneDir + "/Yard.unity";
         const string SpringPath = SceneDir + "/Spring.unity";
         const string EndingPath = SceneDir + "/Ending.unity";
+        const string AirBellPath = SceneDir + "/AirBell.unity";
+        const string NavePath = SceneDir + "/Nave.unity";
+        const string LoftPath = SceneDir + "/Loft.unity";
+        const string ApsePath = SceneDir + "/Apse.unity";
 
         [MenuItem("Project Hymn/Build Hub & Loop", priority = 0)]
         public static void BuildAll()
@@ -42,12 +46,17 @@ namespace ProjectHymn.EditorTools
             CliffsideBuilder.BuildArenaStage();
             CliffsideBuilder.BuildYard();
             CliffsideBuilder.BuildSpring();
+            CliffsideBuilder.BuildNave();
+            CliffsideBuilder.BuildLoft();
+            CliffsideBuilder.BuildApse();
             BuildVillage();
+            BuildAirBell();
             BuildTitle();
             BuildEnding();
             SetBuildOrder();
             EditorSceneManager.OpenScene(TitlePath);
-            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit, the Arena and Starlit Spring are first in File ▸ Build Profiles. " +
+            Debug.Log("[Project Hymn] Hub & Loop built: Title, Village, the Practice Yard, Cliffside, Belfry Ridge, the Summit, the Arena, Starlit Spring, " +
+                      "and the Drowned Nave (the Air Bell, Kelp Nave, Choir Loft, the Sunken Apse) are first in File ▸ Build Profiles. " +
                       "Press Play in Title for the full loop (or in any scene for free play). W / Up talks and uses doors, " +
                       "Esc pauses (Character, Songbook, Weapon, Settings). Playtest keys: F10 experience, F11 / Shift+F11 level up / down, " +
                       "F12 force the next rank, Shift+F12 finish the stage, F7 test checkpoints.");
@@ -444,7 +453,7 @@ namespace ProjectHymn.EditorTools
                 var music = new GameObject("Village Music", typeof(LayeredMusic)).GetComponent<LayeredMusic>();
                 music.baseClip = clip;
                 music.bpm = 88f; music.beatsPerBar = 3; music.firstBeat = 0f;
-                for (int v = 1; v <= Progression.Story.Verses; v++)
+                for (int v = 1; v <= Progression.Story.VersesPerRegion; v++)
                 {
                     var layer = AssetDatabase.LoadAssetAtPath<AudioClip>(VillageClipPath.Replace(".wav", $"_Verse{v}.wav"));
                     if (layer != null) music.layers.Add(new LayeredMusic.Layer { clip = layer, verse = v });
@@ -456,6 +465,104 @@ namespace ProjectHymn.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, VillagePath);
             Debug.Log("[Project Hymn] Village built.");
+        }
+
+        // ---------------- The Air Bell (VS-6) ----------------
+
+        /// <summary>
+        /// The Drowned Nave's hub: the divers' camp inside the great bell (<see cref="AirBellLayout"/>). The divers follow
+        /// the story from chapter three on; a lamp-keeper saves; the dive pool opens the Drowned Nave's road map. Its music
+        /// is "Hush of the Air Bell" (6/8) with a layer for each deep verse home, and its first visit plays chapter two's
+        /// prologue. Menu: Project Hymn ▸ Build Air Bell. Safe to re-run.
+        /// </summary>
+        [MenuItem("Project Hymn/Build Air Bell", priority = 10)]
+        public static void BuildAirBell()
+        {
+            EnvironmentArt.MeshScope = "AirBell";
+            PrepareContent();
+            ArtLibrary.EnsureImportSettings();
+            AssetDatabase.Refresh();
+            bool art = ArtLibrary.HasKayKit;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var weapons = art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
+            var db = EnsureDatabase(weapons);
+            var additive = LoadAdditive();
+            var locomotion = art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
+            DrownedArt.AirBellLighting();
+            var level = new GameObject("Air Bell").transform;
+            float x0 = AirBellLayout.XMin, x1 = AirBellLayout.XMax, top = AirBellLayout.GroundTop;
+            const float FrontZ = -2.6f, BackZ = 6.6f;
+
+            // The deck between two walls (the same masonry as the stages, so it collides like them).
+            DrownedArt.Block(level, new CliffsideLayout.Block("Deck", x0, x1, top, CliffsideLayout.Kind.Ground), FrontZ, BackZ);
+            DrownedArt.Block(level, new CliffsideLayout.Block("West Wall", x0 - 2f, x0, 14f, CliffsideLayout.Kind.Wall), FrontZ, BackZ);
+            DrownedArt.Block(level, new CliffsideLayout.Block("East Wall", x1, x1 + 2f, 14f, CliffsideLayout.Kind.Wall), FrontZ, BackZ);
+            DrownedArt.AirBell(level, x0, x1, top, AirBellLayout.BellX, AirBellLayout.BellZ, AirBellLayout.BellRadius);
+
+            // People: the divers follow the story (Progression/Story.cs, from chapter three); the lamp-keeper saves.
+            var people = new GameObject("People").transform;
+            people.SetParent(level, false);
+            const float npcZ = 1.3f;
+            var keeper = Figure(people, "Lamp-keeper", "Knight", new Vector3(AirBellLayout.LampX - 2.2f, top, npcZ), art).AddComponent<Innkeeper>();
+            keeper.prompt = "Rest (save)";
+            keeper.lines = new[] { "Sit by the lamp a while, cantor. The air's thin, but it's ours." };
+            var talk = new (string name, string model)[] { ("Diver", "Barbarian"), ("Bellwarden", "Mage"), ("Novice", "Rogue_Hooded") };
+            for (int i = 0; i < talk.Length && i < AirBellLayout.Divers.Length; i++)
+            {
+                var t = talk[i];
+                var npc = Figure(people, t.name, t.model, new Vector3(AirBellLayout.Divers[i].X, top, npcZ), art).AddComponent<NpcTalk>();
+                npc.speaker = t.name; npc.storyId = t.name; npc.prompt = "Talk";
+            }
+
+            // The dive pool at the east end opens the Drowned Nave's road map.
+            var doorGo = new GameObject("Dive Pool", typeof(StageGate));
+            doorGo.transform.SetParent(level, false);
+            doorGo.transform.position = new Vector3(AirBellLayout.PoolX, top, 0f);
+            var gate = doorGo.GetComponent<StageGate>();
+            gate.prompt = "Dive"; gate.range = 2.2f; gate.region = 1;
+            var rim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Object.DestroyImmediate(rim.GetComponent<Collider>());
+            rim.name = "Pool Rim";
+            rim.transform.SetParent(doorGo.transform, false);
+            rim.transform.localPosition = new Vector3(0f, 0.04f, 0.6f);
+            rim.transform.localScale = new Vector3(2.6f, 0.04f, 1.8f);
+            rim.GetComponent<MeshRenderer>().sharedMaterial = DrownedEnemies.GlowMat("AirBell_DiveHole", new Color(0.02f, 0.25f, 0.32f), new Color(0.3f, 0.9f, 1f) * 1.5f,
+                                                                                      -1f, 1f, new Color(0.5f, 1f, 1f), false, 0.4f);
+
+            // Spawns, players, camera, UI
+            var spawns = new GameObject("Spawns").transform;
+            foreach (var sp in AirBellLayout.Spawns) Spawn(spawns, sp.Name, new Vector3(sp.X, top, 0f));
+            var start = new Vector3(AirBellLayout.Spawns[0].X, top, 0f);
+            BuildPlayers(start, null, db, locomotion, additive, art);
+            var vcam = BuildCamera(start, 12f, 2.6f);
+            BuildGameUi(hub: true);
+            StageLook.Apply(level, vcam.GetComponent<Camera>(), StageLook.Deep, "AirBell");
+            var cam = vcam.GetComponent<Camera>();
+            if (cam != null) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.08f, 0.07f, 0.06f); }
+
+            // The deep's verses (4 to 6) are celebrated here; chapter two's prologue plays on the first visit.
+            var restore = new GameObject("Verse Restoration", typeof(VerseRestoration)).GetComponent<VerseRestoration>();
+            restore.firstVerse = Progression.Story.VersesPerRegion + 1;
+            restore.lastVerse = Progression.Story.Verses;
+            new GameObject("Chapter Two", typeof(ChapterIntro));
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AirBellClipPath);
+            if (clip != null)
+            {
+                var music = new GameObject("Air Bell Music", typeof(LayeredMusic)).GetComponent<LayeredMusic>();
+                music.baseClip = clip;
+                music.bpm = 150f; music.beatsPerBar = 6; music.firstBeat = 0f;      // 6/8: a beat is an eighth
+                for (int v = 1; v <= Progression.Story.VersesPerRegion; v++)
+                {
+                    var layer = AssetDatabase.LoadAssetAtPath<AudioClip>(AirBellClipPath.Replace(".wav", $"_Verse{v}.wav"));
+                    if (layer != null) music.layers.Add(new LayeredMusic.Layer { clip = layer, verse = Progression.Story.VersesPerRegion + v });
+                    else Debug.LogWarning($"[Project Hymn] Air Bell verse layer {v} missing (Tools/compose_drowned.py).");
+                }
+            }
+            else Debug.LogWarning("[Project Hymn] Air Bell music missing: " + AirBellClipPath);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, AirBellPath);
+            Debug.Log("[Project Hymn] Air Bell built.");
         }
 
         static void Slab(Transform parent, string name, Vector3 min, Vector3 max, bool village, bool ground)
@@ -620,7 +727,8 @@ namespace ProjectHymn.EditorTools
 
         static void SetBuildOrder()
         {
-            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath, SpringPath, EndingPath };
+            var order = new[] { TitlePath, VillagePath, YardPath, CliffsidePath, BelfryPath, SummitPath, ArenaPath, SpringPath, EndingPath,
+                                AirBellPath, NavePath, LoftPath, ApsePath };
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var p in order) scenes.Add(new EditorBuildSettingsScene(p, true));
             foreach (var s in EditorBuildSettings.scenes)

@@ -19,12 +19,15 @@ namespace ProjectHymn.Gameplay
         public float delay = 1.2f;
         [Tooltip("Seconds between pieces appearing.")]
         public float stagger = 0.22f;
+        [Tooltip("The verses this hub celebrates (Saltmere 1 to 3, the Air Bell 4 to 6); a newer verse from elsewhere waits for its own hub.")]
+        public int firstVerse = 1, lastVerse = 3;
 
         void Start()
         {
             var s = GameSession.Instance;
             int chapter = Story.Chapter(s.Data);
             int reveal = s.FreePlay ? 0 : Story.VerseToReveal(s.Data);
+            if (reveal < firstVerse || reveal > lastVerse) reveal = 0;
             var groups = FindObjectsByType<VerseGroup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var g in groups) g.gameObject.SetActive(g.verse <= chapter && g.verse != reveal);
             if (reveal > 0) StartCoroutine(Celebrate(reveal, groups));
@@ -35,7 +38,7 @@ namespace ProjectHymn.Gameplay
             var music = LayeredMusic.Active;
             if (music != null) music.HoldBack(verse);
             yield return new WaitForSecondsRealtime(delay);
-            while (GameSession.Instance.Travelling) yield return null;
+            while (GameSession.Instance.Travelling || StoryCards.Playing) yield return null;
 
             Sfx.Play(Sfx.VerseChime, 0.9f);
             if (music != null) music.Reveal(verse, 4f);

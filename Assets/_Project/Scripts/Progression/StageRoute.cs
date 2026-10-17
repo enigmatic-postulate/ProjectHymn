@@ -11,10 +11,12 @@ namespace ProjectHymn.Progression
         public readonly bool Side;
         /// <summary>Unranked (the Practice Yard).</summary>
         public readonly bool Practice;
+        /// <summary>The region it lies in: 0 = the road from Saltmere, 1 = the Drowned Nave (VS-6).</summary>
+        public readonly int Region;
 
-        public RouteStop(string id, string scene, string name, string meter, string requires, string blurb, bool side = false, bool practice = false)
+        public RouteStop(string id, string scene, string name, string meter, string requires, string blurb, bool side = false, bool practice = false, int region = 0)
         {
-            Id = id; Scene = scene; Name = name; Meter = meter; Requires = requires ?? ""; Blurb = blurb; Side = side; Practice = practice;
+            Id = id; Scene = scene; Name = name; Meter = meter; Requires = requires ?? ""; Blurb = blurb; Side = side; Practice = practice; Region = region;
         }
 
         /// <summary>The verse this stop holds (1-based), or 0.</summary>
@@ -50,12 +52,54 @@ namespace ProjectHymn.Progression
                 "An island among the stars with three platforms to fight across. Fall off and it costs a heart.", side: true),
         };
 
+        /// <summary>The Drowned Nave's story path (VS-6), under Saltmere's harbour: it opens once the Summit is cleared.</summary>
+        public static readonly RouteStop[] DeepPath =
+        {
+            new RouteStop("Nave", "Nave", "Kelp Nave", "6/8", "Summit",
+                "The cathedral's flooded nave, rocking in sixes. Barnacled knights, bell jellies over the choir steps, a chorister in the transept.",
+                region: 1),
+            new RouteStop("Loft", "Loft", "Choir Loft", "6/8", "Nave",
+                "Up the organ pipes to the bell gallery. The choristers sing from the galleries, and their held notes ring along the floor.",
+                region: 1),
+            new RouteStop("Apse", "Apse", "The Sunken Apse", "6/8 · 3/4 · 9/8", "Loft",
+                "The Drowned Precentor keeps the apse. He rocks in six, bends the bar into three, stretches it to nine, and tolls the great bell.",
+                region: 1),
+        };
+
+        /// <summary>The regions' names, map titles and hub scenes.</summary>
+        public static readonly string[] RegionNames = { "Saltmere", "the Drowned Nave" };
+        public static readonly string[] RegionTitles = { "THE ROAD FROM SALTMERE", "THE DROWNED NAVE" };
+        public static readonly string[] RegionHubs = { "Village", "AirBell" };
+        public const int Regions = 2;
+
+        /// <summary>A region's story path.</summary>
+        public static RouteStop[] PathOf(int region) => region == 1 ? DeepPath : Path;
+
+        /// <summary>A region's side roads (the Drowned Nave has none yet).</summary>
+        public static IEnumerable<RouteStop> SideRoadsOf(int region)
+        {
+            foreach (var r in SideRoads) if (r.Region == region) yield return r;
+        }
+
+        /// <summary>A region is open once its first story stop is (the Drowned Nave after the Summit).</summary>
+        public static bool RegionOpen(SaveData s, int region, bool freePlay = false) =>
+            region <= 0 || (region < Regions && IsOpen(s, PathOf(region)[0], freePlay));
+
+        /// <summary>The region a scene belongs to (a stage or a hub), or -1.</summary>
+        public static int RegionOfScene(string scene)
+        {
+            for (int i = 0; i < Regions; i++) if (RegionHubs[i] == scene) return i;
+            foreach (var r in All) if (r.Scene == scene) return r.Region;
+            return -1;
+        }
+
         public static IEnumerable<RouteStop> All
         {
             get
             {
                 foreach (var r in Path) yield return r;
                 foreach (var r in SideRoads) yield return r;
+                foreach (var r in DeepPath) yield return r;
             }
         }
 
@@ -75,10 +119,12 @@ namespace ProjectHymn.Progression
             return r.Practice ? s.tutorialDone || s.HasCleared("Cliffside") : s.HasCleared(r.Id);
         }
 
-        /// <summary>The story stop to play next: the first open one on the path not yet done; null when the story is done.</summary>
+        /// <summary>The story stop to play next: the first open one on the paths (Saltmere's, then the deep's) not yet done; null when the story is done.</summary>
         public static RouteStop Next(SaveData s, bool freePlay = false)
         {
             foreach (var r in Path)
+                if (IsOpen(s, r, freePlay) && !IsDone(s, r)) return r;
+            foreach (var r in DeepPath)
                 if (IsOpen(s, r, freePlay) && !IsDone(s, r)) return r;
             return null;
         }

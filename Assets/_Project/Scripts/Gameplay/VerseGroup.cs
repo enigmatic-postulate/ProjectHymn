@@ -9,6 +9,6 @@ namespace ProjectHymn.Gameplay
     /// </summary>
     public class VerseGroup : MonoBehaviour
     {
-        [Range(1, 3)] public int verse = 1;
+        [Range(1, 6)] public int verse = 1;
     }
 }

@@ -46,6 +46,32 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## The Drowned Nave (vertical slice milestone VS-6: a second region, in 6/8)
+
+Built by **Project Hymn → Build Hub & Loop** (new scenes `AirBell`, `Nave`, `Loft` and `Apse`; each also has its own menu item). It opens once the Summit is cleared: the Lookout says so, and the village gate's map gets a **Down to the Air Bell** button.
+
+- **6/8:** in the deep a beat is an eighth note at 225 (a bar is six eighths, 1.6 s), and the big beats are one and four. Attacks still count in for one bar and land on a downbeat. The meter banner shows 6/8 in teal and 9/8 in violet.
+- **New sequences:** the Minstrel's **Swell** (2-1-1) and **Barcarolle** (2-1-1-2-1-1), the Warden's **Undertow** (1-1-2, a push), and the Crusader's **Riptide** (nine notes in 9/8). They're in `Combat/SequenceLibrary.cs`.
+- **Enemies:**
+  - The **Bell Jelly** hangs high and stings on one, or on one and four, then sinks and breathes slowly. That's the time to cut it; up high, blades only graze it.
+  - The **Drowned Chorister** keeps its distance and sings three bolts and a heavier note. Guard them on the beat and they fly back at it. Its held note rings along the floor: jump it.
+  - The **Barnacled Knight** swings a heavy cut on one, or a cut on each big beat.
+- **Stages:**
+  - **Kelp Nave** and **Choir Loft:** a drowned cathedral with arcades, a rose window, light shafts, caustics, kelp, marine snow, bubbles and fish. The shaders are `HymnShafts`, `HymnCaustics` and `HymnKelp`; the textures come from `Tools/paint_drowned.py`.
+  - **The Sunken Apse:** the boss stage.
+- **The boss, the Drowned Precentor:** he conducts *Canticle of the Precentor* through 6/8, a **3/4 hemiola** (the same bar in three quarters) and **9/8**, and he fights in whichever meter the bar is in.
+  - First verse: the Rocking (one, four), the Hemiola (all three quarters) and the Long Rock (one, four, seven).
+  - Second verse, below half health: adds the Barcarolle, the Suspension, the Riptide and the **Great Bell**, a toll no guard stops (jump or dodge it).
+  - The apse's great bell swings once across every bar, topping its swing on each downbeat.
+- **The Air Bell:** the hub is the divers' camp inside the cathedral's great bell, in a pocket of trapped air. The **Diver**, the **Bellwarden** and the **Novice** follow the story, and the lamp-keeper saves. The **dive pool** opens the Drowned Nave's map, and its **Up to Saltmere** button takes you back.
+- **Story:** the first visit to the Air Bell plays chapter two's two-card prologue. Each deep stage brings a verse home (4 to 6), which the Air Bell celebrates:
+  - verse 4: sea-glass lamps
+  - verse 5: the choir's ribbons
+  - verse 6: the bell's crown of light
+  
+  The music, *Hush of the Air Bell* (6/8), gains a layer with each verse. The Apse's first clear plays chapter two's ending and the credits, then returns you to the Air Bell.
+- **Music:** `Tools/compose_drowned.py` renders the stage, boss and hub themes using the small synth in `Tools/hymnsynth.py`.
+
 ## Story (vertical slice milestone VS-5, Part A)
 
 Built by **Project Hymn → Build Hub & Loop** (the village, the title and the new `Scenes/Ending.unity`). All story text is a placeholder in one file, `Progression/Story.cs`, ready to be rewritten.
