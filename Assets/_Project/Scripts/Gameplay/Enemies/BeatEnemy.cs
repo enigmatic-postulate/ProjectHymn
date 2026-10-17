@@ -445,6 +445,9 @@ namespace ProjectHymn.Gameplay
         /// <summary>False holds attacks (a boss mid-transition).</summary>
         protected virtual bool CanPlan => true;
         protected TempoMap Map => conductor != null ? conductor.Map : null;
+        /// <summary>Set health directly (a boss resuming at the verse it reached). Clamped to 1..max.</summary>
+        protected void SetHealth(float hp) => _hp = Mathf.Clamp(hp, 1f, maxHp);
+
         /// <summary>Cancel the current attack and wait <paramref name="beats"/> before the next (a phase change).</summary>
         protected void Hold(double beats)
         {

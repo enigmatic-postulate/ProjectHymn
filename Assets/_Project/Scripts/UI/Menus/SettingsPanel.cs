@@ -15,9 +15,13 @@ namespace ProjectHymn.UI
         {
             UiKit.Line(column, "SETTINGS", 40, UiKit.Gold, 60f);
             Button vol = null, music = null, sfx = null, audio = null, offset = null, debug = null, checkpoints = null;
-            vol = UiKit.Button(column, "", () => { GameSettings.Volume = GameSettings.Volume >= 0.99f ? 0f : GameSettings.Volume + 0.1f; Refresh(); });
-            music = UiKit.Button(column, "", () => { GameSettings.MusicVolume = GameSettings.MusicVolume >= 0.99f ? 0f : GameSettings.MusicVolume + 0.1f; Refresh(); });
-            sfx = UiKit.Button(column, "", () => { GameSettings.SfxVolume = GameSettings.SfxVolume >= 0.99f ? 0f : GameSettings.SfxVolume + 0.1f; Refresh(); });
+            // Volumes: left / right (or A / D, the d-pad) step down / up; clicking or Enter steps up and wraps from 100% to 0.
+            vol = UiKit.Button(column, "", () => { GameSettings.Volume = GameSettings.Volume >= 0.99f ? 0f : GameSettings.Stepped(GameSettings.Volume, 1); Refresh(); });
+            music = UiKit.Button(column, "", () => { GameSettings.MusicVolume = GameSettings.MusicVolume >= 0.99f ? 0f : GameSettings.Stepped(GameSettings.MusicVolume, 1); Refresh(); });
+            sfx = UiKit.Button(column, "", () => { GameSettings.SfxVolume = GameSettings.SfxVolume >= 0.99f ? 0f : GameSettings.Stepped(GameSettings.SfxVolume, 1); Refresh(); });
+            Stepper(vol, () => GameSettings.Volume, v => GameSettings.Volume = v, () => Refresh());
+            Stepper(music, () => GameSettings.MusicVolume, v => GameSettings.MusicVolume = v, () => Refresh());
+            Stepper(sfx, () => GameSettings.SfxVolume, v => GameSettings.SfxVolume = v, () => Refresh());
             audio = UiKit.Button(column, "", () => { NudgeAudio(1f); Refresh(); });
             UiKit.Button(column, "   Audio offset \u22121 ms", () => { NudgeAudio(-1f); Refresh(); });
             offset = UiKit.Button(column, "", () => { Nudge(10f); Refresh(); });
@@ -25,13 +29,14 @@ namespace ProjectHymn.UI
             debug = UiKit.Button(column, "", () => { GameSettings.DebugHud = !GameSettings.DebugHud; Refresh(); });
             checkpoints = UiKit.Button(column, "", () => { GameSettings.TestCheckpoints = !GameSettings.TestCheckpoints; Refresh(); });
             if (calibrate != null) UiKit.Button(column, "Calibrate audio latency (tap J / X on 16 clicks)", calibrate);
+            UiKit.Line(column, "Volume: ◂ ▸ (or A / D) turns it down / up; in play, - and = change the master volume.", 22, UiKit.Dim, 34f);
             UiKit.Line(column, "Audio offset: how late you hear the music (set by calibration; fine-tune in 1 ms steps). Animation offset: positive shows animation earlier.", 22, UiKit.Dim, 56f);
             UiKit.Button(column, "Back", back);
             void Refresh()
             {
-                UiKit.SetLabel(vol, $"Volume   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.Volume * 100f)}%</color>");
-                UiKit.SetLabel(music, $"   Music   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.MusicVolume * 100f)}%</color>");
-                UiKit.SetLabel(sfx, $"   Effects   <color=#ffd56a>{Mathf.RoundToInt(GameSettings.SfxVolume * 100f)}%</color>");
+                UiKit.SetLabel(vol, $"Volume   <color=#ffd56a>◂ {Mathf.RoundToInt(GameSettings.Volume * 100f)}% ▸</color>");
+                UiKit.SetLabel(music, $"   Music   <color=#ffd56a>◂ {Mathf.RoundToInt(GameSettings.MusicVolume * 100f)}% ▸</color>");
+                UiKit.SetLabel(sfx, $"   Effects   <color=#ffd56a>◂ {Mathf.RoundToInt(GameSettings.SfxVolume * 100f)}% ▸</color>");
                 UiKit.SetLabel(audio, $"Audio offset   <color=#ffd56a>{AudioOffset():+0;-0;0} ms</color>   (+1)");
                 UiKit.SetLabel(offset, $"Animation offset   <color=#ffd56a>{Offset():+0;-0;0} ms</color>   (+10)");
                 UiKit.SetLabel(debug, $"Rhythm debug HUD   <color=#ffd56a>{(GameSettings.DebugHud ? "on" : "off")}</color>");
@@ -39,6 +44,16 @@ namespace ProjectHymn.UI
             }
             Refresh();
             return vol;
+        }
+
+        /// <summary>Left / right on a selected volume row steps it down / up (and keeps the column's up / down navigation).</summary>
+        static void Stepper(Button b, Func<float> get, Action<float> set, Action refresh)
+        {
+            var nav = b.navigation;
+            nav.mode = Navigation.Mode.Vertical;
+            b.navigation = nav;
+            var s = b.gameObject.AddComponent<VolumeStepper>();
+            s.Get = get; s.Set = set; s.Refresh = refresh;
         }
 
         static float Offset() => PlayerPrefs.GetFloat(RhythmAnimator.OffsetPrefKey, 0f);

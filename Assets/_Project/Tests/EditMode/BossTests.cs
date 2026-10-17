@@ -115,13 +115,25 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, max, 3));
         }
 
-        [TestCase(200f, 0)]
-        [TestCase(101f, 0)]
-        [TestCase(99f, 1)]
-        [TestCase(1f, 1)]
-        public void TheSliceBossHasTwoPhases(float hp, int phase)
+        [TestCase(600f, 0)]
+        [TestCase(401f, 0)]
+        [TestCase(399f, 1)]
+        [TestCase(201f, 1)]
+        [TestCase(199f, 2)]
+        [TestCase(1f, 2)]
+        public void TheBossesFightThreeVerses(float hp, int phase)
         {
-            Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, 200f));
+            Assert.AreEqual(phase, BossPlanner.PhaseFor(hp, 600f, 3));
+        }
+
+        [Test]
+        public void DyingKeepsTheVerseReached()
+        {
+            Assert.AreEqual(600f, BossPlanner.VerseStartHp(600f, 0, 3), 1e-3);
+            Assert.AreEqual(400f, BossPlanner.VerseStartHp(600f, 1, 3), 1e-3);
+            Assert.AreEqual(200f, BossPlanner.VerseStartHp(600f, 2, 3), 1e-3);
+            for (int p = 0; p < 3; p++)
+                Assert.AreEqual(p, BossPlanner.PhaseFor(BossPlanner.VerseStartHp(600f, p, 3), 600f, 3), "resumes in verse " + (p + 1));
         }
 
         [Test]

@@ -18,6 +18,8 @@ namespace ProjectHymn.Movement
         public bool Drowned;
         public float ParSeconds = 75f;
         public int PerfectAttacks = 14;
+        /// <summary>Hits a run may take and still earn S / A (-1 = the default: none for S on Cliffside, 2 elsewhere; 3 for A).</summary>
+        public int HitsForS = -1, HitsForA = -1;
         public CliffsideLayout.Block[] Route = new CliffsideLayout.Block[0];
         public CliffsideLayout.Block[] Props = new CliffsideLayout.Block[0];
         public CliffsideLayout.Block[] Secrets = new CliffsideLayout.Block[0];

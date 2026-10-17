@@ -249,7 +249,8 @@ namespace ProjectHymn.EditorTools
             dso.FindProperty("stageId").stringValue = L.Id;
             dso.FindProperty("stageName").stringValue = L.Name;
             dso.FindProperty("enemyTotal").intValue = L.EnemyCount;
-            dso.FindProperty("hitsAllowedForS").intValue = L.Id == "Cliffside" ? 0 : 2;     // the first stage allows none
+            dso.FindProperty("hitsAllowedForS").intValue = L.HitsForS >= 0 ? L.HitsForS : L.Id == "Cliffside" ? 0 : 2;     // the first stage allows none
+            if (L.HitsForA >= 0) dso.FindProperty("hitsAllowedForA").intValue = L.HitsForA;
             dso.FindProperty("fallCostsAHeart").boolValue = L.OpenEdges;
             dso.FindProperty("parSeconds").floatValue = L.ParSeconds;
             dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
@@ -443,13 +444,13 @@ namespace ProjectHymn.EditorTools
         {
             if (IsApse)
             {
-                // VS-6: the Drowned Precentor holds the apse floor. Two verses inside a 0:25 par.
+                // VS-6: the Drowned Precentor holds the apse floor. Three verses inside a 1:10 par.
                 var apse = new Vector2(ApseLayout.ArenaXMin + 3f, ApseLayout.ArenaXMax - 1.5f);
-                return DrownedEnemies.Precentor(level, m.Name, new Vector3(m.X, m.Y, 0f), apse, conductor, 240f);
+                return DrownedEnemies.Precentor(level, m.Name, new Vector3(m.X, m.Y, 0f), apse, conductor, 720f);
             }
             var bounds = new Vector2(SummitLayout.ArenaXMin + 3f, SummitLayout.ArenaXMax - 1.5f);
             var pos = new Vector3(m.X, m.Y, 0f);
-            const float Hp = 200f;          // Slice 8: two phases inside the 0:15 par
+            const float Hp = 600f;          // Recalibrated 2026-10-17: three verses inside a 1:00 par (was 200 HP, 0:15)
             if (_art && ArtLibrary.HasSkeleton) return KayKitBuilder.BuildSkeletonCantor(level, m.Name, pos, bounds, conductor, Hp);
             return EnemyBuilder.BuildCantor(level, m.Name, pos, bounds, conductor, Hp);
         }

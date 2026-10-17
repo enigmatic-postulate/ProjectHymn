@@ -93,6 +93,10 @@ namespace ProjectHymn.EditorTools.Art
                     ("Suspension", new[] { Chop, Diag }),
                     ("Great Bell", new[] { Jump }),
                     ("Riptide", new[] { Diag, Horiz, Diag, Horiz, Diag, Stab }),
+                    ("Twin Bells", new[] { Jump, Jump }),
+                    ("Hemiola Run", new[] { Diag, Horiz, Chop, Diag, Horiz, Chop }),
+                    ("Cross Current", new[] { Diag, Horiz, Diag, Horiz, Stab }),
+                    ("Undertow", new[] { Diag, Horiz, Diag, Horiz, Stab }),
                 });
         }
     }

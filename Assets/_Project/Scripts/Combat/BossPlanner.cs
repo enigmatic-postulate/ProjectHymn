@@ -99,6 +99,16 @@ namespace ProjectHymn.Combat
             return Math.Min(phases - 1, (int)Math.Floor(lost * phases + 1e-6));
         }
 
+        /// <summary>
+        /// The health a boss resumes at when the player dies in verse <paramref name="phase"/>: the top of that verse's band,
+        /// so the verses already won stay won (with 3 phases, verse 2 resumes at two thirds).
+        /// </summary>
+        public static float VerseStartHp(float maxHp, int phase, int phases)
+        {
+            if (phases <= 1 || phase <= 0) return maxHp;
+            return maxHp * (1f - Math.Min(phase, phases - 1) / (float)phases);
+        }
+
         static float Mathf01(float x) => x < 0f ? 0f : x > 1f ? 1f : x;
     }
 }

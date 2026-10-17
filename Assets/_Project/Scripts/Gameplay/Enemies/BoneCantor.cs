@@ -10,10 +10,11 @@ namespace ProjectHymn.Gameplay
     /// The summit boss (VS-3): a giant skeleton cantor who conducts "Hymn of the Summit" through 4/4, 3/4 and 7/8 and
     /// fights in whatever meter the music is in. Every attack is counted in for one bar of the meter it lands in, and
     /// never straddles a meter change (<see cref="BossPlanner"/>); through the bar before a change he raises his staff
-    /// and conducts it (the HUD names the next meter). Three phases by health: the first fights with the gavel and the
-    /// simplest pattern of each meter; the second adds four-on-the-floor, the hesitation and the shockwave (a ground
-    /// slam no guard can stop: jump it or dodge it); the third adds the full 7/8 run. Each phase change holds him for a
-    /// bar. He takes reduced damage from the front until he recovers after an attack.
+    /// and conducts it (the HUD names the next meter). Three verses by health (thirds): the first fights with the gavel
+    /// and the simplest pattern of each meter; the second adds four-on-the-floor, the hesitation, the shockwave (a
+    /// ground slam no guard can stop: jump it or dodge it) and the full 7/8 run; the third adds strings across two bars
+    /// and the twin shockwave. Each new verse holds him for a bar, then he walks faster. He takes half damage unless
+    /// he's recovering after an attack or staggered. If the player dies he resumes at the top of the verse reached.
     /// </summary>
     public class BoneCantor : BeatEnemy
     {
@@ -44,7 +45,10 @@ namespace ProjectHymn.Gameplay
         [Tooltip("Shockwave: reaches this far along the ground either side; a jump clears it.")]
         [SerializeField] float shockReach = 7f;
         [SerializeField] float shockClearHeight = 0.6f;
-        [SerializeField, Range(0f, 1f)] float frontShare = 0.7f;
+        [Tooltip("Damage share from blows while he's guarding (not recovering or staggered): punish his recoveries.")]
+        [SerializeField, Range(0f, 1f)] float frontShare = 0.5f;
+        [Tooltip("Each verse after the first walks this much faster (0.3 = 30% per verse).")]
+        [SerializeField] float verseSpeedUp = 0.3f;
 
         readonly List<BossMove> _moves = new List<BossMove>();
         int _turn, _phase, _face = -1;
@@ -66,6 +70,11 @@ namespace ProjectHymn.Gameplay
             new BossMove(new EnemyAttackPattern("Hesitation", new[] { 0.0, 2.0 }, 3, 3, 1), 3, 1),
             new BossMove(new EnemyAttackPattern("Shockwave", new[] { 0.0 }, 4, 3, 2).WithUnblockable(), 0, 1),
             new BossMove(new EnemyAttackPattern("Limp Run", new[] { 0.0, 2.0, 4.0, 6.0 }, 7, 6, 1), 7, 1),
+            // Third verse: longer strings that run across two bars, a double shockwave, and shorter recoveries.
+            new BossMove(new EnemyAttackPattern("Rolling Gavel", new[] { 0.0, 1.0, 2.0, 3.0, 4.0, 6.0 }, 4, 2, 1), 4, 2),
+            new BossMove(new EnemyAttackPattern("Twin Shockwave", new[] { 0.0, 2.0 }, 4, 2, 2).WithUnblockable(), 4, 2),
+            new BossMove(new EnemyAttackPattern("Turning Waltz", new[] { 0.0, 1.0, 2.0, 3.0, 5.0 }, 3, 2, 1), 3, 2),
+            new BossMove(new EnemyAttackPattern("Limp Storm", new[] { 0.0, 2.0, 4.0, 7.0, 9.0, 11.0 }, 7, 4, 1), 7, 2),
         };
 
         /// <summary>The boss's moves (a subclass, like the Drowned Precentor, has its own).</summary>
@@ -73,6 +82,9 @@ namespace ProjectHymn.Gameplay
         protected virtual string SecondVerseToast => "The Cantor's second verse: four on the floor, shockwaves (jump or dodge), the full seven";
         protected virtual string FallToast => "The Bone Cantor falls silent. The way down is open.";
         protected virtual Color RingColor => new Color(0.8f, 0.6f, 1f, 0.9f);
+        /// <summary>Verses (phases by health, in equal bands). Both bosses fight three.</summary>
+        protected virtual int Phases => 3;
+        protected virtual string ThirdVerseToast => "The Cantor's last verse: rolling gavels, twin shockwaves, the seven run twice. Keep counting.";
         /// <summary>Beats per felt pulse for the clips' timing: 1 in simple meters; a subclass in 6/8 or 9/8 returns 3.</summary>
         protected virtual float PoseScale => 1f;
 
@@ -102,24 +114,27 @@ namespace ProjectHymn.Gameplay
             var phase = Phase;
             bool attacking = phase == AttackPhase.Telegraph || phase == AttackPhase.Active;
 
-            // Phase change at half health (two phases: the boss stage's par is 0:15, so no pause between them).
-            int want = BossPlanner.PhaseFor(Hp, MaxHp);
+            // A new verse at each third of his health: he stops, holds for a bar (raising his staff), then comes back with
+            // more moves, walking faster.
+            int want = BossPlanner.PhaseFor(Hp, MaxHp, Phases);
             if (live && want > _phase && !IsDead)
             {
                 _phase = want;
                 _phaseT = 0f;
-                GameHud.Toast(SecondVerseToast);
+                var bar = Map != null ? Map.GetBeat((long)System.Math.Floor(BeatNow)).BeatsPerMeasure : 4;
+                Hold(bar);
+                GameHud.Toast(_phase >= 2 ? ThirdVerseToast : SecondVerseToast, 3.5f);
             }
 
             _conducting = live && Map != null && !attacking && BossPlanner.Cue(Map, BeatNow).Changing;
 
             var pos = transform.position;
-            if (live && Player != null && Aggro && !IsStaggered && !attacking && _phaseT > 0.5f)
+            if (live && Player != null && Aggro && !IsStaggered && !attacking && _phaseT > 1.2f)
             {
                 float px = Player.position.x;
                 _face = px >= pos.x ? 1 : -1;
                 float target = px - _face * keepDistance;
-                if (!_conducting) pos.x = Mathf.MoveTowards(pos.x, target, walkSpeed * dt);
+                if (!_conducting) pos.x = Mathf.MoveTowards(pos.x, target, walkSpeed * (1f + verseSpeedUp * _phase) * dt);
             }
             else if (live && phase == AttackPhase.Telegraph && Windup > 0.85f)
                 pos.x += _face * 1.0f * dt;
@@ -155,7 +170,7 @@ namespace ProjectHymn.Gameplay
             _pose.Reset();
             var stance = walking && walkClip != null ? walkClip : idleClip;
             _pose.Layer(stance, Loop(stance), 1f, true);
-            if (conductClip != null && (_conducting || _phaseT < 1.2f))
+            if (conductClip != null && (_conducting || _phaseT < 1.8f))
                 _pose.Layer(conductClip, Mathf.Repeat(BeatPhase * 0.5f + 0.1f, 1f), 0.8f);
 
             var named = Plan.IsValid ? ClipsFor(Plan.Pattern.Name) : null;
@@ -261,9 +276,10 @@ namespace ProjectHymn.Gameplay
 
         protected override void OnReset()
         {
+            // The player died: he goes home, but the verses already won stay won (he resumes at the top of his current verse).
             _face = -1;
-            _phase = 0;
             _turn = 0;
+            SetHealth(BossPlanner.VerseStartHp(MaxHp, _phase, Phases));
             ApplyFacing(true);
         }
 

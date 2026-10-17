@@ -32,8 +32,10 @@ namespace ProjectHymn.Combat
         /// <summary>
         /// The Drowned Precentor (the region's boss) conducts "Canticle of the Precentor": 6/8, then the same bar bent into a
         /// 3/4 hemiola (a beat is a quarter there), then 9/8. Each move fits one meter (0 = any): in 6/8 he strikes on the big
-        /// beats, in 3/4 on all three quarters, in 9/8 on all three big beats. His second verse (below half health) adds
-        /// the barcarolle's long-short swing, the suspension, the 9/8 riptide and the Great Bell, a toll no guard stops.
+        /// beats, in 3/4 on all three quarters, in 9/8 on all three big beats. His second verse (below two thirds) adds
+        /// the barcarolle's long-short swing, the suspension, the 9/8 riptide and the Great Bell, a toll no guard stops;
+        /// his third (below a third) adds twin bells, the hemiola run across two bars, twos against the 9/8's threes
+        /// (the cross current) and the undertow.
         /// </summary>
         public static List<BossMove> Precentor() => new List<BossMove>
         {
@@ -45,6 +47,11 @@ namespace ProjectHymn.Combat
             new BossMove(new EnemyAttackPattern("Suspension", new[] { 0.0, 2.0 }, 3, 3, 1), 3, 1),
             new BossMove(new EnemyAttackPattern("Great Bell", new[] { 0.0 }, 6, 6, 2).WithUnblockable(), 0, 1),
             new BossMove(new EnemyAttackPattern("Riptide", new[] { 0.0, 2.0, 3.0, 5.0, 6.0, 8.0 }, 9, 6, 1), 9, 1),
+            // Third verse: two bells in a bar, the hemiola run over two bars, twos against the 9/8's threes, the undertow.
+            new BossMove(new EnemyAttackPattern("Twin Bells", new[] { 0.0, 3.0 }, 6, 6, 2).WithUnblockable(), 6, 2),
+            new BossMove(new EnemyAttackPattern("Hemiola Run", new[] { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0 }, 3, 2, 1), 3, 2),
+            new BossMove(new EnemyAttackPattern("Cross Current", new[] { 0.0, 2.0, 4.0, 6.0, 8.0 }, 9, 4, 1), 9, 2),
+            new BossMove(new EnemyAttackPattern("Undertow", new[] { 0.0, 1.0, 2.0, 3.0, 5.0 }, 6, 4, 1), 6, 2),
         };
     }
 }

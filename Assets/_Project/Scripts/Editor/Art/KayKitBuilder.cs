@@ -558,6 +558,10 @@ namespace ProjectHymn.EditorTools.Art
                     ("Hesitation", new[] { Chop, Diag }),
                     ("Shockwave", new[] { Jump }),
                     ("Limp Run", new[] { Diag, Horiz, Diag, Stab }),
+                    ("Rolling Gavel", new[] { Diag, Horiz, Diag, Horiz, Diag, Chop }),
+                    ("Twin Shockwave", new[] { Jump, Jump }),
+                    ("Turning Waltz", new[] { Diag, Horiz, Chop, Diag, Stab }),
+                    ("Limp Storm", new[] { Diag, Horiz, Stab, Diag, Horiz, Stab }),
                 });
         }
 

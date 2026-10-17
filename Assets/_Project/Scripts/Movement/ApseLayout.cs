@@ -44,7 +44,7 @@ namespace ProjectHymn.Movement
         {
             Id = "Apse", Name = "The Sunken Apse", Scene = "Apse", Meter = 6, Drowned = true,
             HubScene = "AirBell", HubSpawn = "FromNave",
-            ParSeconds = 25f, PerfectAttacks = 16,
+            ParSeconds = 70f, PerfectAttacks = 52, HitsForS = 3, HitsForA = 6,
             Route = Route, Props = Props, Markers = Markers,
         };
     }

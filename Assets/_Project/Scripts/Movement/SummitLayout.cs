@@ -30,7 +30,8 @@ namespace ProjectHymn.Movement
 
         public static readonly Marker[] Markers =
         {
-            // Par 0:15 (GDD update 18): a short run up the stair, the Cantor just past the top, the way down close behind him.
+            // A short run up the stair, the Cantor just past the top, the way down close behind him. Par 1:00 (recalibrated
+            // 2026-10-17 from GDD update 18's 0:15: three verses and 600 HP).
             new Marker("Spawn",            M.Spawn,       4f, 0f),
             new Marker("Checkpoint 1",     M.Checkpoint,  4f, 0f),
             new Marker("Checkpoint 2",     M.Checkpoint, 29f, ArenaTop),
@@ -44,7 +45,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Stage => new StageLayout
         {
             Id = "Summit", Name = "The Summit", Scene = "Summit", Meter = 4,
-            ParSeconds = 15f, PerfectAttacks = 14,
+            ParSeconds = 60f, PerfectAttacks = 45, HitsForS = 3, HitsForA = 6,
             Route = Route, Props = Props, Markers = Markers,
         };
     }

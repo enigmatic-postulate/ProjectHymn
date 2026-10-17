@@ -136,6 +136,7 @@ namespace ProjectHymn.Gameplay
         void Update()
         {
             if (Data != null) Data.playSeconds += Time.unscaledDeltaTime;
+            VolumeKeys();
             DebugKeys();
         }
 
@@ -143,6 +144,15 @@ namespace ProjectHymn.Gameplay
 
         /// <summary>A rank the next stage clear is forced to (debug F12), or null.</summary>
         public StageRank? DebugRank { get; set; }
+
+        /// <summary>Minus / equals (or the numpad's minus / plus) turn the master volume down / up a step, anywhere, any time.</summary>
+        void VolumeKeys()
+        {
+            int k = UiInput.VolumeKey;
+            if (k == 0) return;
+            GameSettings.Volume = GameSettings.Stepped(GameSettings.Volume, k);
+            ProjectHymn.UI.GameHud.Toast($"Volume {Mathf.RoundToInt(GameSettings.Volume * 100f)}%   (- / = to change)", 1.2f);
+        }
 
         void DebugKeys()
         {

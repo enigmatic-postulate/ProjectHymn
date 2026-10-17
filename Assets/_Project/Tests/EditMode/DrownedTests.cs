@@ -72,7 +72,7 @@ namespace ProjectHymn.Tests
             return d;
         }
 
-        /// <summary>Plan the Precentor's attacks back to back through the whole canticle in one verse; returns the patterns used.</summary>
+        /// <summary>Plan the Precentor's attacks back to back, three times through the canticle, in one verse; returns the patterns used.</summary>
         static List<string> FightThrough(int phase)
         {
             var map = Precentor();
@@ -81,7 +81,7 @@ namespace ProjectHymn.Tests
             var used = new List<string>();
             int turn = 0;
             double now = 0;
-            for (int guard = 0; guard < 60 && now < 140; guard++)
+            for (int guard = 0; guard < 200 && now < 432; guard++)        // three times through the canticle
             {
                 var plan = BossPlanner.Plan(map, moves, phase, ref turn, now, now);
                 Assert.IsTrue(plan.IsValid, "an attack at beat " + now);
@@ -113,6 +113,11 @@ namespace ProjectHymn.Tests
             var second = FightThrough(1);
             CollectionAssert.Contains(second, "Great Bell");
             CollectionAssert.Contains(second, "Riptide");
+            CollectionAssert.DoesNotContain(second, "Twin Bells", "twin bells wait for the third verse");
+            var third = FightThrough(2);
+            CollectionAssert.Contains(third, "Twin Bells");
+            CollectionAssert.Contains(third, "Hemiola Run");
+            CollectionAssert.Contains(third, "Cross Current");
         }
 
         [Test]
@@ -123,9 +128,9 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(1, d["Great Bell"].MinPhase);
             foreach (var m in d.Values)
             {
-                if (m.Pattern.Name == "Great Bell") continue;
+                if (m.Pattern.Name == "Great Bell" || m.Pattern.Name == "Twin Bells") { Assert.IsTrue(m.Pattern.Unblockable, m.Pattern.Name); continue; }
                 Assert.IsFalse(m.Pattern.Unblockable, m.Pattern.Name + " can be guarded");
-                if (m.Meter != 0) Assert.Less(m.Pattern.Span, m.Meter, m.Pattern.Name + " fits inside one bar");
+                if (m.Meter != 0) Assert.Less(m.Pattern.Span, 2 * m.Meter, m.Pattern.Name + " fits inside two bars");
             }
             // The hemiola's three quarters take exactly as long as a bar of the 6/8 around it.
             var map = Precentor();

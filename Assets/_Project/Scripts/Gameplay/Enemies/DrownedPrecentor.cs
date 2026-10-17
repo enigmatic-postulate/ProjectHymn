@@ -8,8 +8,8 @@ namespace ProjectHymn.Gameplay
     /// VS-6's boss, the Drowned Precentor: the cathedral's choirmaster, drowned at his lectern, who still sets the pace for
     /// "Canticle of the Precentor". He fights like the Bone Cantor (every attack counted in for a bar of the meter it lands
     /// in, never across a change; he lifts his hand through the bar before one), but his song bends the same bar three
-    /// ways: 6/8, a 3/4 hemiola, then 9/8 (<see cref="DrownedPatterns.Precentor"/>). Below half health his second verse
-    /// adds the Great Bell, a toll along the floor no guard stops.
+    /// ways: 6/8, a 3/4 hemiola, then 9/8 (<see cref="DrownedPatterns.Precentor"/>). Three verses by health: the second
+    /// adds the Great Bell, a toll along the floor no guard stops; the third, twin bells and strings across two bars.
     /// </summary>
     public class DrownedPrecentor : BoneCantor
     {
@@ -19,6 +19,9 @@ namespace ProjectHymn.Gameplay
             "The Precentor's second verse: the barcarolle, the riptide, and the Great Bell (no guard holds it: jump or dodge)";
 
         protected override string FallToast => "The Precentor lowers his hand. The nave falls quiet. The way up is open.";
+
+        protected override string ThirdVerseToast =>
+            "The Precentor's last verse: twin bells, the hemiola run, twos against nine. Count every eighth.";
 
         protected override Color RingColor => new Color(0.45f, 0.95f, 1f, 0.9f);
 

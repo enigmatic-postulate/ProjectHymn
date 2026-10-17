@@ -49,5 +49,11 @@ namespace ProjectHymn.Gameplay
         }
 
         public static void Apply() => AudioListener.volume = Volume;
+
+        /// <summary>One step of the volume controls (10%), rounded to the step so repeated presses land on even values.</summary>
+        public const float VolumeStep = 0.1f;
+
+        /// <summary>A volume moved <paramref name="steps"/> steps, kept within 0 to 100% (no wrap-around).</summary>
+        public static float Stepped(float value, int steps) => Mathf.Clamp01(Mathf.Round(value / VolumeStep + steps) * VolumeStep);
     }
 }
