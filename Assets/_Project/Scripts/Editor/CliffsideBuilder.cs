@@ -28,6 +28,7 @@ namespace ProjectHymn.EditorTools
         static bool IsArena => L.Id == "Arena";
         static bool IsYard => L.Id == "Yard";
         static bool IsSpring => L.Id == "Spring";
+        static bool Drowned => L.Drowned;
         static BeatEnemy _boss;
         const float Bottom = -14f;      // cliffs reach down into the water
         const float FrontZ = -2.6f;     // cliff faces toward the camera; the lane is z = 0
@@ -55,6 +56,12 @@ namespace ProjectHymn.EditorTools
         [MenuItem("Project Hymn/Build Practice Yard", priority = 5)]
         public static void BuildYard() => BuildStage(StageLayout.Yard);
 
+        [MenuItem("Project Hymn/Build Kelp Nave", priority = 7)]
+        public static void BuildNave() => BuildStage(StageLayout.Nave);
+
+        [MenuItem("Project Hymn/Build Choir Loft", priority = 8)]
+        public static void BuildLoft() => BuildStage(StageLayout.Loft);
+
         /// <summary>
         /// Build a stage scene from its layout: Cliffside (4/4, the battle theme) or Belfry Ridge (VS-2: 3/4, the waltz,
         /// bone dancers, dusk light and the belfry). Safe to re-run.
@@ -70,23 +77,30 @@ namespace ProjectHymn.EditorTools
             _art = ArtLibrary.HasKayKit;
             _village = ArtLibrary.HasVillage;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var theme = Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : IsYard ? LoadPracticeTheme() : LoadTheme();
+            var theme = Drowned ? LoadNaveTheme() : Boss ? LoadSummitTheme() : Waltz ? LoadWaltz() : IsYard ? LoadPracticeTheme() : LoadTheme();
             var weapons = _art ? KayKitBuilder.EnsureWeapons() : LoadWeapons();
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
-            if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else if (!IsSpring) BuildLighting();
+            if (Drowned) DrownedArt.Lighting();
+            else if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else if (!IsSpring) BuildLighting();
             var level = new GameObject("Level").transform;
             if (IsSpring) BuildSpringFloors(level);
+            else if (Drowned)
+            {
+                // VS-6: the drowned cathedral's masonry and column drums (same colliders as any stage's blocks).
+                foreach (var b in L.Route) DrownedArt.Block(level, b, FrontZ, BackZ);
+                foreach (var b in L.Props) DrownedArt.Block(level, b, FrontZ, BackZ);
+            }
             else
             {
                 foreach (var b in L.Route) BuildBlock(level, b);
                 foreach (var b in L.Props) BuildBlock(level, b);
                 BuildWaterAndBackdrop(level);
             }
-            if (!IsArena && !IsYard && !IsSpring) BuildDressing(level);
+            if (!IsArena && !IsYard && !IsSpring && !Drowned) BuildDressing(level);
             if (IsYard) BuildYardDressing(level);
-            if (_village && !IsArena && !IsYard && !IsSpring) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
+            if (_village && !IsArena && !IsYard && !IsSpring && !Drowned) EnvironmentArt.Dress(level, FrontZ, L.Route, cliffsideProps: L.Id == "Cliffside");
             if (L.Id == "Cliffside") EnvironmentArt.Boulders(level, CliffsideLayout.WaterY);
             if (Waltz) BuildBelfry(level);
             if (Boss) BuildArena(level);
@@ -136,6 +150,15 @@ namespace ProjectHymn.EditorTools
                         var cp = BuildCheckpoint(level, m);
                         if (first == null) { first = cp; SetBool(cp, "startsLit", true); }
                         break;
+                    case CliffsideLayout.MarkerKind.Target when Drowned:
+                        DrownedEnemies.Knight(ParentFor(m), new Vector3(m.X, m.Y, 0f), LedgeBounds(m), conductor);
+                        break;
+                    case CliffsideLayout.MarkerKind.FloatingTarget when Drowned:
+                        DrownedEnemies.Jelly(ParentFor(m), new Vector3(m.X, m.Y + 1.0f, 0f), new Vector2(m.X - 6f, m.X + 6f), conductor, additive);
+                        break;
+                    case CliffsideLayout.MarkerKind.Chorister:
+                        DrownedEnemies.Chorister(ParentFor(m), new Vector3(m.X, m.Y, 0f), LedgeBounds(m), conductor, additive);
+                        break;
                     case CliffsideLayout.MarkerKind.Target:
                         var knight = BuildKnight(ParentFor(m), m, conductor);
                         if (IsYard && m.Name == YardLayout.TrainingKnight) yardKnight = knight;
@@ -163,8 +186,9 @@ namespace ProjectHymn.EditorTools
                 homeGo.transform.SetParent(level, false);
                 homeGo.transform.position = new Vector3(-8.6f, 0f, 0f);
                 var home = homeGo.GetComponent<SceneDoor>();
-                home.scene = "Village"; home.spawn = "FromCliffside"; home.saveOnArrival = true; home.prompt = "Back to the village"; home.range = 1.2f;
-                if (_village) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
+                home.scene = L.HubScene; home.spawn = L.HubSpawn; home.saveOnArrival = true;
+                home.prompt = Drowned ? "Back to the Air Bell" : "Back to the village"; home.range = 1.2f;
+                if (_village && !Drowned) EnvironmentArt.Piece(level, "Prop_WoodenFence_Single", new Vector3(-8.6f, 0f, 1.6f), 0f);
             }
 
             // Camera, effects, HUD (the minimal HUD builds itself; the old one is the debug HUD)
@@ -179,7 +203,13 @@ namespace ProjectHymn.EditorTools
                 if (g != null) SpringArt.GoalPortal(g.transform);
             }
 
-            if (!IsSpring)
+            if (Drowned)
+            {
+                // VS-6: the drowned cathedral (arcades, rose window, light shafts, caustics, kelp, snow, bubbles, fish), deep water.
+                DrownedArt.Build(level, L);
+                StageLook.Apply(level, cam.GetComponent<Camera>(), StageLook.Deep, L.Id);
+            }
+            else if (!IsSpring)
             {
                 // VS-4: Starlit Spring's finish on every stage (sky, fog, post-processing, beat-lit fires, a living sea).
                 var look = Boss ? StageLook.Night : Waltz ? StageLook.Dusk : IsYard ? StageLook.Morning : StageLook.Day;
@@ -218,6 +248,8 @@ namespace ProjectHymn.EditorTools
             dso.FindProperty("fallCostsAHeart").boolValue = L.OpenEdges;
             dso.FindProperty("parSeconds").floatValue = L.ParSeconds;
             dso.FindProperty("perfectAttacks").intValue = L.PerfectAttacks;
+            dso.FindProperty("returnSpawn").stringValue = L.HubSpawn;
+            dso.FindProperty("hubScene").stringValue = L.HubScene == "Village" ? "" : L.HubScene;
             dso.ApplyModifiedPropertiesWithoutUndo();
 
             FinishScene(scene, theme);
@@ -230,7 +262,7 @@ namespace ProjectHymn.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath, first: false);
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log($"[Project Hymn] {L.Name} built ({L.Meter}/4). A/D run, Space jump (again in the air to double jump; hold for height), " +
+            Debug.Log($"[Project Hymn] {L.Name} built ({L.Meter}/{(L.Meter == 6 || L.Meter == 9 ? 8 : 4)}). A/D run, Space jump (again in the air to double jump; hold for height), " +
                       "jump at a ledge to grab it, Up/Space to climb, Down to let go. J / K play notes anywhere, on the ground or in the air. " +
                       "L guards: press it on the beat an enemy's blow lands (it glows red a beat before) to parry. " +
                       "W / Up uses doors, Esc pauses. Shift dodge, R restart, F1-F4 tempos, F9 debug HUD.");
@@ -574,6 +606,13 @@ namespace ProjectHymn.EditorTools
             return cp;
         }
 
+        /// <summary>The route block a marker stands on, as an enemy's bounds (a little in from each end).</summary>
+        static Vector2 LedgeBounds(CliffsideLayout.Marker m)
+        {
+            var ledge = L.BlockAt(m.X);
+            return new Vector2(ledge.XMin + 0.8f, ledge.XMax - 0.8f);
+        }
+
         /// <summary>The shield knight guards the ledge it stands on (it never walks off it).</summary>
         static ShieldKnight BuildKnight(Transform level, CliffsideLayout.Marker m, Conductor conductor)
         {
@@ -627,6 +666,7 @@ namespace ProjectHymn.EditorTools
             // A stone arch standing behind the lane (the kit's town gate when the art is in), with a turning crystal.
             var arch = go.transform;
             if (IsSpring) { }                     // Starlit Spring's way out is a star portal (SpringArt.GoalPortal)
+            else if (Drowned) DrownedArt.GoalArch(arch, new Vector3(m.X, m.Y, 0f));
             else if (_village) EnvironmentArt.Gate(arch, new Vector3(m.X, m.Y, 0f));
             else
             {

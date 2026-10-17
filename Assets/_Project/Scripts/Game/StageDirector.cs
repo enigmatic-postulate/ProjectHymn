@@ -22,6 +22,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] Vector2Int notesPerEnemy = new Vector2Int(20, 40);
         [SerializeField] SliceGoal goal;
         [SerializeField] string returnSpawn = "FromCliffside";
+        [Tooltip("The hub this stage goes home to (empty = the database's hub, Saltmere's village). VS-6: the Air Bell.")]
+        [SerializeField] string hubScene = "";
         [SerializeField] float restartDelay = 0.8f;
 
         [Header("Targets (GDD update 18; placeholders until playtested)")]
@@ -352,7 +354,8 @@ namespace ProjectHymn.Gameplay
                 s.Travel(EndingScene, "Start");
                 return;
             }
-            if (s.Db != null) s.Travel(s.Db.hubScene, returnSpawn, saveOnArrival: true);
+            string hub = !string.IsNullOrEmpty(hubScene) ? hubScene : s.Db != null ? s.Db.hubScene : "Village";
+            s.Travel(hub, returnSpawn, saveOnArrival: true);
         }
 
         /// <summary>The ending's scene (built by Project Hymn → Build Hub &amp; Loop).</summary>

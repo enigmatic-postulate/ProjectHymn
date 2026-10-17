@@ -10,8 +10,12 @@ namespace ProjectHymn.Movement
     public sealed class StageLayout
     {
         public string Id, Name, Scene;
-        /// <summary>Beats per bar of the stage's music (4 = common time, 3 = waltz).</summary>
+        /// <summary>Beats per bar of the stage's music (4 = common time, 3 = waltz, 6 = the Drowned Nave's 6/8).</summary>
         public int Meter = 4;
+        /// <summary>The region's hub the stage returns to, and the spawn there (VS-6: the Drowned Nave goes home to the Air Bell).</summary>
+        public string HubScene = "Village", HubSpawn = "FromCliffside";
+        /// <summary>The Drowned Nave (VS-6): underwater ruins, 6/8, drowned enemies.</summary>
+        public bool Drowned;
         public float ParSeconds = 75f;
         public int PerfectAttacks = 14;
         public CliffsideLayout.Block[] Route = new CliffsideLayout.Block[0];
@@ -49,7 +53,8 @@ namespace ProjectHymn.Movement
                 int n = 0;
                 foreach (var m in Markers)
                     if (m.Kind == CliffsideLayout.MarkerKind.Target || m.Kind == CliffsideLayout.MarkerKind.FloatingTarget ||
-                        m.Kind == CliffsideLayout.MarkerKind.Dancer || m.Kind == CliffsideLayout.MarkerKind.Boss) n++;
+                        m.Kind == CliffsideLayout.MarkerKind.Dancer || m.Kind == CliffsideLayout.MarkerKind.Boss ||
+                        m.Kind == CliffsideLayout.MarkerKind.Chorister) n++;
                 return n;
             }
         }
@@ -60,7 +65,9 @@ namespace ProjectHymn.Movement
         public static StageLayout Arena => ArenaLayout.Stage;
         public static StageLayout Yard => YardLayout.Stage;
         public static StageLayout Spring => SpringLayout.Stage;
-        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena, Spring };
+        public static StageLayout Nave => NaveLayout.Stage;
+        public static StageLayout Loft => LoftLayout.Stage;
+        public static IReadOnlyList<StageLayout> All => new[] { Yard, Cliffside, Belfry, Summit, Arena, Spring, Nave, Loft };
 
         /// <summary>Every floor an enemy (or the player) can stand on: the route and the platforms.</summary>
         public FloorMap Floors()

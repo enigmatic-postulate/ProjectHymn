@@ -154,13 +154,22 @@ namespace ProjectHymn.EditorTools
             var loreSummit = Item("lore_summit", "The Last Cantor", ItemKind.Lore, 0, "Cut into the first step of the summit path.", 0x9ab8ff);
             loreSummit.loreText = "THE LAST CANTOR WOULD NOT STOP COUNTING. HE COUNTS FOUR, THEN THREE, THEN SEVEN, AND RAISES HIS STAFF A BAR BEFORE HE CHANGES. " +
                                   "WHEN HE LEAPS, THE GROUND ITSELF STRIKES: NO BLADE TURNS IT. LEAVE THE GROUND.";
-            foreach (var i in new[] { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit }) EditorUtility.SetDirty(i);
+            var loreNave = Item("lore_nave", "The Diver's Slate", ItemKind.Lore, 0, "Scratched on a slate wedged in the narthex door.", 0x7fd8d0);
+            loreNave.loreText = "DOWN HERE THE WATER ROCKS IN SIXES. COUNT ONE-two-three FOUR-five-six. THE BELLS IN THE WATER STING ON ONE AND FOUR, " +
+                                "THEN SINK AND BREATHE SLOW. THAT IS WHEN YOU CUT. THE KNIGHTS SWING HEAVY ON ONE. DO NOT CLIMB TO MEET THEM.";
+            var loreLoft = Item("lore_loft", "Page from a Psalter", ItemKind.Lore, 0, "Pressed between two stones on the loft stair.", 0x7fd8d0);
+            loreLoft.loreText = "The choir still sings its antiphon: three answers and an amen. Guard the answers and they fly back to the singer. " +
+                                "When the note is held long, the floor itself rings. Leave it.";
+            var loreApse = Item("lore_apse", "The Precentor's Rule", ItemKind.Lore, 0, "Carved on the rail before the apse.", 0x7fd8d0);
+            loreApse.loreText = "THE PRECENTOR SETS THE PACE. HE ROCKS IN SIX, THEN BENDS THE SAME BAR INTO THREE, THEN STRETCHES IT TO NINE. " +
+                                "HE LIFTS HIS HAND A BAR BEFORE HE TURNS IT. WHEN HE TOLLS THE GREAT BELL, NO SHIELD WILL HOLD: LEAVE THE FLOOR.";
+            foreach (var i in new[] { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit, loreNave, loreLoft, loreApse }) EditorUtility.SetDirty(i);
 
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>($"{ResourcesDir}/{GameDatabase.ResourcePath}.asset");
             if (db == null) { db = ScriptableObject.CreateInstance<GameDatabase>(); AssetDatabase.CreateAsset(db, $"{ResourcesDir}/{GameDatabase.ResourcePath}.asset"); }
             db.classes = new List<ClassDefinition> { minstrel, fighter, warden, crusader };
             db.weapons = any;
-            db.items = new List<ItemDefinition> { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit };
+            db.items = new List<ItemDefinition> { loreVillage, loreCliff, loreLedge, loreBelfry, loreSummit, loreNave, loreLoft, loreApse };
             db.shopStock = new List<ItemDefinition>();
             db.startingItems = new List<GameDatabase.ItemCount>();
             db.hubScene = "Village";

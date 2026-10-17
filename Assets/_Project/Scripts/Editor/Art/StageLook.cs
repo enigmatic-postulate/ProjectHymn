@@ -99,6 +99,21 @@ namespace ProjectHymn.EditorTools.Art
             WaterDeep = new Color(0.05f, 0.08f, 0.2f), WaterShallow = new Color(0.2f, 0.3f, 0.45f), WaterSky = new Color(0.95f, 0.6f, 0.45f), WaterGlints = 0.9f,
         };
 
+        /// <summary>
+        /// The Drowned Nave (VS-6): deep water. A dark teal column brightening toward the surface far above (a hazy glow
+        /// where the light comes down, a ripple of "cloud" up there), no sun disc, cool bloom and a deep blue vignette.
+        /// </summary>
+        public static Preset Deep => new Preset
+        {
+            Name = "Deep",
+            Top = new Color(0.12f, 0.42f, 0.5f), Mid = new Color(0.03f, 0.2f, 0.26f), Horizon = new Color(0.02f, 0.1f, 0.14f),
+            Stars = 0.12f, Clouds = 0.45f, CloudCover = 0.55f, CloudHeight = 0.9f,
+            CloudLit = new Color(0.55f, 0.95f, 1f), CloudShade = new Color(0.05f, 0.25f, 0.3f),
+            Sun = new Vector2(0.55f, 0.98f), SunGlow = 0.55f, SunSize = 0.0f, SunColor = new Color(0.9f, 1.6f, 1.7f),
+            BloomThreshold = 0.9f, BloomIntensity = 0.9f, BloomScatter = 0.75f, Exposure = 0.2f, Contrast = 14f, Saturation = 8f, Vignette = 0.32f,
+            VignetteColor = new Color(0f, 0.04f, 0.08f), Filter = new Color(0.86f, 1f, 1f),
+        };
+
         // ---------------- Apply ----------------
 
         /// <summary>Sky, fog, post-processing and the beat pulse for a scene, under <paramref name="root"/>.</summary>
