@@ -86,7 +86,7 @@ namespace ProjectHymn.EditorTools
             var additive = LoadAdditive();
             var locomotion = _art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
 
-            if (Drowned) DrownedArt.Lighting();
+            if (Drowned) { DrownedArt.Use(L.Id); DrownedArt.Lighting(); }
             else if (Boss) BuildNightLighting(); else if (Waltz) BuildDuskLighting(); else if (!IsSpring) BuildLighting();
             var level = new GameObject("Level").transform;
             if (IsSpring) BuildSpringFloors(level);
@@ -212,7 +212,7 @@ namespace ProjectHymn.EditorTools
             {
                 // VS-6: the drowned cathedral (arcades, rose window, light shafts, caustics, kelp, snow, bubbles, fish), deep water.
                 DrownedArt.Build(level, L);
-                StageLook.Apply(level, cam.GetComponent<Camera>(), StageLook.Deep, L.Id);
+                StageLook.Apply(level, cam.GetComponent<Camera>(), StageLook.DeepFor(L.Id), L.Id);
             }
             else if (!IsSpring)
             {

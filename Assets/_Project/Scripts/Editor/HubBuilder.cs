@@ -488,6 +488,7 @@ namespace ProjectHymn.EditorTools
             var db = EnsureDatabase(weapons);
             var additive = LoadAdditive();
             var locomotion = art ? KayKitBuilder.EnsureLocomotion() : Sword.SwordContent.EnsureLocomotion();
+            DrownedArt.Use("AirBell");
             DrownedArt.AirBellLighting();
             var level = new GameObject("Air Bell").transform;
             float x0 = AirBellLayout.XMin, x1 = AirBellLayout.XMax, top = AirBellLayout.GroundTop;

@@ -58,6 +58,7 @@ Built by **Project Hymn → Build Hub & Loop** (new scenes `AirBell`, `Nave`, `L
   - The **Barnacled Knight** swings a heavy cut on one, or a cut on each big beat.
 - **Stages:**
   - **Kelp Nave** and **Choir Loft:** a drowned cathedral with arcades, a rose window, light shafts, caustics, kelp, marine snow, bubbles and fish. The shaders are `HymnShafts`, `HymnCaustics` and `HymnKelp`; the textures come from `Tools/paint_drowned.py`.
+  - **Each drowned stage has its own palette** (`DrownedArt.Palette`, picked by stage id, with its materials saved per palette so they don't overwrite each other), the way Cliffside's day and Belfry Ridge's dusk differ: the **Kelp Nave** is green and choked with weed, lit from far above; the **Choir Loft** is up among the clerestory windows, warm gold and clearer, with lower arcades and little weed; the **Sunken Apse** is the deepest and coldest, violet and close, with fewer and heavier columns. Their post-processing follows in `StageLook.Deep`, `DeepLoft` and `DeepApse`.
   - **The Sunken Apse:** the boss stage.
 - **The boss, the Drowned Precentor:** he conducts *Canticle of the Precentor* through 6/8, a **3/4 hemiola** (the same bar in three quarters) and **9/8**, and he fights in whichever meter the bar is in.
   - First verse: the Rocking (one, four), the Hemiola (all three quarters) and the Long Rock (one, four, seven).

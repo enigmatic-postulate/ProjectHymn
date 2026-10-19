@@ -26,26 +26,134 @@ namespace ProjectHymn.EditorTools.Art
 
         static readonly Dictionary<string, Material> Mats = new Dictionary<string, Material>();
 
+        // ---------------- Palettes (one look per stage) ----------------
+
+        /// <summary>
+        /// A drowned stage's palette. The Kelp Nave, the Choir Loft and the Sunken Apse sit at different heights in the
+        /// same cathedral and read differently for it: the nave is green and choked with kelp on the silt; the loft is up
+        /// in the galleries where the clerestory lets warm light in, clearer and golden; the apse is the deepest and
+        /// coldest, violet and close. Materials are saved per palette (the key is their suffix), so the stages don't
+        /// share one asset and overwrite each other's colours.
+        /// </summary>
+        public sealed class Palette
+        {
+            public string Key = "Nave";
+            // Lighting
+            public Color Sun = new Color(0.62f, 1f, 0.88f);
+            public float SunIntensity = 1.05f;
+            public Vector2 SunAngle = new Vector2(68f, 16f);
+            public Color Sky = new Color(0.2f, 0.5f, 0.42f), Equator = new Color(0.08f, 0.26f, 0.24f), Ground = new Color(0.03f, 0.09f, 0.08f);
+            public Color Fog = new Color(0.04f, 0.24f, 0.21f);
+            public float FogStart = 12f, FogEnd = 76f;
+            // Stone
+            public Color Stone = new Color(0.78f, 1f, 0.88f), DarkStone = new Color(0.45f, 0.64f, 0.58f), Top = new Color(0.92f, 1f, 0.9f);
+            // Water light
+            public Color Shaft = new Color(0.5f, 1f, 0.82f);
+            public float ShaftIntensity = 1f;
+            public Color Caustic = new Color(0.45f, 1f, 0.85f);
+            public float CausticIntensity = 0.55f;
+            // Windows
+            public Color WindowA = new Color(0.2f, 0.75f, 0.85f), WindowB = new Color(0.75f, 1f, 1f);
+            public Color RoseA = new Color(0.25f, 0.5f, 1f), RoseB = new Color(0.9f, 0.6f, 1f), RoseLight = new Color(0.6f, 0.65f, 1f);
+            // Kelp: two frond colours, how close together they grow (metres) and how tall
+            public Color KelpRootA = new Color(0.02f, 0.1f, 0.07f), KelpTipA = new Color(0.32f, 0.62f, 0.3f);
+            public Color KelpRootB = new Color(0.05f, 0.08f, 0.03f), KelpTipB = new Color(0.55f, 0.55f, 0.22f);
+            public float KelpSpacing = 2.5f, KelpScale = 1f;
+            public int KelpClump = 3;
+            // Shape: the arcades' spacing and size, and where the windows sit (the loft is up among them)
+            public float ArcadeSpacing = 1f, ArcadeScale = 1f;
+            public float WindowY = 24f, WindowHeight = 8f, WindowStep = 14f, RoseY = 22f, RoseScale = 1f;
+            // Particles
+            public Color Snow = new Color(0.75f, 0.95f, 1f, 0.6f), Fish = new Color(0.2f, 0.35f, 0.38f, 0.9f);
+            public float SnowRate = 60f, BubbleRate = 4f;
+            public int FishBands = 3;
+        }
+
+        /// <summary>The Kelp Nave's palette: drowned green, thick kelp on the silt, light filtering a long way down.</summary>
+        public static Palette Green => new Palette();
+
+        /// <summary>
+        /// The Choir Loft's palette: up in the galleries, close under the clerestory. Warm gold light, clearer water, warm stone,
+        /// and only a little weed this high up.
+        /// </summary>
+        public static Palette Gold => new Palette
+        {
+            Key = "Loft",
+            Sun = new Color(1f, 0.84f, 0.56f), SunIntensity = 1.3f, SunAngle = new Vector2(56f, -26f),
+            Sky = new Color(0.44f, 0.38f, 0.3f), Equator = new Color(0.14f, 0.22f, 0.3f), Ground = new Color(0.05f, 0.08f, 0.12f),
+            Fog = new Color(0.14f, 0.18f, 0.24f), FogStart = 20f, FogEnd = 100f,
+            Stone = new Color(1f, 0.9f, 0.74f), DarkStone = new Color(0.62f, 0.54f, 0.46f), Top = new Color(1f, 0.94f, 0.8f),
+            Shaft = new Color(1f, 0.82f, 0.5f), ShaftIntensity = 1.4f,
+            Caustic = new Color(1f, 0.88f, 0.58f), CausticIntensity = 0.38f,
+            WindowA = new Color(1f, 0.72f, 0.3f), WindowB = new Color(1f, 0.95f, 0.75f),
+            RoseA = new Color(1f, 0.55f, 0.2f), RoseB = new Color(1f, 0.9f, 0.5f), RoseLight = new Color(1f, 0.8f, 0.5f),
+            KelpRootA = new Color(0.08f, 0.07f, 0.03f), KelpTipA = new Color(0.6f, 0.5f, 0.2f),
+            KelpRootB = new Color(0.1f, 0.06f, 0.03f), KelpTipB = new Color(0.72f, 0.46f, 0.22f),
+            KelpSpacing = 7f, KelpScale = 0.7f, KelpClump = 2,
+            ArcadeSpacing = 0.8f, ArcadeScale = 0.78f,
+            WindowY = 13f, WindowHeight = 6f, WindowStep = 9f, RoseY = 12f, RoseScale = 0.8f,
+            Snow = new Color(1f, 0.9f, 0.7f, 0.55f), Fish = new Color(0.42f, 0.32f, 0.2f, 0.9f),
+            SnowRate = 42f, BubbleRate = 2.5f, FishBands = 2,
+        };
+
+        /// <summary>The Sunken Apse's palette: the deepest and coldest room, violet and close around the Precentor.</summary>
+        public static Palette Violet => new Palette
+        {
+            Key = "Apse",
+            Sun = new Color(0.68f, 0.68f, 1.1f), SunIntensity = 0.85f, SunAngle = new Vector2(74f, 8f),
+            Sky = new Color(0.26f, 0.2f, 0.46f), Equator = new Color(0.12f, 0.08f, 0.26f), Ground = new Color(0.04f, 0.03f, 0.1f),
+            Fog = new Color(0.09f, 0.06f, 0.22f), FogStart = 10f, FogEnd = 62f,
+            Stone = new Color(0.82f, 0.8f, 1f), DarkStone = new Color(0.46f, 0.44f, 0.66f), Top = new Color(0.8f, 0.78f, 0.96f),
+            Shaft = new Color(0.72f, 0.56f, 1.1f), ShaftIntensity = 0.85f,
+            Caustic = new Color(0.68f, 0.58f, 1.1f), CausticIntensity = 0.5f,
+            WindowA = new Color(0.5f, 0.3f, 1f), WindowB = new Color(0.9f, 0.75f, 1f),
+            RoseA = new Color(0.6f, 0.2f, 1f), RoseB = new Color(1f, 0.5f, 0.85f), RoseLight = new Color(0.7f, 0.5f, 1f),
+            KelpRootA = new Color(0.04f, 0.03f, 0.1f), KelpTipA = new Color(0.3f, 0.28f, 0.55f),
+            KelpRootB = new Color(0.06f, 0.03f, 0.08f), KelpTipB = new Color(0.45f, 0.26f, 0.5f),
+            KelpSpacing = 5.5f, KelpScale = 0.85f, KelpClump = 2,
+            ArcadeSpacing = 1.35f, ArcadeScale = 1.18f,
+            WindowY = 29f, WindowHeight = 10f, WindowStep = 22f, RoseY = 26f, RoseScale = 1.25f,
+            Snow = new Color(0.8f, 0.78f, 1f, 0.55f), Fish = new Color(0.26f, 0.22f, 0.4f, 0.9f),
+            SnowRate = 48f, FishBands = 2,
+        };
+
+        /// <summary>The Air Bell's masonry: warm, under the camp's lamps (its own lighting, not a stage's).</summary>
+        public static Palette Lamplit => new Palette
+        {
+            Key = "Bell",
+            Stone = new Color(1f, 0.88f, 0.72f), DarkStone = new Color(0.58f, 0.5f, 0.44f), Top = new Color(1f, 0.9f, 0.74f),
+            Caustic = new Color(0.6f, 1f, 1f), CausticIntensity = 0.45f,
+        };
+
+        /// <summary>The palette for a stage id (the hub included); the Kelp Nave's green is the default.</summary>
+        public static Palette For(string stageId) =>
+            stageId == "Loft" ? Gold : stageId == "Apse" ? Violet : stageId == "AirBell" ? Lamplit : Green;
+
+        static Palette P = Green;
+
+        /// <summary>Choose the palette everything built after this call uses.</summary>
+        public static void Use(string stageId) { P = For(stageId); Mats.Clear(); }
+
         // ---------------- Lighting ----------------
 
-        /// <summary>Light from the surface far above: a cool key from overhead, teal fill, and fog that closes in quickly.</summary>
+        /// <summary>Light from the surface far above, in the current palette's colour (<see cref="Use"/>), with its fog.</summary>
         public static void Lighting()
         {
             var sun = new GameObject("Surface Light", typeof(Light));
-            sun.transform.rotation = Quaternion.Euler(68f, 16f, 0f);
+            sun.transform.rotation = Quaternion.Euler(P.SunAngle.x, P.SunAngle.y, 0f);
             var l = sun.GetComponent<Light>();
-            l.type = LightType.Directional; l.intensity = 1.05f; l.color = new Color(0.72f, 0.96f, 1f);
+            l.type = LightType.Directional; l.intensity = P.SunIntensity; l.color = P.Sun;
             l.shadows = LightShadows.Soft; l.shadowStrength = 0.6f;
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.26f, 0.52f, 0.58f);
-            RenderSettings.ambientEquatorColor = new Color(0.12f, 0.3f, 0.34f);
-            RenderSettings.ambientGroundColor = new Color(0.05f, 0.1f, 0.12f);
+            RenderSettings.ambientSkyColor = P.Sky;
+            RenderSettings.ambientEquatorColor = P.Equator;
+            RenderSettings.ambientGroundColor = P.Ground;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.06f, 0.26f, 0.3f);
-            RenderSettings.fogStartDistance = 12f;
-            RenderSettings.fogEndDistance = 80f;
+            RenderSettings.fogColor = P.Fog;
+            RenderSettings.fogStartDistance = P.FogStart;
+            RenderSettings.fogEndDistance = P.FogEnd;
         }
 
         // ---------------- Materials ----------------
@@ -70,9 +178,9 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         static string Tex(string name) => $"{Dir}/{name}.png";
-        static Material StoneMat => ArtLibrary.Textured("Drowned_Stone", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), new Color(0.9f, 1f, 0.98f), 0.35f);
-        static Material DarkStoneMat => ArtLibrary.Textured("Drowned_StoneDark", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), new Color(0.55f, 0.66f, 0.66f), 0.3f);
-        static Material TopMat => ArtLibrary.Textured("Drowned_Top", Tex("DrownedTop_Albedo"), null, Color.white, 0.2f);
+        static Material StoneMat => ArtLibrary.Textured($"Drowned_Stone_{P.Key}", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), P.Stone, 0.35f);
+        static Material DarkStoneMat => ArtLibrary.Textured($"Drowned_StoneDark_{P.Key}", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), P.DarkStone, 0.3f);
+        static Material TopMat => ArtLibrary.Textured($"Drowned_Top_{P.Key}", Tex("DrownedTop_Albedo"), null, P.Top, 0.2f);
 
         static Shader HymnShader(string file) => AssetDatabase.LoadAssetAtPath<Shader>($"{ShaderDir}/{file}.shader");
 
@@ -91,18 +199,18 @@ namespace ProjectHymn.EditorTools.Art
 
         static Material Shafts(string name, float intensity, float seed)
         {
-            var m = Mat(name, HymnShader("HymnShafts"));
-            m.SetColor("_Color", new Color(0.55f, 0.95f, 1.1f));
-            m.SetFloat("_Intensity", intensity); m.SetFloat("_Bands", 4f); m.SetFloat("_Speed", 0.12f);
+            var m = Mat($"{name}_{P.Key}", HymnShader("HymnShafts"));
+            m.SetColor("_Color", P.Shaft);
+            m.SetFloat("_Intensity", intensity * P.ShaftIntensity); m.SetFloat("_Bands", 4f); m.SetFloat("_Speed", 0.12f);
             m.SetFloat("_Fade", 0.95f); m.SetFloat("_Seed", seed);
             return m;
         }
 
         static Material Caustics()
         {
-            var m = Mat("Drowned_Caustics", HymnShader("HymnCaustics"));
-            m.SetColor("_Color", new Color(0.5f, 1f, 1.05f));
-            m.SetFloat("_Intensity", 0.55f); m.SetFloat("_Scale", 0.85f); m.SetFloat("_Speed", 0.35f); m.SetFloat("_Sharpness", 5f);
+            var m = Mat($"Drowned_Caustics_{P.Key}", HymnShader("HymnCaustics"));
+            m.SetColor("_Color", P.Caustic);
+            m.SetFloat("_Intensity", P.CausticIntensity); m.SetFloat("_Scale", 0.85f); m.SetFloat("_Speed", 0.35f); m.SetFloat("_Sharpness", 5f);
             return m;
         }
 
@@ -191,11 +299,11 @@ namespace ProjectHymn.EditorTools.Art
 
         public static void Build(Transform level, StageLayout layout)
         {
-            Mats.Clear();
+            Use(layout.Id);
             Directory.CreateDirectory(MeshDir);
             AssetDatabase.Refresh();
             PrepareTextures();
-            var root = new GameObject("Drowned Nave Art").transform;
+            var root = new GameObject($"Drowned Art ({P.Key})").transform;
             root.SetParent(level, false);
             float x0 = layout.Route[0].XMin - 20f, x1 = layout.Route[layout.Route.Length - 1].XMax + 20f;
             Arcades(root, x0, x1);
@@ -218,9 +326,10 @@ namespace ProjectHymn.EditorTools.Art
                 new Vector2(0.85f, 28.4f), new Vector2(0.85f, 1.2f), new Vector2(1.1f, 0.8f), new Vector2(1.2f, 0f), new Vector2(0f, 0f),
             }, 24, Vector3.one, 4f).Save("NaveColumn", MeshDir);
             var arch = ArchMesh(4.5f, 0.9f, 1.4f).Save("NaveArch", MeshDir);
-            foreach (var (z, spacing, scale, mat) in new[] { (11f, 10f, 1f, StoneMat), (24f, 12f, 1.25f, DarkStoneMat) })
+            foreach (var (z, baseSpacing, baseScale, mat) in new[] { (11f, 10f, 1f, StoneMat), (24f, 12f, 1.25f, DarkStoneMat) })
             {
                 float y0 = Bottom;
+                float spacing = baseSpacing * P.ArcadeSpacing, scale = baseScale * P.ArcadeScale;
                 for (float x = x0 + (z > 20f ? 6f : 0f); x < x1; x += spacing)
                 {
                     Part(parent, "Column", col, mat, new Vector3(x, y0, z), null, new Vector3(scale, scale, scale));
@@ -262,31 +371,32 @@ namespace ProjectHymn.EditorTools.Art
             var parent = new GameObject("Back Wall").transform;
             parent.SetParent(root, false);
             EnvironmentArt.Block(parent, "Wall", new Vector3(x0 - 30f, Bottom, 36f), new Vector3(x1 + 30f, 48f, 40f), DarkStoneMat, DarkStoneMat, 3.2f, 3.2f, collider: false);
-            var light = Glow("Drowned_Window", new Color(0.2f, 0.75f, 0.85f) * 1.6f, new Color(0.75f, 1f, 1f) * 2.6f, 0f, 1f, new Color(0.6f, 1f, 1f));
-            var glass = Glow("Drowned_RoseGlass", new Color(0.25f, 0.5f, 1f) * 2f, new Color(0.9f, 0.6f, 1f) * 2.6f, -6f, 6f, new Color(1f, 0.9f, 1f) * 1.5f, 0.5f);
-            for (float x = x0; x < x1; x += 14f)
+            var light = Glow($"Drowned_Window_{P.Key}", P.WindowA * 1.6f, P.WindowB * 2.6f, 0f, 1f, P.WindowB);
+            var glass = Glow($"Drowned_RoseGlass_{P.Key}", P.RoseA * 2f, P.RoseB * 2.6f, -6f, 6f, P.RoseB * 1.5f, 0.5f);
+            for (float x = x0; x < x1; x += P.WindowStep)
             {
                 if (Mathf.Abs(x - cx) < 10f) continue;
                 var w = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Object.DestroyImmediate(w.GetComponent<Collider>());
                 w.name = "Clerestory";
                 w.transform.SetParent(parent, false);
-                w.transform.position = new Vector3(x, 24f, 35.9f);
-                w.transform.localScale = new Vector3(2.2f, 8f, 0.2f);
+                w.transform.position = new Vector3(x, P.WindowY, 35.9f);
+                w.transform.localScale = new Vector3(2.2f, P.WindowHeight, 0.2f);
                 w.GetComponent<MeshRenderer>().sharedMaterial = light;
             }
             // The rose: a glowing disc, a ring of tracery and a twelve-point star, with a light of its own.
             var rose = new GameObject("Rose Window").transform;
             rose.SetParent(parent, false);
-            rose.position = new Vector3(cx, 22f, 35.6f);
-            Part(rose, "Glass", MeshKit.Disc(6f, 6f, 48, 0.2f).Save("RoseDisc", MeshDir), glass, rose.position, Quaternion.Euler(-90f, 0f, 0f));
-            Part(rose, "Tracery", MeshKit.Torus(6.2f, 0.45f, 64, 10).Save("RoseRing", MeshDir), StoneMat, rose.position + Vector3.back * 0.2f, Quaternion.Euler(90f, 0f, 0f));
-            Part(rose, "Star", MeshKit.Star(5.6f, 2.2f, 0.4f, 12).Save("RoseStar", MeshDir), StoneMat, rose.position + Vector3.back * 0.25f);
+            rose.position = new Vector3(cx, P.RoseY, 35.6f);
+            float rs = P.RoseScale;
+            Part(rose, "Glass", MeshKit.Disc(6f * rs, 6f * rs, 48, 0.2f).Save($"RoseDisc_{P.Key}", MeshDir), glass, rose.position, Quaternion.Euler(-90f, 0f, 0f));
+            Part(rose, "Tracery", MeshKit.Torus(6.2f * rs, 0.45f * rs, 64, 10).Save($"RoseRing_{P.Key}", MeshDir), StoneMat, rose.position + Vector3.back * 0.2f, Quaternion.Euler(90f, 0f, 0f));
+            Part(rose, "Star", MeshKit.Star(5.6f * rs, 2.2f * rs, 0.4f * rs, 12).Save($"RoseStar_{P.Key}", MeshDir), StoneMat, rose.position + Vector3.back * 0.25f);
             var lg = new GameObject("Rose Light", typeof(Light));
             lg.transform.SetParent(rose, false);
-            lg.transform.position = rose.position + Vector3.back * 6f;
+            lg.transform.position = rose.position + Vector3.back * 6f * rs;
             var l = lg.GetComponent<Light>();
-            l.type = LightType.Point; l.range = 40f; l.intensity = 2f; l.color = new Color(0.6f, 0.65f, 1f);
+            l.type = LightType.Point; l.range = 40f; l.intensity = 2f; l.color = P.RoseLight;
         }
 
         /// <summary>Light shafts slanting down from the surface, across the depth of the scene.</summary>
@@ -361,22 +471,22 @@ namespace ProjectHymn.EditorTools.Art
             var fronds = new[] { Frond(2.4f, 0.45f, "Kelp_S"), Frond(3.6f, 0.55f, "Kelp_M"), Frond(5.2f, 0.6f, "Kelp_L") };
             var mats = new[]
             {
-                Kelp("Drowned_KelpGreen", new Color(0.02f, 0.1f, 0.07f), new Color(0.32f, 0.62f, 0.3f), 5f),
-                Kelp("Drowned_KelpOlive", new Color(0.05f, 0.08f, 0.03f), new Color(0.55f, 0.55f, 0.22f), 5f),
+                Kelp($"Drowned_KelpA_{P.Key}", P.KelpRootA, P.KelpTipA, 5f),
+                Kelp($"Drowned_KelpB_{P.Key}", P.KelpRootB, P.KelpTipB, 5f),
             };
             var rng = new System.Random(17);
             foreach (var b in layout.Route)
             {
                 if (b.Kind == CliffsideLayout.Kind.Pillar || b.Width < 4f) continue;
-                for (float x = b.XMin + 1f; x < b.XMax - 1f; x += 2.5f + (float)rng.NextDouble() * 4f)
+                for (float x = b.XMin + 1f; x < b.XMax - 1f; x += P.KelpSpacing + (float)rng.NextDouble() * 4f)
                 {
-                    int clump = 2 + rng.Next(3);
+                    int clump = 1 + rng.Next(P.KelpClump);
                     for (int c = 0; c < clump; c++)
                     {
                         var f = fronds[rng.Next(fronds.Length)];
                         var pos = new Vector3(x + (float)rng.NextDouble() * 1.2f, b.Top, 2.8f + (float)rng.NextDouble() * 3.4f);
                         var r = Part(parent, "Frond", f, mats[rng.Next(mats.Length)], pos, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f),
-                                     Vector3.one * (0.8f + (float)rng.NextDouble() * 0.5f));
+                                     Vector3.one * P.KelpScale * (0.8f + (float)rng.NextDouble() * 0.5f));
                         r.gameObject.isStatic = false;
                     }
                 }
@@ -395,20 +505,22 @@ namespace ProjectHymn.EditorTools.Art
             var snow = SparkMat();
             float cx = (x0 + x1) * 0.5f, w = x1 - x0;
             // Marine snow drifting down through the whole scene.
-            Emitter(root, "Marine Snow", new Vector3(cx, 6f, 6f), new Vector3(w, 30f, 26f), snow, 60f, (8f, 14f), (0.05f, 0.2f), (0.04f, 0.1f),
-                    new Color(0.75f, 0.95f, 1f, 0.6f), new Color(0.6f, 0.85f, 0.9f, 0.4f), 0.01f, 0.15f, Vector3.down * 0.25f);
+            Emitter(root, "Marine Snow", new Vector3(cx, 6f, 6f), new Vector3(w, 30f, 26f), snow, P.SnowRate, (8f, 14f), (0.05f, 0.2f), (0.04f, 0.1f),
+                    P.Snow, P.Snow * new Color(0.85f, 0.9f, 0.9f, 0.7f), 0.01f, 0.15f, Vector3.down * 0.25f);
             // Bubble streams from vents in the floor, rising and wobbling.
             var bubble = Particle("Drowned_Bubble", Tex("Bubble"), false);
             var rng = new System.Random(5);
             for (float x = x0 + 8f; x < x1 - 8f; x += 14f + (float)rng.NextDouble() * 10f)
-                Emitter(root, "Bubbles", new Vector3(x, -2f, 1.5f + (float)rng.NextDouble() * 6f), new Vector3(0.4f, 0.2f, 0.4f), bubble, 4f, (4f, 6f),
+                Emitter(root, "Bubbles", new Vector3(x, -2f, 1.5f + (float)rng.NextDouble() * 6f), new Vector3(0.4f, 0.2f, 0.4f), bubble, P.BubbleRate, (4f, 6f),
                         (1.2f, 2.2f), (0.08f, 0.22f), new Color(0.85f, 1f, 1f, 0.9f), new Color(0.7f, 0.95f, 1f, 0.7f), -0.05f, 0.4f, Vector3.zero);
             // Schools of small fish drifting across the far aisle.
             var fish = Particle("Drowned_Fish", Tex("Fish"), false);
-            foreach (var (y, z, dir) in new[] { (10f, 18f, 1f), (16f, 26f, -1f), (6f, 30f, 1f) })
+            var bands = new[] { (10f, 18f, 1f), (16f, 26f, -1f), (6f, 30f, 1f) };
+            for (int bi = 0; bi < P.FishBands && bi < bands.Length; bi++)
             {
+                var (y, z, dir) = bands[bi];
                 var ps = Emitter(root, "Fish", new Vector3(dir > 0 ? x0 : x1, y, z), new Vector3(1f, 4f, 3f), fish, 6f, (14f, 20f), (2.5f, 3.5f),
-                                 (0.25f, 0.45f), new Color(0.2f, 0.35f, 0.38f, 0.9f), new Color(0.3f, 0.5f, 0.5f, 0.8f), 0f, 0.3f, Vector3.zero);
+                                 (0.25f, 0.45f), P.Fish, P.Fish * new Color(1.3f, 1.3f, 1.3f, 0.9f), 0f, 0.3f, Vector3.zero);
                 ps.transform.rotation = Quaternion.LookRotation(Vector3.right * dir);     // swim along the aisle
                 var shape = ps.shape;
                 shape.scale = new Vector3(4f, 3f, 1f);

@@ -114,6 +114,36 @@ namespace ProjectHymn.EditorTools.Art
             VignetteColor = new Color(0f, 0.04f, 0.08f), Filter = new Color(0.86f, 1f, 1f),
         };
 
+        /// <summary>
+        /// The Choir Loft (VS-6): the same water, but up in the galleries under the clerestory. Warmer and clearer, with
+        /// gold light coming through the windows instead of green haze far overhead.
+        /// </summary>
+        public static Preset DeepLoft => new Preset
+        {
+            Name = "DeepLoft",
+            Top = new Color(0.3f, 0.46f, 0.5f), Mid = new Color(0.14f, 0.22f, 0.26f), Horizon = new Color(0.1f, 0.1f, 0.12f),
+            Stars = 0.1f, Clouds = 0.5f, CloudCover = 0.5f, CloudHeight = 0.85f,
+            CloudLit = new Color(1.2f, 0.95f, 0.6f), CloudShade = new Color(0.14f, 0.2f, 0.26f),
+            Sun = new Vector2(0.4f, 0.9f), SunGlow = 0.75f, SunSize = 0.02f, SunColor = new Color(2.4f, 1.8f, 1f),
+            BloomThreshold = 0.92f, BloomIntensity = 1f, BloomScatter = 0.72f, Exposure = 0.3f, Contrast = 11f, Saturation = 10f,
+            Vignette = 0.24f, VignetteColor = new Color(0.06f, 0.04f, 0.03f), Filter = new Color(1f, 0.96f, 0.86f),
+        };
+
+        /// <summary>The Sunken Apse (VS-6): the deepest room, violet and close, for the Precentor.</summary>
+        public static Preset DeepApse => new Preset
+        {
+            Name = "DeepApse",
+            Top = new Color(0.16f, 0.12f, 0.4f), Mid = new Color(0.06f, 0.04f, 0.2f), Horizon = new Color(0.03f, 0.02f, 0.1f),
+            Stars = 0.2f, Nebula = 0.25f, NebulaColor = new Color(0.5f, 0.2f, 0.8f), Clouds = 0.35f, CloudCover = 0.6f, CloudHeight = 0.92f,
+            CloudLit = new Color(0.6f, 0.5f, 1f), CloudShade = new Color(0.05f, 0.03f, 0.16f),
+            Sun = new Vector2(0.5f, 0.98f), SunGlow = 0.4f, SunSize = 0f, SunColor = new Color(1.2f, 0.9f, 2f),
+            BloomThreshold = 0.86f, BloomIntensity = 1.15f, BloomScatter = 0.78f, Exposure = 0.18f, Contrast = 15f, Saturation = 6f,
+            Vignette = 0.38f, VignetteColor = new Color(0.04f, 0.01f, 0.09f), Filter = new Color(0.92f, 0.88f, 1f),
+        };
+
+        /// <summary>The look for a drowned stage id: the Nave's green, the Loft's gold, the Apse's violet.</summary>
+        public static Preset DeepFor(string stageId) => stageId == "Loft" ? DeepLoft : stageId == "Apse" ? DeepApse : Deep;
+
         // ---------------- Apply ----------------
 
         /// <summary>Sky, fog, post-processing and the beat pulse for a scene, under <paramref name="root"/>.</summary>
