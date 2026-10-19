@@ -71,10 +71,10 @@ namespace ProjectHymn.Gameplay
             new BossMove(new EnemyAttackPattern("Shockwave", new[] { 0.0 }, 4, 3, 2).WithUnblockable(), 0, 1),
             new BossMove(new EnemyAttackPattern("Limp Run", new[] { 0.0, 2.0, 4.0, 6.0 }, 7, 6, 1), 7, 1),
             // Third verse: longer strings that run across two bars, a double shockwave, and shorter recoveries.
-            new BossMove(new EnemyAttackPattern("Rolling Gavel", new[] { 0.0, 1.0, 2.0, 3.0, 4.0, 6.0 }, 4, 2, 1), 4, 2),
+            new BossMove(new EnemyAttackPattern("Rolling Gavel", new[] { 0.0, 1.0, 2.0, 4.0, 6.0 }, 4, 2, 1), 4, 2),
             new BossMove(new EnemyAttackPattern("Twin Shockwave", new[] { 0.0, 2.0 }, 4, 2, 2).WithUnblockable(), 4, 2),
             new BossMove(new EnemyAttackPattern("Turning Waltz", new[] { 0.0, 1.0, 2.0, 3.0, 5.0 }, 3, 2, 1), 3, 2),
-            new BossMove(new EnemyAttackPattern("Limp Storm", new[] { 0.0, 2.0, 4.0, 7.0, 9.0, 11.0 }, 7, 4, 1), 7, 2),
+            new BossMove(new EnemyAttackPattern("Limp Storm", new[] { 0.0, 2.0, 4.0, 7.0 }, 7, 4, 1), 7, 2),
         };
 
         /// <summary>The boss's moves (a subclass, like the Drowned Precentor, has its own).</summary>

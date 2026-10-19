@@ -44,7 +44,7 @@ namespace ProjectHymn.Movement
         {
             Id = "Apse", Name = "The Sunken Apse", Scene = "Apse", Meter = 6, Drowned = true,
             HubScene = "AirBell", HubSpawn = "FromNave",
-            ParSeconds = 70f, PerfectAttacks = 45, HitsForS = 3, HitsForA = 6,   // the par now matches the fight (1750 HP)
+            ParSeconds = 50f, PerfectAttacks = 32, HitsForS = 3, HitsForA = 6,   // ~5 s of approach and ~31 s of boss (1100 HP)
             Route = Route, Props = Props, Markers = Markers,
         };
     }

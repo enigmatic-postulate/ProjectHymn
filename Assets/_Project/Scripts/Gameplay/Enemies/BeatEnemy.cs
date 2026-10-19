@@ -31,6 +31,8 @@ namespace ProjectHymn.Gameplay
         [SerializeField] protected bool oneBarCountIn = true;
         [Tooltip("The red galvanize aura flares this many beats before each hit (one beat for every enemy for now; varied per enemy later).")]
         [SerializeField] protected float galvanizeBeats = 1f;
+        [Tooltip("The least warning the aura ever gives, in seconds. A lead counted in beats shrinks as the music speeds up (the Summit's 7/8 runs at eighth = 300, so a beat is 0.2 s), which left no time to read an attack. Whichever is longer wins.")]
+        [SerializeField] protected float minGalvanizeSeconds = 0.55f;
         [Tooltip("Beats per felt pulse for posing (1 in simple meters; 3 in 6/8 and 9/8, where a beat is an eighth), so swings and wind-ups keep their speed.")]
         [SerializeField] protected float poseBeatScale = 1f;
         [Header("Stagger")]
@@ -473,21 +475,23 @@ namespace ProjectHymn.Gameplay
         protected AttackPhase Phase => Plan.IsValid ? Plan.PhaseAt(BeatNow) : AttackPhase.Waiting;
 
         /// <summary>
-        /// 0..1 while the enemy galvanizes: from <see cref="galvanizeBeats"/> before a hit until just after it (GDD update
-        /// 18: a red aura right as it attacks, replacing the 3-2-1 count). 0 otherwise.
+        /// 0..1 while the enemy galvanizes: from <see cref="galvanizeBeats"/> before a hit (never less than
+        /// <see cref="minGalvanizeSeconds"/> of warning, however fast the music) until just after it (GDD update 18: a
+        /// red aura right as it attacks, replacing the 3-2-1 count). 0 otherwise.
         /// </summary>
         public float Galvanize
         {
             get
             {
                 if (!Plan.IsValid || IsStaggered || galvanizeBeats <= 0f) return 0f;
+                float lead = Combat.Meters.TelegraphBeats(galvanizeBeats, SecondsPerBeat, minGalvanizeSeconds);
                 for (int i = 0; i < Plan.HitCount; i++)
                 {
                     double h = Plan.HitBeat(i);
                     double until = h - BeatNow;
                     if (until < -0.15) continue;
-                    if (until > galvanizeBeats) return 0f;
-                    return until <= 0 ? 1f : Mathf.Clamp01(1f - (float)(until / galvanizeBeats) * 0.6f);
+                    if (until > lead) return 0f;
+                    return until <= 0 ? 1f : Mathf.Clamp01(1f - (float)(until / lead) * 0.6f);
                 }
                 return 0f;
             }

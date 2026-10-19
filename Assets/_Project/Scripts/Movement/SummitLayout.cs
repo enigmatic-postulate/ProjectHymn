@@ -45,7 +45,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Stage => new StageLayout
         {
             Id = "Summit", Name = "The Summit", Scene = "Summit", Meter = 4,
-            ParSeconds = 60f, PerfectAttacks = 40, HitsForS = 3, HitsForA = 6,   // the par now matches the fight (1600 HP)
+            ParSeconds = 45f, PerfectAttacks = 28, HitsForS = 3, HitsForA = 6,   // ~7 s up the stair and ~27 s of boss (950 HP)
             Route = Route, Props = Props, Markers = Markers,
         };
     }

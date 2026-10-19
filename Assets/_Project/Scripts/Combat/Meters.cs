@@ -42,6 +42,20 @@ namespace ProjectHymn.Combat
             return false;
         }
 
+        /// <summary>
+        /// How many beats ahead an enemy must flare its warning aura to give the player <paramref name="minSeconds"/> of
+        /// notice. A lead counted in beats shrinks as the music speeds up: the Summit's 7/8 runs at eighth = 300, so one
+        /// beat is 0.2 s there against 0.4 s in its 4/4 — the warning all but vanished exactly where the fight was
+        /// fastest. The lead is a length of time, floored here and converted back to beats.
+        /// </summary>
+        public static float TelegraphBeats(float galvanizeBeats, double secondsPerBeat, float minSeconds)
+        {
+            if (galvanizeBeats <= 0f) return galvanizeBeats;
+            if (secondsPerBeat <= 0.0 || minSeconds <= 0f) return galvanizeBeats;
+            float needed = (float)(minSeconds / secondsPerBeat);
+            return galvanizeBeats > needed ? galvanizeBeats : needed;
+        }
+
         /// <summary>A compound meter (its beat is an eighth grouped in threes).</summary>
         public static bool IsCompound(string meter) => meter == "6/8" || meter == "9/8" || meter == "12/8";
     }

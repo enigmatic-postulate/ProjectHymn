@@ -155,5 +155,20 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(1, bosses);
             Assert.AreEqual(1, s.EnemyCount);
         }
+
+        [Test]
+        public void TheWarningIsALengthOfTimeNotACountOfBeats()
+        {
+            // "Hymn of the Summit" runs 4/4 and 3/4 at 150 (a beat is 0.4 s), then 7/8 at eighth = 300 (0.2 s). One beat
+            // of warning in that last section is a fifth of a second: no time to read an attack, let alone parry it.
+            const float Min = 0.55f;
+            float slow = Meters.TelegraphBeats(1f, 0.4, Min);
+            float fast = Meters.TelegraphBeats(1f, 0.2, Min);
+            Assert.AreEqual(Min, slow * 0.4f, 1e-3f, "the lead is the same length of time in 4/4");
+            Assert.AreEqual(Min, fast * 0.2f, 1e-3f, "and in the fast 7/8");
+            Assert.Greater(fast, slow, "a faster section needs more beats of lead for the same warning");
+            Assert.AreEqual(3f, Meters.TelegraphBeats(3f, 0.4, Min), 1e-4f, "a longer lead of its own is kept");
+            Assert.AreEqual(0f, Meters.TelegraphBeats(0f, 0.4, Min), 1e-4f, "an enemy with no aura keeps none");
+        }
     }
 }
