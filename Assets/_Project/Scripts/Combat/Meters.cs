@@ -10,36 +10,35 @@ namespace ProjectHymn.Combat
     /// </summary>
     public static class Meters
     {
-        static readonly int[] Simple = { 1 };
-        static readonly int[] Compound = { 1, 3 };
-        static readonly int[] Seven = { 1, 2, 3 };
-
-        /// <summary>The beat gaps that keep a chain going in this meter.</summary>
-        public static int[] PulseGaps(string meter)
+        /// <summary>Beats in the felt pulse of this meter (3 in 6/8, 9/8 and 7/8, 1 otherwise): what one note step spans.</summary>
+        public static int PulseBeats(string meter)
         {
             switch (meter)
             {
                 case "6/8":
                 case "9/8":
-                case "12/8": return Compound;
-                case "7/8": return Seven;
-                default: return Simple;
+                case "12/8":
+                case "7/8": return 3;
+                default: return 1;
             }
         }
 
-        /// <summary>Beats in the felt pulse of this meter (3 in 6/8 and 9/8, 1 otherwise): what one note step spans.</summary>
-        public static int PulseBeats(string meter)
-        {
-            var gaps = PulseGaps(meter);
-            return gaps[gaps.Length - 1];
-        }
+        /// <summary>
+        /// Whether a gap of <paramref name="gap"/> beats carries a chain on: anything up to one felt pulse. In 4/4 and
+        /// 3/4 that is the next beat, as before. In a compound meter it is any gap up to the dotted quarter, because a
+        /// player attacking at a comfortable pace in the Drowned Nave's 6/8 (an eighth is 0.27 s) lands two or three
+        /// eighths apart without aiming at either, and the first playtest of the pulse rule still recorded no sequences
+        /// there: a chain should not depend on guessing which subdivision the game had in mind.
+        /// </summary>
+        public static bool IsPulseGap(string meter, long gap) => gap >= 1 && gap <= PulseBeats(meter);
 
-        /// <summary>Whether a gap of <paramref name="gap"/> beats carries a chain on in this meter.</summary>
-        public static bool IsPulseGap(string meter, long gap)
+        /// <summary>The beat gaps that keep a chain going in this meter (1 to the felt pulse).</summary>
+        public static int[] PulseGaps(string meter)
         {
-            if (gap <= 0) return false;
-            foreach (var g in PulseGaps(meter)) if (gap == g) return true;
-            return false;
+            int pulse = PulseBeats(meter);
+            var gaps = new int[pulse];
+            for (int i = 0; i < pulse; i++) gaps[i] = i + 1;
+            return gaps;
         }
 
         /// <summary>

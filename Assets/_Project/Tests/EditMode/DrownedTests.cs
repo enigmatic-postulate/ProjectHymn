@@ -162,8 +162,10 @@ namespace ProjectHymn.Tests
             CollectionAssert.AreEqual(new[] { "Swell" }, onPulse, "one, four, one of the next bar");
             var onEighths = Play("6/8", new[] { (0L, NoteButton.Two), (1L, NoteButton.One), (2L, NoteButton.One) });
             CollectionAssert.AreEqual(new[] { "Swell" }, onEighths, "straight eighths still chain for anyone that fast");
+            var offPulse = Play("6/8", new[] { (0L, NoteButton.Two), (2L, NoteButton.One), (4L, NoteButton.One) });
+            CollectionAssert.AreEqual(new[] { "Swell" }, offPulse, "and so does anything inside a pulse: nobody aims at a subdivision");
             var tooSlow = Play("6/8", new[] { (0L, NoteButton.Two), (4L, NoteButton.One), (8L, NoteButton.One) });
-            Assert.AreEqual(0, tooSlow.Count, "four eighths apart is not a pulse of this meter");
+            Assert.AreEqual(0, tooSlow.Count, "but more than a dotted quarter apart starts a new chain");
         }
 
         [Test]
@@ -177,6 +179,9 @@ namespace ProjectHymn.Tests
             Assert.AreEqual(3, Meters.PulseBeats("6/8"));
             Assert.AreEqual(3, Meters.PulseBeats("9/8"));
             Assert.IsTrue(Meters.IsPulseGap("7/8", 2), "7/8 groups as 2+2+3");
+            Assert.IsTrue(Meters.IsPulseGap("6/8", 2), "a chain holds anywhere inside the pulse");
+            Assert.IsFalse(Meters.IsPulseGap("6/8", 4), "but not past it");
+            Assert.IsFalse(Meters.IsPulseGap("4/4", 2));
             Assert.IsTrue(Meters.IsPulseGap("7/8", 3));
             Assert.IsFalse(Meters.IsPulseGap("3/4", 3));
             Assert.IsTrue(Meters.IsCompound("9/8"));
