@@ -89,7 +89,7 @@ namespace ProjectHymn.EditorTools
                 ? KayKitBuilder.BuildDrownedPrecentor(parent, name, at, bounds, conductor, maxHp)
                 : EnemyBuilder.BuildCantor<DrownedPrecentor>(parent, name, at, bounds, conductor, maxHp, 0xbcd8cc, 0x1e4a4a, 0x9ab89a, 0x70f0ff);
             var so = new SerializedObject(p);
-            so.FindProperty("galvanizeBeats").floatValue = 2f;
+            so.FindProperty("galvanizeBeats").floatValue = 3f;      // a full dotted quarter: the pulse players feel in 6/8
             so.FindProperty("warnColor").colorValue = new Color(1f, 0.3f, 0.4f);
             so.ApplyModifiedPropertiesWithoutUndo();
             return p;

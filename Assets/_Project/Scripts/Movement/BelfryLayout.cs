@@ -53,7 +53,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Stage => new StageLayout
         {
             Id = "Belfry", Name = "Belfry Ridge", Scene = "Belfry", Meter = 3,
-            ParSeconds = 45f, PerfectAttacks = 20,
+            ParSeconds = 40f, PerfectAttacks = 30,      // playtest: clears 0:37-0:39
             Route = Route, Props = Props, Markers = Markers,
         };
     }

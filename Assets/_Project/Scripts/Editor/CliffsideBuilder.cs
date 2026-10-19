@@ -444,13 +444,13 @@ namespace ProjectHymn.EditorTools
         {
             if (IsApse)
             {
-                // VS-6: the Drowned Precentor holds the apse floor. Three verses inside a 1:10 par.
+                // VS-6: the Drowned Precentor holds the apse floor. Three verses inside a 1:10 par (health from the playtest).
                 var apse = new Vector2(ApseLayout.ArenaXMin + 3f, ApseLayout.ArenaXMax - 1.5f);
-                return DrownedEnemies.Precentor(level, m.Name, new Vector3(m.X, m.Y, 0f), apse, conductor, 720f);
+                return DrownedEnemies.Precentor(level, m.Name, new Vector3(m.X, m.Y, 0f), apse, conductor, 1750f);
             }
             var bounds = new Vector2(SummitLayout.ArenaXMin + 3f, SummitLayout.ArenaXMax - 1.5f);
             var pos = new Vector3(m.X, m.Y, 0f);
-            const float Hp = 600f;          // Recalibrated 2026-10-17: three verses inside a 1:00 par (was 200 HP, 0:15)
+            const float Hp = 1600f;         // Playtest 2026-10-18: the player deals ~35 HP/s, so 600 HP was a 17 s fight
             if (_art && ArtLibrary.HasSkeleton) return KayKitBuilder.BuildSkeletonCantor(level, m.Name, pos, bounds, conductor, Hp);
             return EnemyBuilder.BuildCantor(level, m.Name, pos, bounds, conductor, Hp);
         }

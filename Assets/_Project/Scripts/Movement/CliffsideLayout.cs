@@ -94,7 +94,7 @@ namespace ProjectHymn.Movement
         public static StageLayout Stage => new StageLayout
         {
             Id = "Cliffside", Name = "Cliffside", Scene = "Cliffside", Meter = 4,
-            ParSeconds = 75f, PerfectAttacks = 14,
+            ParSeconds = 50f, PerfectAttacks = 30,      // playtest 2026-10-18: clears 0:39-0:52, par 1:15 was free
             Route = Route, Props = Props, Secrets = Secrets, Markers = Markers,
         };
     }

@@ -56,7 +56,7 @@ namespace ProjectHymn.Movement
         {
             Id = "Nave", Name = "Kelp Nave", Scene = "Nave", Meter = 6, Drowned = true,
             HubScene = "AirBell", HubSpawn = "FromNave",
-            ParSeconds = 60f, PerfectAttacks = 22,
+            ParSeconds = 58f, PerfectAttacks = 70,      // playtest: clears 0:54-0:58, and the stage runs ~89 attacks
             Route = Route, Props = Props, Markers = Markers,
         };
     }

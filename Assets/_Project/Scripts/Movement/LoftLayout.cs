@@ -56,7 +56,7 @@ namespace ProjectHymn.Movement
         {
             Id = "Loft", Name = "Choir Loft", Scene = "Loft", Meter = 6, Drowned = true,
             HubScene = "AirBell", HubSpawn = "FromNave",
-            ParSeconds = 60f, PerfectAttacks = 24,
+            ParSeconds = 50f, PerfectAttacks = 45,      // playtest: only two clears, one skipped enemies; provisional
             Route = Route, Props = Props, Markers = Markers,
         };
     }
