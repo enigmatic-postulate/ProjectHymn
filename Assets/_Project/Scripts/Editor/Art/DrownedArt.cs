@@ -508,8 +508,7 @@ namespace ProjectHymn.EditorTools.Art
             PrepareTextures();
             var root = new GameObject("Air Bell Art").transform;
             root.SetParent(level, false);
-            var bronze = ArtLibrary.Textured("Drowned_BellBronze", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), new Color(0.62f, 0.48f, 0.3f), 0.55f);
-            bronze.SetFloat("_Metallic", 0.75f);
+            var bronze = Bronze("Drowned_BellBronze", Tex("DrownedStone_Albedo"), Tex("DrownedStone_Normal"), new Color(1f, 0.74f, 0.44f), 0.3f);
 
             // The bell from inside: its profile walked from the lip up to the crown, so the faces (and normals) point inward.
             float h = radius * 1.05f;
@@ -528,6 +527,17 @@ namespace ProjectHymn.EditorTools.Art
                                          64, Vector3.one, 12f).Save($"AirBellHoop_{(int)y}", MeshDir);
                 var hr = Part(root, "Hoop", hoop, DarkStoneMat, new Vector3(bellX, top, bellZ));
                 hr.shadowCastingMode = ShadowCastingMode.Off;
+            }
+
+            // Warm wash lights up the bronze walls (the camp's lamps alone don't reach a 30 m bell).
+            foreach (var (wx, wy, wz) in new[] { (bellX - radius * 0.6f, top + 8f, bellZ + 10f), (bellX, top + 14f, bellZ + radius * 0.55f),
+                                                 (bellX + radius * 0.6f, top + 8f, bellZ + 10f), (bellX, top + h * 0.7f, bellZ) })
+            {
+                var wash = new GameObject("Bronze Wash", typeof(Light));
+                wash.transform.SetParent(root, false);
+                wash.transform.position = new Vector3(wx, wy, wz);
+                var wl = wash.GetComponent<Light>();
+                wl.type = LightType.Point; wl.range = 26f; wl.intensity = 1.4f; wl.color = new Color(1f, 0.78f, 0.52f);
             }
 
             // Caustics on the deck, and the dive pool glowing behind it.
@@ -646,6 +656,20 @@ namespace ProjectHymn.EditorTools.Art
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>
+        /// Bronze that reads under water: mostly diffuse (a fully metallic surface reflects the environment, and down here
+        /// there is no sky to reflect, so it renders near-black), with a faint warm glow of its own so the big shapes hold.
+        /// </summary>
+        static Material Bronze(string name, string albedo, string normal, Color tint, float glow)
+        {
+            var m = ArtLibrary.Textured(name, albedo, normal, tint, 0.45f);
+            m.SetFloat("_Metallic", 0.2f);
+            m.EnableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", new Color(tint.r * glow, tint.g * glow * 0.85f, tint.b * glow * 0.6f));
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            return m;
+        }
+
         static Transform Verse(Transform root, string name, int verse)
         {
             var go = new GameObject(name, typeof(VerseGroup));
@@ -695,8 +719,7 @@ namespace ProjectHymn.EditorTools.Art
             var root = new GameObject("Apse").transform;
             root.SetParent(level, false);
             float cx = (x0 + x1) * 0.5f;
-            var bronze = ArtLibrary.Textured("Drowned_Bronze", null, null, new Color(0.42f, 0.5f, 0.36f), 0.65f);
-            bronze.SetFloat("_Metallic", 0.8f);
+            var bronze = Bronze("Drowned_Bronze", null, null, new Color(0.72f, 0.62f, 0.4f), 0.22f);
             // The beam and its two posts
             var post = MeshKit.Lathe(new[]
             {
@@ -741,6 +764,11 @@ namespace ProjectHymn.EditorTools.Art
             lg.transform.localPosition = new Vector3(0f, -5.2f, -2.5f);
             var l = lg.GetComponent<Light>();
             l.type = LightType.Point; l.range = 12f; l.intensity = 2f; l.color = new Color(0.45f, 0.95f, 1f);
+            var key = new GameObject("Bell Key", typeof(Light));
+            key.transform.SetParent(root, false);
+            key.transform.position = new Vector3(cx, top + 11f, 1.2f);
+            var kl = key.GetComponent<Light>();
+            kl.type = LightType.Point; kl.range = 14f; kl.intensity = 1.6f; kl.color = new Color(1f, 0.82f, 0.58f);
             // The drowned lectern at the back of the floor
             var lectern = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Object.DestroyImmediate(lectern.GetComponent<Collider>());
