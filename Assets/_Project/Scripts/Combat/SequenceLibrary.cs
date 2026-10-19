@@ -42,7 +42,9 @@ namespace ProjectHymn.Combat
     /// sequence works for every class (multiclassing grows the library). The finisher scales with length. No two
     /// sequences in one meter share a pattern, so "longest match wins" never has to choose. Names, patterns and
     /// multipliers are drafts. VS-6 adds the Drowned Nave's compound meters: 6/8 (Swell, Barcarolle, Undertow) and 9/8
-    /// (Riptide), each counted in eighths. The slice builds the Minstrel, Fighter, Warden and Crusader trees; Tempest moved to the
+    /// (Riptide), each counted in eighths. VS-5 Part D fills the gaps the playtest found: 3/4 had one sequence and 6/8
+    /// none for the Fighter or Crusader, so most classes could never land a sequence in the Belfry or the Drowned Nave.
+    /// Every class now has at least one sequence in every meter the game uses. The slice builds the Minstrel, Fighter, Warden and Crusader trees; Tempest moved to the
     /// Balladeer, a later class, so nobody learns it yet.
     /// </summary>
     public static class SequenceLibrary
@@ -59,20 +61,32 @@ namespace ProjectHymn.Combat
             // Minstrel, VS-6: the Drowned Nave's 6/8, heavy on each big beat (1 and 4); Barcarolle carries on from Swell
             new SequenceEntry("Swell", "Swell", Minstrel, Six, "2-1-1", 1.8f, 0x7ad0e8),
             new SequenceEntry("Barcarolle", "Barcarolle", Minstrel, Six, "2-1-1-2-1-1", 2.4f, 0x9af0ff),
+            // Minstrel, VS-5 Part D: one sequence per meter, so every class can play a sequence in every region
+            new SequenceEntry("Roundel", "Roundel", Minstrel, Waltz, "1-1-2", 1.7f, 0xffc48a),
+            new SequenceEntry("LimpingVerse", "Limping Verse", Minstrel, Seven, "1-1-2", 1.8f, 0xffb0d0),
+            new SequenceEntry("TideVerse", "Tide Verse", Minstrel, Nine, "1-1-2", 1.9f, 0x8ae8ff, SequenceEffect.Launch, "launches the enemy"),
             // Fighter (4/4 only, by design)
             new SequenceEntry("Drill", "Drill", Fighter, Common, "1-1-1-1", 1.8f, 0xd8d8d8),
             new SequenceEntry("Hammerfall", "Hammerfall", Fighter, Common, "2-2-2", 2.0f, 0xff9a4a),
             new SequenceEntry("IronCount", "Iron Count", Fighter, Common, "2-1-2-1", 2.0f, 0xc0c8d8),
+            new SequenceEntry("StampAndTurn", "Stamp and Turn", Fighter, Waltz, "2-2-1", 1.8f, 0xe0b070),
+            new SequenceEntry("Tidehammer", "Tidehammer", Fighter, Six, "2-2", 1.6f, 0xffa07a),
+            new SequenceEntry("SevenHammers", "Seven Hammers", Fighter, Seven, "2-2-1", 1.9f, 0xffd0a0),
+            new SequenceEntry("Ninefold", "Ninefold", Fighter, Nine, "2-2-2", 2.0f, 0xd8a8ff),
             // Warden
             new SequenceEntry("Bulwark", "Bulwark", Warden, Common, "2-1-1", 1.7f, 0x9ab8ff, SequenceEffect.Push, "the bash pushes the enemy back a beat"),
             new SequenceEntry("Counterpoint", "Counterpoint", Warden, Common, "1-2-2-1", 2.0f, 0x7ac8ff),
             new SequenceEntry("LanternStep", "Lantern Step", Warden, Waltz, "1-2-2", 1.8f, 0xffe6a0),
             new SequenceEntry("Undertow", "Undertow", Warden, Six, "1-1-2", 1.8f, 0x5ab0d8, SequenceEffect.Push, "the last blow pulls the enemy off its feet and back a beat"),
+            new SequenceEntry("HobbleGuard", "Hobble Guard", Warden, Seven, "1-2-1", 1.8f, 0xa0d0ff),
+            new SequenceEntry("Breakwater", "Breakwater", Warden, Nine, "1-2-2", 1.9f, 0x70c0e0, SequenceEffect.Push, "the shoulder throws the enemy back a beat"),
             // Crusader
             new SequenceEntry("Brandish", "Brandish", Crusader, Common, "2-1", 1.5f, 0xffc860),
             new SequenceEntry("Judgement", "Judgement", Crusader, Common, "2-2-1-2", 2.2f, 0xfff0b0),
             new SequenceEntry("Crusade", "Crusade", Crusader, Seven, "2-1-2-1-2-1-2", 2.6f, 0xffffff),
             new SequenceEntry("Riptide", "Riptide", Crusader, Nine, "2-1-1-2-1-1-2-1-1", 3.0f, 0x40d8ff),
+            new SequenceEntry("Processional", "Processional", Crusader, Waltz, "2-1-2", 1.9f, 0xffe0a0),
+            new SequenceEntry("Keelhaul", "Keelhaul", Crusader, Six, "2-1-2", 1.9f, 0x60c8e8),
             // Balladeer (a later class): Tempest moved here
             new SequenceEntry("Tempest", "Tempest", Balladeer, Common, "1-1-1-2-1-1-1", 2.5f, 0x7affc8),
         };

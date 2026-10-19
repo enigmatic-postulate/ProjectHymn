@@ -50,8 +50,9 @@ namespace ProjectHymn.Combat
 
     /// <summary>
     /// The M2 rhythm rules, pure C#:
-    /// - A chain is a run of on-beat notes on consecutive beats. A gap of a beat or more starts a new chain;
-    ///   an off-beat note (or a second press on the same beat) breaks it.
+    /// - A chain is a run of on-beat notes a felt pulse apart (<see cref="Meters"/>): consecutive beats in 4/4 and 3/4,
+    ///   and either the dotted quarter or straight eighths in 6/8 and 9/8, so the compound meters can be played on their
+    ///   big beats. A longer gap starts a new chain; an off-beat note (or a second press on the same beat) breaks it.
     /// - Every note deals damage (GDD update 3); rhythm decides the combo, not whether a note hits.
     /// - The chain's most recent notes are matched against the sequences (1-2-1, 2-2, 1-1-1-2-1-1-1...): the longest
     ///   tail of the chain that is the start of a sequence decides which move plays. Finishing a sequence completes it;
@@ -108,7 +109,7 @@ namespace ProjectHymn.Combat
                 return new ChainStep(0, true, -1, -1, false, broke: true);
             }
 
-            if (_lastBeat != long.MinValue && beatIndex == _lastBeat + 1) ChainLength++;
+            if (_lastBeat != long.MinValue && Meters.IsPulseGap(_meter, beatIndex - _lastBeat)) ChainLength++;
             else { ChainLength = 1; _tail.Clear(); }
             _lastBeat = beatIndex;
             _tail.Add(button);

@@ -82,6 +82,18 @@ namespace ProjectHymn.EditorTools.Art
                     ["Barcarolle"] = new[] { "Chop", "Horizontal", "Diagonal", "Chop", "Horizontal", "Stab" },
                     ["Undertow"] = new[] { "Horizontal", "Diagonal", "ShieldBash" },             // the bash pushes
                     ["Riptide"] = new[] { "Chop", "Diagonal", "Horizontal", "Chop", "Diagonal", "Horizontal", "LeapChop", "Diagonal", "Stab" },
+                    // VS-5 Part D: a sequence per class in every meter
+                    ["Roundel"] = new[] { "Diagonal", "Horizontal", "LeapChop" },
+                    ["LimpingVerse"] = new[] { "Horizontal", "Diagonal", "ShieldBash" },
+                    ["TideVerse"] = new[] { "Diagonal", "Horizontal", "ShieldBash" },             // the bash lifts them
+                    ["StampAndTurn"] = new[] { "Chop", "Chop", "Horizontal" },
+                    ["Tidehammer"] = new[] { "Chop", "LeapChop" },
+                    ["SevenHammers"] = new[] { "Chop", "Chop", "Diagonal" },
+                    ["Ninefold"] = new[] { "Chop", "Chop", "LeapChop" },
+                    ["HobbleGuard"] = new[] { "Diagonal", "Chop", "Horizontal" },
+                    ["Breakwater"] = new[] { "Diagonal", "Chop", "ShieldBash" },                  // the shoulder pushes
+                    ["Processional"] = new[] { "Chop", "Diagonal", "Stab" },
+                    ["Keelhaul"] = new[] { "Chop", "Horizontal", "Stab" },
                 });
             // Heft 1.0 on the moves; the weapon's damage scale (1.3) gives the greatsword its weight (weapons are
             // separate from classes since Rank & Class).
@@ -116,6 +128,18 @@ namespace ProjectHymn.EditorTools.Art
                     ["Barcarolle"] = new[] { "Chop", "Slice", "Stab", "Chop", "Whirl", "Spin" },
                     ["Undertow"] = new[] { "Stab", "Slice", "Kick" },                             // the kick pushes
                     ["Riptide"] = new[] { "Chop", "Slice", "Stab", "Chop", "Slice", "Whirl", "Chop", "Slice", "Spin" },
+                    // VS-5 Part D: a sequence per class in every meter
+                    ["Roundel"] = new[] { "Slice", "Stab", "Whirl" },
+                    ["LimpingVerse"] = new[] { "Stab", "Slice", "Chop" },
+                    ["TideVerse"] = new[] { "Slice", "Stab", "Whirl" },                           // the whirl lifts them
+                    ["StampAndTurn"] = new[] { "Chop", "Whirl", "Stab" },
+                    ["Tidehammer"] = new[] { "Chop", "Chop" },
+                    ["SevenHammers"] = new[] { "Chop", "Whirl", "Slice" },
+                    ["Ninefold"] = new[] { "Chop", "Whirl", "Spin" },
+                    ["HobbleGuard"] = new[] { "Slice", "Chop", "Stab" },
+                    ["Breakwater"] = new[] { "Slice", "Chop", "Kick" },                           // the kick pushes
+                    ["Processional"] = new[] { "Chop", "Slice", "Spin" },
+                    ["Keelhaul"] = new[] { "Chop", "Stab", "Whirl" },
                 });
             sword.id = "sword";
             great.id = "greatsword";

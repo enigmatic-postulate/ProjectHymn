@@ -42,17 +42,17 @@ namespace ProjectHymn.Tests
         [Test]
         public void TheTreesInTheSlice()
         {
-            CollectionAssert.AreEqual(new[] { "CrossingCuts", "Powerslice", "RisingVerse", "Swell", "Barcarolle" }, SequenceLibrary.TreeKeys(SequenceLibrary.Minstrel));
-            Assert.IsTrue(SequenceLibrary.Tree(SequenceLibrary.Fighter).All(e => e.Meter == SequenceLibrary.Common), "the Fighter's tree is 4/4 by design");
+            CollectionAssert.AreEqual(new[] { "CrossingCuts", "Powerslice", "RisingVerse", "Swell", "Barcarolle", "Roundel", "LimpingVerse", "TideVerse" },
+                                      SequenceLibrary.TreeKeys(SequenceLibrary.Minstrel));
             Assert.AreEqual(SequenceLibrary.Waltz, SequenceLibrary.Find("LanternStep").Meter);
             Assert.AreEqual(SequenceLibrary.Seven, SequenceLibrary.Find("Crusade").Meter);
             Assert.AreEqual(SequenceLibrary.Balladeer, SequenceLibrary.Find("Tempest").Tree);
             Assert.AreEqual(SequenceEffect.Launch, SequenceLibrary.Find("RisingVerse").Effect);
             Assert.AreEqual(SequenceEffect.Push, SequenceLibrary.Find("Bulwark").Effect);
-            Assert.AreEqual(5, SequenceLibrary.Tree(SequenceLibrary.Minstrel).Count);
-            Assert.AreEqual(3, SequenceLibrary.Tree(SequenceLibrary.Fighter).Count);
-            Assert.AreEqual(4, SequenceLibrary.Tree(SequenceLibrary.Warden).Count);
-            Assert.AreEqual(4, SequenceLibrary.Tree(SequenceLibrary.Crusader).Count);
+            Assert.AreEqual(8, SequenceLibrary.Tree(SequenceLibrary.Minstrel).Count);
+            Assert.AreEqual(7, SequenceLibrary.Tree(SequenceLibrary.Fighter).Count);
+            Assert.AreEqual(6, SequenceLibrary.Tree(SequenceLibrary.Warden).Count);
+            Assert.AreEqual(6, SequenceLibrary.Tree(SequenceLibrary.Crusader).Count);
             Assert.AreEqual(SequenceLibrary.Six, SequenceLibrary.Find("Barcarolle").Meter);
             Assert.AreEqual(SequenceLibrary.Nine, SequenceLibrary.Find("Riptide").Meter);
             Assert.AreEqual(SequenceEffect.Push, SequenceLibrary.Find("Undertow").Effect);
@@ -199,7 +199,7 @@ namespace ProjectHymn.Tests
             foreach (var k in new[] { "CrossingCuts", "Bulwark", "LanternStep", "Brandish", "Crusade" }) Assert.IsTrue(s.Knows(k), k);
             Assert.IsFalse(s.Knows("Drill"));
             var learned = ProgressionRules.Learned(s, ProgressionRules.Fighter);
-            CollectionAssert.AreEqual(new[] { "Drill", "Hammerfall", "IronCount" }, learned);
+            CollectionAssert.AreEqual(new[] { "Drill", "Hammerfall", "IronCount", "StampAndTurn", "Tidehammer", "SevenHammers", "Ninefold" }, learned);
             Assert.AreEqual(0, ProgressionRules.Learned(s, ProgressionRules.Fighter).Count, "already known");
         }
 
@@ -215,7 +215,7 @@ namespace ProjectHymn.Tests
             var o = rules.Apply(s, "Cliffside", new StageResult(60, StageRank.B, StageRank.B, new List<string>(), 1.0, true), log, Classes);
             Assert.AreEqual(ProgressionRules.Fighter, s.classId);
             Assert.IsTrue(s.Knows("Hammerfall"));
-            CollectionAssert.AreEqual(new[] { "Drill", "Hammerfall", "IronCount" }, o.SequencesLearned);
+            CollectionAssert.AreEqual(new[] { "Drill", "Hammerfall", "IronCount", "StampAndTurn", "Tidehammer", "SevenHammers", "Ninefold" }, o.SequencesLearned);
         }
 
         [Test]
@@ -227,6 +227,16 @@ namespace ProjectHymn.Tests
             s.Normalize();
             Assert.IsTrue(s.Knows("Bulwark"));
             Assert.IsTrue(s.Knows("RisingVerse"), "the Minstrel's tree is always known");
+        }
+
+        [Test]
+        public void EveryClassCanPlayASequenceInEveryMeter()
+        {
+            // The playtest found 0 sequences in 253 hits on Belfry Ridge and 1 in 978 in the Kelp Nave: most classes
+            // had nothing to play in 3/4 or 6/8.
+            foreach (var tree in new[] { SequenceLibrary.Minstrel, SequenceLibrary.Fighter, SequenceLibrary.Warden, SequenceLibrary.Crusader })
+                foreach (var meter in new[] { SequenceLibrary.Common, SequenceLibrary.Waltz, SequenceLibrary.Six, SequenceLibrary.Seven, SequenceLibrary.Nine })
+                    Assert.IsTrue(SequenceLibrary.Tree(tree).Any(e => e.Meter == meter), $"{tree} has nothing to play in {meter}");
         }
     }
 }

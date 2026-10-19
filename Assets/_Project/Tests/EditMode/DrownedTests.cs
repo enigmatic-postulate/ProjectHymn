@@ -136,5 +136,51 @@ namespace ProjectHymn.Tests
             var map = Precentor();
             Assert.AreEqual(map.BeatToTime(48) - map.BeatToTime(42), map.BeatToTime(51) - map.BeatToTime(48), 1e-6);
         }
+
+        /// <summary>Play a run of notes on the given beats, in one meter; returns the sequences completed.</summary>
+        static List<string> Play(string meter, (long beat, NoteButton note)[] notes)
+        {
+            var chain = new RhythmChain();
+            var done = new List<string>();
+            chain.SetSequences(new[]
+            {
+                new SequencePattern("Swell", new[] { NoteButton.Two, NoteButton.One, NoteButton.One }, null, "6/8"),
+                new SequencePattern("Undertow", new[] { NoteButton.One, NoteButton.One, NoteButton.Two }, null, "6/8"),
+                new SequencePattern("CrossingCuts", new[] { NoteButton.One, NoteButton.Two, NoteButton.One }, null, "4/4"),
+            });
+            chain.SequenceCompleted += p => done.Add(p.Name);
+            foreach (var (beat, note) in notes) chain.Register(beat, note, onBeat: true, meter);
+            return done;
+        }
+
+        [Test]
+        public void SixEightSequencesPlayOnTheBigBeats()
+        {
+            // A beat is an eighth at 225, so consecutive eighths are 0.27 s apart: nobody plays a three-note sequence in
+            // half a second. The chain carries across a dotted quarter, so the big beats (1 and 4) count.
+            var onPulse = Play("6/8", new[] { (0L, NoteButton.Two), (3L, NoteButton.One), (6L, NoteButton.One) });
+            CollectionAssert.AreEqual(new[] { "Swell" }, onPulse, "one, four, one of the next bar");
+            var onEighths = Play("6/8", new[] { (0L, NoteButton.Two), (1L, NoteButton.One), (2L, NoteButton.One) });
+            CollectionAssert.AreEqual(new[] { "Swell" }, onEighths, "straight eighths still chain for anyone that fast");
+            var tooSlow = Play("6/8", new[] { (0L, NoteButton.Two), (4L, NoteButton.One), (8L, NoteButton.One) });
+            Assert.AreEqual(0, tooSlow.Count, "four eighths apart is not a pulse of this meter");
+        }
+
+        [Test]
+        public void SimpleMetersStillWantConsecutiveBeats()
+        {
+            var onBeats = Play("4/4", new[] { (0L, NoteButton.One), (1L, NoteButton.Two), (2L, NoteButton.One) });
+            CollectionAssert.AreEqual(new[] { "CrossingCuts" }, onBeats);
+            var skipped = Play("4/4", new[] { (0L, NoteButton.One), (2L, NoteButton.Two), (4L, NoteButton.One) });
+            Assert.AreEqual(0, skipped.Count, "a gap of two quarters in 4/4 starts a new chain");
+            Assert.AreEqual(1, Meters.PulseBeats("4/4"));
+            Assert.AreEqual(3, Meters.PulseBeats("6/8"));
+            Assert.AreEqual(3, Meters.PulseBeats("9/8"));
+            Assert.IsTrue(Meters.IsPulseGap("7/8", 2), "7/8 groups as 2+2+3");
+            Assert.IsTrue(Meters.IsPulseGap("7/8", 3));
+            Assert.IsFalse(Meters.IsPulseGap("3/4", 3));
+            Assert.IsTrue(Meters.IsCompound("9/8"));
+            Assert.IsFalse(Meters.IsCompound("7/8"), "seven is odd, not compound");
+        }
     }
 }
