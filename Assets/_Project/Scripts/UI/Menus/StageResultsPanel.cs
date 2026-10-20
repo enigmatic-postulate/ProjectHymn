@@ -107,7 +107,7 @@ namespace ProjectHymn.UI
             // VS-7: anything this run earned for the class's research tree.
             foreach (var f in _feats)
                 sb.Append($"\n<color=#ffd56a>Feat earned: {f.Name}</color>   <color=#b0a8c8>unlocks {f.Ability}</color>");
-            UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
+            UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f + 30f * _feats.Count, TextAnchor.UpperLeft);
 
             // VS-4: the rank letter, big, in its colour, popping in a moment after the panel.
             var letter = UiKit.Label(panel, r.Rank.ToString(), 190, TextAnchor.MiddleCenter, RankColor(r.Rank));

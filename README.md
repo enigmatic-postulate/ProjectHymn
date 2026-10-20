@@ -57,7 +57,7 @@ The GDD asks for a research tree per class whose unlocks take a feat ("beating t
   - **Warden:** Shield Wall (answer every enemy attack with a parry or block), Counterweight (10 parries in a run), The Cantor's Count (beat a boss with 8 parries and more parries than hits taken).
   - **Crusader:** Riptide Runner (dodge 5 attacks), Eye of the Storm (beat a boss unhit), Undertow (dodge 3 attacks in the Drowned Nave).
 - **Why these:** the playtests showed the rank rewards rushing (the fastest S runs completed no sequences at all) and that nobody dodges — one dodge in 18 runs. The feats are the counterweight: they only pay for playing the rhythm, and three of them exist to give the dodge a reason.
-- **Where they show:** earned feats appear on the results screen as they land, and the pause menu's **Songbook → Feats** lists every tree with what each feat asks for, the class you're playing first.
+- **Where they show:** earned feats appear on the results screen as they land, and the pause menu's **Songbook → Feats** lists the four classes with how many each has earned; opening one gives that tree its own page (name, what to do, what it unlocks), so a long requirement wraps instead of running into the next row.
 
 ## The Drowned Nave (vertical slice milestone VS-6: a second region, in 6/8)
 

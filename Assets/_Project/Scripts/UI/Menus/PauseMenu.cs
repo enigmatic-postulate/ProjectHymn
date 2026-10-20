@@ -258,39 +258,59 @@ namespace ProjectHymn.UI
         }
 
         /// <summary>
-        /// VS-7: the class research trees. Each feat says what to do and what it unlocks; the one for the class you are
-        /// playing is listed first, since only that class's feats can be earned right now.
+        /// VS-7: the class research trees, a page of class buttons like the Songbook's. Each class's feats then get a
+        /// page of their own as one block of text, so a long requirement wraps instead of overrunning the row below it.
         /// </summary>
         void FeatsPage()
         {
             _onMain = false;
             var col = Page();
             var s = GameSession.Instance;
-            UiKit.Line(col, $"FEATS  ({s.Data.feats.Count}/{Feats.All.Count} earned)", 30, UiKit.Gold, 44f);
-            UiKit.Line(col, "A feat is earned by clearing a stage a certain way, and unlocks an ability for that class. You earn a class's feats while playing it.",
-                       21, UiKit.Dim, 52f);
-            var trees = new List<string> { s.Data.classId };
-            foreach (var t in new[] { ProgressionRules.Minstrel, ProgressionRules.Fighter, ProgressionRules.Warden, ProgressionRules.Crusader })
-                if (t != s.Data.classId) trees.Add(t);
-            foreach (var tree in trees)
+            UiKit.Line(col, $"FEATS  ({s.Data.feats.Count}/{Feats.All.Count} earned)", 36, UiKit.Gold, 52f);
+            UiKit.Line(col, "A feat is earned by clearing a stage a certain way, and unlocks an ability for that class.\nYou fill a class's tree while playing it; change class at the village trainer.",
+                       22, UiKit.Dim, 72f, TextAnchor.UpperLeft);
+            Button first = null;
+            foreach (var tree in new[] { ProgressionRules.Minstrel, ProgressionRules.Fighter, ProgressionRules.Warden, ProgressionRules.Crusader })
             {
                 var feats = Feats.Tree(tree);
                 if (feats.Count == 0) continue;
                 string name = s.ClassName(tree);
                 if (name == tree) name = char.ToUpperInvariant(tree[0]) + tree.Substring(1);
                 bool mine = tree == s.Data.classId;
-                UiKit.Line(col, $"{name}   <color=#8a84a0>{Feats.Done(s.Data, tree)}/{feats.Count}{(mine ? "   (playing)" : "")}</color>",
-                           25, mine ? UiKit.Gold : UiKit.Text, 36f);
-                foreach (var f in feats)
-                {
-                    bool done = s.Data.HasFeat(f.Key);
-                    string mark = done ? "<color=#8ad8a0>done</color>" : "<color=#8a84a0>to do</color>";
-                    UiKit.Line(col, $"   {(done ? "\u2714" : "\u2022")} {f.Name} \u2014 {f.How}   {mark}   <color=#b0a8c8>{f.Ability}</color>",
-                               21, done ? UiKit.Text : UiKit.Dim, 34f, TextAnchor.UpperLeft);
-                }
+                string t = tree;
+                var b = UiKit.Button(col, $"{name}   <color=#8a84a0>{Feats.Done(s.Data, tree)}/{feats.Count} earned</color>{(mine ? "   <color=#ffd56a>playing</color>" : "")}",
+                                     () => FeatTree(t), 28, 54f);
+                if (first == null || mine) first = b;
             }
             var back = UiKit.Button(col, "Back", Songbook, 28, 54f);
-            UiKit.Select(back);
+            UiKit.Select(first != null ? first : back);
+        }
+
+        void FeatTree(string tree)
+        {
+            _onMain = false;
+            var col = Page();
+            var s = GameSession.Instance;
+            string name = s.ClassName(tree);
+            if (name == tree) name = char.ToUpperInvariant(tree[0]) + tree.Substring(1);
+            var feats = Feats.Tree(tree);
+            UiKit.Line(col, $"{name.ToUpperInvariant()}'S FEATS   {Feats.Done(s.Data, tree)}/{feats.Count}", 36, UiKit.Gold, 56f);
+            var sb = new StringBuilder();
+            if (tree != s.Data.classId)
+                sb.Append($"<color=#8a84a0>You earn these while playing the {name}; you are playing the {s.ClassName(s.Data.classId)}.</color>\n\n");
+            foreach (var f in feats)
+            {
+                bool done = s.Data.HasFeat(f.Key);
+                sb.Append(done
+                    ? $"<color=#8ad8a0>\u2714 {f.Name}</color>\n"
+                    : $"<color=#ffd56a>{f.Name}</color>\n");
+                sb.Append($"<color=#b8b2c8>{f.How}</color>\n");
+                sb.Append(done
+                    ? $"<color=#8ad8a0>Earned \u2014 {f.Ability}</color>\n\n"
+                    : $"<color=#6a6478>Unlocks {f.Ability}</color>\n\n");
+            }
+            UiKit.Line(col, sb.ToString(), 24, UiKit.Text, 520f, TextAnchor.UpperLeft);
+            UiKit.Select(UiKit.Button(col, "Back", FeatsPage));
         }
 
         void Weapons()
