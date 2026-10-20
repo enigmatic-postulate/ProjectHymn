@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using ProjectHymn.Core;
 using ProjectHymn.Gameplay;
@@ -19,10 +20,14 @@ namespace ProjectHymn.UI
         CanvasGroup _fade;
         RectTransform _rank;
 
-        public static void Show(string stage, StageResult result, PlaystyleLog log, StageTargets targets, RunOutcome outcome, Action onContinue)
+        static IReadOnlyList<Feat> _feats = new Feat[0];
+
+        public static void Show(string stage, StageResult result, PlaystyleLog log, StageTargets targets, RunOutcome outcome, Action onContinue,
+                                IReadOnlyList<Feat> feats = null)
         {
             var p = new GameObject("Stage Results").AddComponent<StageResultsPanel>();
             p._continue = onContinue;
+            _feats = feats ?? new Feat[0];
             p.Build(stage, result, log, targets, outcome);
         }
 
@@ -99,6 +104,9 @@ namespace ProjectHymn.UI
             sb.Append($"On the beat {log.OnBeatShare:P0}   guard {log.GuardShare:P0} / dodge {log.DodgeShare:P0} of {log.EnemyAttacks} enemy attacks\n");
             sb.Append($"Efficiency {r.Efficiency:P0}   ({t.PerfectAttacks} attacks for a perfect run, {log.Attacks} used)\n");
             sb.Append($"Mastery score {log.MasteryScore:0}   (a True Perfect counts as 3 Perfects)");
+            // VS-7: anything this run earned for the class's research tree.
+            foreach (var f in _feats)
+                sb.Append($"\n<color=#ffd56a>Feat earned: {f.Name}</color>   <color=#b0a8c8>unlocks {f.Ability}</color>");
             UiKit.Line(col, sb.ToString(), 26, UiKit.Text, 470f, TextAnchor.UpperLeft);
 
             // VS-4: the rank letter, big, in its colour, popping in a moment after the panel.

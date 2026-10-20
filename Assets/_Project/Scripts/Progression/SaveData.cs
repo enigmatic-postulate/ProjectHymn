@@ -95,6 +95,8 @@ namespace ProjectHymn.Progression
         public bool tutorialDone;
         /// <summary>Story moments already shown (VS-5): "verse1".."verse3" (the village celebrated it), "ending".</summary>
         public List<string> story = new List<string>();
+        /// <summary>Feats earned (VS-7): the keys of <see cref="Feats"/> entries, each unlocking an ability.</summary>
+        public List<string> feats = new List<string>();
 
         public static SaveData NewGame(string classId, IEnumerable<string> startingSequences, IEnumerable<ItemCount> startingItems = null)
         {
@@ -198,6 +200,16 @@ namespace ProjectHymn.Progression
         {
             if (string.IsNullOrEmpty(pickupId) || collected.Contains(pickupId)) return false;
             collected.Add(pickupId);
+            return true;
+        }
+
+        public bool HasFeat(string key) => feats != null && feats.Contains(key);
+
+        /// <summary>Record a feat; false if it was already earned.</summary>
+        public bool MarkFeat(string key)
+        {
+            if (string.IsNullOrEmpty(key) || feats.Contains(key)) return false;
+            feats.Add(key);
             return true;
         }
 
@@ -320,6 +332,7 @@ namespace ProjectHymn.Progression
             if (totals == null) totals = new PlayTotals();
             if (weaponsForSale == null) weaponsForSale = new List<string>();
             if (history == null) history = new List<RunRecord>();
+            if (feats == null) feats = new List<string>();
             if (story == null) story = new List<string>();
             if (version < 3)
             {

@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Text;
 using ProjectHymn.Combat;
+using ProjectHymn.Progression;
 using ProjectHymn.Core;
 using ProjectHymn.Gameplay;
 using UnityEngine;
@@ -192,6 +194,7 @@ namespace ProjectHymn.UI
                 if (first == null) first = b;
             }
             UiKit.Button(col, $"Lore  <color=#8a84a0>({GameSession.Instance.Data.lore.Count} found)</color>", Lore, 28, 54f);
+            UiKit.Button(col, $"Feats  <color=#8a84a0>({GameSession.Instance.Data.feats.Count}/{Feats.All.Count} earned)</color>", FeatsPage, 28, 54f);
             var back = UiKit.Button(col, "Back", Main, 28, 54f);
             UiKit.Select(first != null ? first : back);
         }
@@ -252,6 +255,42 @@ namespace ProjectHymn.UI
                 }
             var back = UiKit.Button(col, "Back", Songbook);
             UiKit.Select(first != null ? first : back);
+        }
+
+        /// <summary>
+        /// VS-7: the class research trees. Each feat says what to do and what it unlocks; the one for the class you are
+        /// playing is listed first, since only that class's feats can be earned right now.
+        /// </summary>
+        void FeatsPage()
+        {
+            _onMain = false;
+            var col = Page();
+            var s = GameSession.Instance;
+            UiKit.Line(col, $"FEATS  ({s.Data.feats.Count}/{Feats.All.Count} earned)", 30, UiKit.Gold, 44f);
+            UiKit.Line(col, "A feat is earned by clearing a stage a certain way, and unlocks an ability for that class. You earn a class's feats while playing it.",
+                       21, UiKit.Dim, 52f);
+            var trees = new List<string> { s.Data.classId };
+            foreach (var t in new[] { ProgressionRules.Minstrel, ProgressionRules.Fighter, ProgressionRules.Warden, ProgressionRules.Crusader })
+                if (t != s.Data.classId) trees.Add(t);
+            foreach (var tree in trees)
+            {
+                var feats = Feats.Tree(tree);
+                if (feats.Count == 0) continue;
+                string name = s.ClassName(tree);
+                if (name == tree) name = char.ToUpperInvariant(tree[0]) + tree.Substring(1);
+                bool mine = tree == s.Data.classId;
+                UiKit.Line(col, $"{name}   <color=#8a84a0>{Feats.Done(s.Data, tree)}/{feats.Count}{(mine ? "   (playing)" : "")}</color>",
+                           25, mine ? UiKit.Gold : UiKit.Text, 36f);
+                foreach (var f in feats)
+                {
+                    bool done = s.Data.HasFeat(f.Key);
+                    string mark = done ? "<color=#8ad8a0>done</color>" : "<color=#8a84a0>to do</color>";
+                    UiKit.Line(col, $"   {(done ? "\u2714" : "\u2022")} {f.Name} \u2014 {f.How}   {mark}   <color=#b0a8c8>{f.Ability}</color>",
+                               21, done ? UiKit.Text : UiKit.Dim, 34f, TextAnchor.UpperLeft);
+                }
+            }
+            var back = UiKit.Button(col, "Back", Songbook, 28, 54f);
+            UiKit.Select(back);
         }
 
         void Weapons()

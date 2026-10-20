@@ -47,6 +47,18 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## Class abilities and feats (vertical slice milestone VS-7, Part A)
+
+The GDD asks for a research tree per class whose unlocks take a feat ("beating the act 2 boss using only parries and shield blocks"). Part A builds the feats themselves; the abilities they unlock follow.
+
+- **Twelve feats, three per class** (`Progression/Feats.cs`, pure C# and tested). Each says what to do and what it unlocks, and is judged against the run you just finished: the stage has to be cleared, not finished with a playtest key, and you only fill the tree of the class you are playing.
+  - **Minstrel:** Carry the Tune (8 sequences in a clear), Deep Measure (4 sequences in a Drowned Nave stage), Perfect Cadence (half your notes Perfect or better).
+  - **Fighter:** Ironclad (clear without taking a hit), On the One (nine notes in ten on the beat), No Quarter (every enemy down without losing half your hearts).
+  - **Warden:** Shield Wall (answer every enemy attack with a parry or block), Counterweight (10 parries in a run), The Cantor's Count (beat a boss with 8 parries and more parries than hits taken).
+  - **Crusader:** Riptide Runner (dodge 5 attacks), Eye of the Storm (beat a boss unhit), Undertow (dodge 3 attacks in the Drowned Nave).
+- **Why these:** the playtests showed the rank rewards rushing (the fastest S runs completed no sequences at all) and that nobody dodges — one dodge in 18 runs. The feats are the counterweight: they only pay for playing the rhythm, and three of them exist to give the dodge a reason.
+- **Where they show:** earned feats appear on the results screen as they land, and the pause menu's **Songbook → Feats** lists every tree with what each feat asks for, the class you're playing first.
+
 ## The Drowned Nave (vertical slice milestone VS-6: a second region, in 6/8)
 
 Built by **Project Hymn → Build Hub & Loop** (new scenes `AirBell`, `Nave`, `Loft` and `Apse`; each also has its own menu item). It opens once the Summit is cleared: the Lookout says so, and the village gate's map gets a **Down to the Air Bell** button.

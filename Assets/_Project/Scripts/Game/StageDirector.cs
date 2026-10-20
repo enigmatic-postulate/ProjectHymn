@@ -306,6 +306,14 @@ namespace ProjectHymn.Gameplay
             if (s.DebugRank.HasValue && result.Rank != s.DebugRank.Value)
                 result = new StageResult(result.Seconds, result.TimeRank, s.DebugRank.Value, result.Caps, result.Efficiency, result.Clean);
             var outcome = s.RecordClear(stageId, result, Log, _levelDowns);
+            // VS-7: the feats this run earned for the class's research tree, recorded before the results panel shows them.
+            var feats = Feats.NewlyEarned(new FeatRun(stageId, s.Data.classId, cleared: true, result.Rank, Seconds, parSeconds, Log,
+                                                      s.DebugRank.HasValue), s.Data);
+            if (feats.Count > 0)
+            {
+                foreach (var f in feats) s.Data.MarkFeat(f.Key);
+                s.SaveProgress();
+            }
             if (_run != null)
             {
                 _run.Grade(result, parSeconds);
@@ -313,7 +321,7 @@ namespace ProjectHymn.Gameplay
                 RunEvent("goal", result.Rank.ToString());
             }
             StageResultsPanel.Show(string.IsNullOrEmpty(stageName) ? stageId : stageName, result, Log, targets, outcome, () =>
-                FeelPrompt.Ask(feel => { if (_run != null) _run.feel = feel; EndRunLog("clear"); AfterResults(outcome); }));
+                FeelPrompt.Ask(feel => { if (_run != null) _run.feel = feel; EndRunLog("clear"); AfterResults(outcome); }), feats);
         }
 
         /// <summary>After the results (and the playtest question): replay a C, offer a class change, or go home.</summary>
