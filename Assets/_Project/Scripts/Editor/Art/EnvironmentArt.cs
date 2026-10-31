@@ -38,12 +38,12 @@ namespace ProjectHymn.EditorTools.Art
             if (Kit.TryGetValue(key, out var m) && m != null) return m;
             switch (key)
             {
-                case "MI_Brick": m = ArtLibrary.Textured("Kit_Brick", T("T_Brick_BaseColor"), N("T_Brick_Normal")); break;
+                case "MI_Brick": m = ArtLibrary.Textured("Kit_Brick", T("T_Brick_BaseColor"), N("T_Brick_Normal")); GateArt.Height(m, "T_Brick", 0.025f); break;
                 case "MI_RedBrick": m = ArtLibrary.Textured("Kit_RedBrick", T("T_RedBrick_BaseColor"), N("T_Brick_Normal")); break;
                 case "MI_Plaster": m = ArtLibrary.Textured("Kit_Plaster", T("T_Plaster_BaseColor"), N("T_Plaster_Normal")); break;
-                case "MI_RockTrim": m = ArtLibrary.Textured("Kit_RockTrim", T("T_RockTrim_BaseColor"), N("T_RockTrim_Normal")); break;
+                case "MI_RockTrim": m = ArtLibrary.Textured("Kit_RockTrim", T("T_RockTrim_BaseColor"), N("T_RockTrim_Normal")); GateArt.Height(m, "T_RockTrim", 0.025f); break;
                 case "MI_RoundTiles": m = ArtLibrary.Textured("Kit_RoundTiles", T("T_RoundTiles_BaseColor"), N("T_RoundTiles_Normal"), null, 0.2f); break;
-                case "MI_UnevenBrick": m = ArtLibrary.Textured("Kit_UnevenBrick", T("T_UnevenBrick_BaseColor"), N("T_UnevenBrick_Normal")); break;
+                case "MI_UnevenBrick": m = ArtLibrary.Textured("Kit_UnevenBrick", T("T_UnevenBrick_BaseColor"), N("T_UnevenBrick_Normal")); GateArt.Height(m, "T_UnevenBrick", 0.03f); break;
                 case "MI_WoodTrim":
                 case "MI_WoodTrim_Wear": m = ArtLibrary.Textured("Kit_WoodTrim", T("T_WoodTrim_BaseColor"), N("T_WoodTrim_Normal")); break;
                 case "MI_Vine": m = ArtLibrary.Textured("Kit_Vine", T("T_VineLeaf"), null, new Color(0.75f, 0.95f, 0.6f), 0.05f, 1f, cutout: true, doubleSided: true); break;
@@ -275,13 +275,11 @@ namespace ProjectHymn.EditorTools.Art
         }
 
         /// <summary>The town gate at the goal: an arch flanked by stone walls, standing just behind the lane.</summary>
-        public static void Gate(Transform parent, Vector3 at)
-        {
-            Piece(parent, "Wall_Arch", new Vector3(at.x, at.y, 1.6f), 180f);
-            Piece(parent, "Wall_UnevenBrick_Straight", new Vector3(at.x - 2f, at.y, 1.6f), 180f);
-            Piece(parent, "Wall_UnevenBrick_Straight", new Vector3(at.x + 2f, at.y, 1.6f), 180f);
-            Piece(parent, "Prop_Vine9", new Vector3(at.x, at.y + 3.0f, 1.5f), 180f, 0.8f);
-        }
+        /// <summary>
+        /// The gate, with the depth the kit's flat wall has not got: <see cref="GateArt"/> lines the opening, runs a dark
+        /// passage back from it and stands voussoirs around the arch.
+        /// </summary>
+        public static void Gate(Transform parent, Vector3 at) => GateArt.Build(parent, at);
 
         // ---------------- Boulders ----------------
 

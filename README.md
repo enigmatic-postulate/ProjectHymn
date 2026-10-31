@@ -47,6 +47,16 @@ Menu **Project Hymn → Build Cliffside Slice**, then press **Play** (scene `Sce
 - **Health:** 5 hearts (top left). Hits knock you back (and off ledges). At zero you respawn at the last checkpoint with full health, and enemies still standing reset; defeated ones stay down.
 - **Tuning:** movement numbers are on the Player's *Platformer Controller*; enemy health, ranges and attack patterns (hits in beats, telegraph length, recovery, damage) are on each enemy; the level layout is `Movement/CliffsideLayout.cs` (EditMode tests check every jump on the route is reachable with the tuned arcs); movement poses are in `Data/Sword/Locomotion` (reset with **Reset Sword Moves to Defaults**); camera framing per stretch is on the *Camera Zone* objects.
 
+## The gate (stage exits and the village gate)
+
+The kit's `Wall_Arch` is a plane 2 m wide, 3 m tall and **64 mm thick** with a hole in it, so the doorway showed the ground behind it and the wall read as a billboard as the camera scrolled. `Editor/Art/GateArt.cs` builds the parts the plane hasn't got, and `EnvironmentArt.Gate` goes through it, so every stage's exit and the village gate get it at once.
+
+- **A lined passage.** The opening's outline is taken from the kit mesh itself (jambs to a springline at 2.037 m, then the arch to its apex at 2.744 m), swept 1.1 m back into the wall and floored, so you see the thickness of the doorway as you pass.
+- **Dark, with light beyond.** The far end is closed with near-black stone, and a warm beat-lit lamp sits low and deep in the passage, reaching the lining but not the lane; dust turns in it. Nothing shows through.
+- **Voussoirs.** Eighteen wedge stones radiate around the arch, standing proud of the face and alternating a couple of millimetres so the ring isn't a smooth band, with imposts at the springline and a keystone rising into the parapet. They taper from 0.34 m at the springline to 0.21 m at the crown, which keeps the ring under the top of the wall.
+- **A solid core.** Blocks either side of the passage, a lintel over it and a parapet along the top, so the silhouette has depth at its edges.
+- **Stone with relief.** `Tools/paint_gate.py` derives height maps from the kit's own albedo (blurred, contrast-stretched luminance: joints dark and low, faces light and proud) into `Art/Generated/Village/`. They drive URP's parallax on the kit's brick, uneven brick and rock trim, and the normals are pushed to 1.6, which also takes the washed-out look off every other kit wall in the game.
+
 ## Class abilities and feats (vertical slice milestone VS-7, Part A)
 
 The GDD asks for a research tree per class whose unlocks take a feat ("beating the act 2 boss using only parries and shield blocks"). Part A builds the feats themselves; the abilities they unlock follow.
