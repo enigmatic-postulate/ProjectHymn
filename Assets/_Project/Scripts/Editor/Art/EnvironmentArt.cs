@@ -142,6 +142,33 @@ namespace ProjectHymn.EditorTools.Art
             Color.Lerp(new Color(0.45f, 0.66f, 0.3f), Fog, Haze[layer]), 0.0f, 1f);
 
         /// <summary>
+        /// The plain the backdrop stands in: one quad under everything, out past the farthest cliffs and wider than they
+        /// run. Without it the cliffs hang over open sky wherever the stage's own ground stops — at the ends of the
+        /// village street, say, where you can see past the walls. It sits a little below the ground it joins, so the two
+        /// never fight over the same pixels, and the fog takes its far edge long before it reaches the horizon.
+        /// </summary>
+        public static void FarGround(Transform parent, float x0, float x1, float z0, float z1, float y, bool village)
+        {
+            var mat = village
+                ? FarGrass(0)
+                : ArtLibrary.Textured("Far_Ground_Flat", null, null, Color.Lerp(new Color(0.45f, 0.66f, 0.3f), Fog, Haze[0]), 0f);
+            var k = new MeshKit();
+            const float Tile = 0.08f;        // the terrain noise repeats every ~12 m
+            int a = k.Vert(new Vector3(x0, y, z0), Vector3.up, new Vector2(x0 * Tile, z0 * Tile));
+            int b = k.Vert(new Vector3(x1, y, z0), Vector3.up, new Vector2(x1 * Tile, z0 * Tile));
+            int c = k.Vert(new Vector3(x1, y, z1), Vector3.up, new Vector2(x1 * Tile, z1 * Tile));
+            int d = k.Vert(new Vector3(x0, y, z1), Vector3.up, new Vector2(x0 * Tile, z1 * Tile));
+            k.Quad(a, b, c, d);
+            var go = new GameObject("Far Ground", typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<MeshFilter>().sharedMesh = SaveMesh(k.ToMesh("Far Ground"), "Far Ground");
+            var r = go.GetComponent<MeshRenderer>();
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            go.isStatic = true;
+        }
+
+        /// <summary>
         /// A distant cliff in the backdrop: a stone mesa of two or three terraces (each narrower and grass-topped), a
         /// buttress at its foot, hazier with each layer; the nearest layer sometimes carries a boulder crag.
         /// </summary>

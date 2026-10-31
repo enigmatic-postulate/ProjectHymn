@@ -580,6 +580,9 @@ namespace ProjectHymn.EditorTools
             root.SetParent(level, false);
             var rng = new System.Random(23);
             var layers = new[] { (z: 48f, min: 8f, max: 20f, w: 14f), (z: 80f, min: 14f, max: 34f, w: 22f), (z: 130f, min: 20f, max: 50f, w: 30f) };
+            // The plain the cliffs stand in: wider than they run (-70 to 140) and out past the last of them, so they
+            // don't float over the sky where the street's ground ends.
+            EnvironmentArt.FarGround(root, -110f, 190f, -8f, 240f, -0.2f, village);
             for (int li = 0; li < layers.Length; li++)
             {
                 var layer = layers[li];
