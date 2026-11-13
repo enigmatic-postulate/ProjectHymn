@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Broadsword_TempestFinish
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Tempest Finish
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  - beat: -0.2
+    rootOffset: {x: 0, y: -0.08, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -46, y: 22, z: -4}
+    - bone: LowerArm.R
+      euler: {x: -7, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 74, y: 31, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -31.199999, z: 0}
+    - bone: Chest
+      euler: {x: 14, y: -59.8, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -30, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 34, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 20, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 30, y: 0, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: 0.02, z: 0.20799999}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -86, y: -1, z: -20}
+    - bone: LowerArm.R
+      euler: {x: -8, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 53, y: 40, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 10.4, z: 0}
+    - bone: Chest
+      euler: {x: -10, y: 20.8, z: 0}
+  - beat: 0.25
+    rootOffset: {x: 0, y: 0.04, z: 0.234}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -112, y: 3, z: 1}
+    - bone: LowerArm.R
+      euler: {x: -2, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 50, y: 48, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 26, z: 0}
+    - bone: Chest
+      euler: {x: -18, y: 46.8, z: 0}
+  - beat: 0.6
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  activeStart: -0.08
+  activeEnd: 0.14
+  damage: 18.199999
+  reach: 1.25
+  radius: 1.1
+  effect: finish
+  trailColor: {r: 0.47843137, g: 1, b: 0.78431374, a: 1}
+  offHandFree: 0

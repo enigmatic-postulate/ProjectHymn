@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Saber_RisingGuard
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Rising Guard
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  - beat: -0.2
+    rootOffset: {x: 0, y: -0.1, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -44, y: 12, z: -2}
+    - bone: LowerArm.R
+      euler: {x: -24, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 79, y: 18, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -6, z: 0}
+    - bone: Chest
+      euler: {x: 18, y: -6, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -30, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 40, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 22, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 36, y: 0, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: 0, z: 0.04}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -127, y: 7, z: -1}
+    - bone: LowerArm.R
+      euler: {x: -18, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 76, y: 9, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -10, y: 0, z: 0}
+  - beat: 0.3
+    rootOffset: {x: 0, y: 0.02, z: 0.02}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -149, y: 6, z: -3}
+    - bone: LowerArm.R
+      euler: {x: -46, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -5, y: 0, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -14, y: 0, z: 0}
+  - beat: 0.5
+    rootOffset: {x: 0, y: 0.02, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -147, y: 3, z: -3}
+    - bone: LowerArm.R
+      euler: {x: -45, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -9, y: -3, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -14, y: 0, z: 0}
+  activeStart: -0.1
+  activeEnd: 0.1
+  damage: 8
+  reach: 1.25
+  radius: 0.9
+  effect: cut
+  trailColor: {r: 0.8156863, g: 0.627451, b: 1, a: 1}
+  offHandFree: 0

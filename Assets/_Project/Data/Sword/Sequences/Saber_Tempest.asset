@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: Saber_Tempest
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Tempest
+  notes: 01000000010000000100000002000000010000000100000001000000i
+  moves:
+  - {fileID: 11400000, guid: 0ce4dfdd53fdae94084bbb4511d8da8e, type: 2}
+  - {fileID: 11400000, guid: 24c4c5558a7dd5e4fb7413060d2d65d9, type: 2}
+  - {fileID: 11400000, guid: 58cea52dd6a6e5b469e67af6162c7e74, type: 2}
+  - {fileID: 11400000, guid: 4210f725f1415a447a4970983d13d3ac, type: 2}
+  - {fileID: 11400000, guid: 0ce4dfdd53fdae94084bbb4511d8da8e, type: 2}
+  - {fileID: 11400000, guid: 24c4c5558a7dd5e4fb7413060d2d65d9, type: 2}
+  - {fileID: 11400000, guid: 268ba517b3a0d55458b5e60593163639, type: 2}
+  finisherMultiplier: 2.5
+  color: {r: 0.47843137, g: 1, b: 0.78431374, a: 1}

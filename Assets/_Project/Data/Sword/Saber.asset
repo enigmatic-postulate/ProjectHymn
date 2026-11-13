@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aecc5103dc4d7f479613de2e25e9376, type: 3}
+  m_Name: Saber
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.WeaponSet
+  displayName: Saber
+  swordObject: Saber
+  twoHanded: 0
+  stance:
+    beat: 0
+    rootOffset: {x: 0, y: -0.03, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: -22, z: 0}
+    - bone: Chest
+      euler: {x: 0, y: -8, z: 0}
+    - bone: UpperArm.R
+      euler: {x: -13, y: 23, z: 7}
+    - bone: LowerArm.R
+      euler: {x: -79, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 47, y: 22, z: 0}
+    - bone: UpperArm.L
+      euler: {x: 18, y: 0, z: -22}
+    - bone: LowerArm.L
+      euler: {x: -35, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -22, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 18, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 16, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 22, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 4, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: -18, y: 0, z: 0}
+    - bone: Head
+      euler: {x: 0, y: 18, z: 0}
+  sequences:
+  - {fileID: 11400000, guid: b9751ff0eb4ff994e8c13ee69c410135, type: 2}
+  - {fileID: 11400000, guid: 307c32f07c426d54fa2fc3c97b98e67c, type: 2}
+  - {fileID: 11400000, guid: d2f04d88209be044284b21f7468b5280, type: 2}
+  lightA: {fileID: 11400000, guid: 0ce4dfdd53fdae94084bbb4511d8da8e, type: 2}
+  lightB: {fileID: 11400000, guid: 58cea52dd6a6e5b469e67af6162c7e74, type: 2}
+  heavy: {fileID: 11400000, guid: c83db9fef08fb6e45992a61cb7c8e7a0, type: 2}
+  guard: {fileID: 11400000, guid: 6dc78a7636e91484a8d29c480e7ce41e, type: 2}
+  damageScale: 1

@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Sky_Title
+  m_Shader: {fileID: 4800000, guid: 886b9d11892c6eb46add65b6895e5513, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Aspect: 2.6
+    - _AuroraHeight: 0.66
+    - _AuroraStrength: 0
+    - _CloudCover: 0.45
+    - _CloudHeight: 0.4
+    - _CloudSpeed: 0.004
+    - _CloudStrength: 0.9
+    - _NebulaStrength: 0
+    - _StarStrength: 0.2
+    - _SunGlow: 0.9
+    - _SunSize: 0.04
+    m_Colors:
+    - _AuroraHigh: {r: 1.2, g: 0.35, b: 1.1, a: 1}
+    - _AuroraLow: {r: 0.25, g: 1.6, b: 0.9, a: 1}
+    - _CloudColor: {r: 1.3, g: 0.8, b: 0.55, a: 1}
+    - _CloudShade: {r: 0.3, g: 0.25, b: 0.42, a: 1}
+    - _HorizonColor: {r: 0.95, g: 0.55, b: 0.32, a: 1}
+    - _MidColor: {r: 0.35, g: 0.35, b: 0.6, a: 1}
+    - _NebulaColor: {r: 0.55, g: 0.18, b: 0.75, a: 1}
+    - _SunColor: {r: 2.6, g: 1.5, b: 0.8, a: 1}
+    - _SunPos: {r: 0.15, g: 0.25, b: 0, a: 0}
+    - _TopColor: {r: 0.08, g: 0.12, b: 0.3, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

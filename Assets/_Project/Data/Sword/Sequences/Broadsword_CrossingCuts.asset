@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: Broadsword_CrossingCuts
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Crossing Cuts
+  notes: 010000000200000001000000i
+  moves:
+  - {fileID: 11400000, guid: d7d9c82a5fc4aa44e9c5163d3c81d567, type: 2}
+  - {fileID: 11400000, guid: 4ab728c3df14c6245ab8774beda0a540, type: 2}
+  - {fileID: 11400000, guid: 0db02212120784044a610b4fb425ee21, type: 2}
+  finisherMultiplier: 1.8
+  color: {r: 1, g: 0.8235294, b: 0.47843137, a: 1}

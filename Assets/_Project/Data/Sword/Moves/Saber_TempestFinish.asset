@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Saber_TempestFinish
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Tempest Finish
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  - beat: -0.2
+    rootOffset: {x: 0, y: -0.08, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -51, y: 18, z: -17}
+    - bone: LowerArm.R
+      euler: {x: -6, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 77, y: 31, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -24, z: 0}
+    - bone: Chest
+      euler: {x: 14, y: -46, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -30, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 34, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 20, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 30, y: 0, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: 0.02, z: 0.16}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -86, y: 4, z: -19}
+    - bone: LowerArm.R
+      euler: {x: -6, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 50, y: 40, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 8, z: 0}
+    - bone: Chest
+      euler: {x: -10, y: 16, z: 0}
+  - beat: 0.25
+    rootOffset: {x: 0, y: 0.04, z: 0.18}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -115, y: 9, z: 4}
+    - bone: LowerArm.R
+      euler: {x: -2, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 49, y: 45, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 20, z: 0}
+    - bone: Chest
+      euler: {x: -18, y: 36, z: 0}
+  - beat: 0.6
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  activeStart: -0.08
+  activeEnd: 0.14
+  damage: 14
+  reach: 1.25
+  radius: 1.1
+  effect: finish
+  trailColor: {r: 0.47843137, g: 1, b: 0.78431374, a: 1}
+  offHandFree: 0

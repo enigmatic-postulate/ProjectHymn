@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: Saber_CrossingCuts
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Crossing Cuts
+  notes: 010000000200000001000000i
+  moves:
+  - {fileID: 11400000, guid: 0ce4dfdd53fdae94084bbb4511d8da8e, type: 2}
+  - {fileID: 11400000, guid: 24c4c5558a7dd5e4fb7413060d2d65d9, type: 2}
+  - {fileID: 11400000, guid: 58cea52dd6a6e5b469e67af6162c7e74, type: 2}
+  finisherMultiplier: 1.8
+  color: {r: 1, g: 0.8235294, b: 0.47843137, a: 1}

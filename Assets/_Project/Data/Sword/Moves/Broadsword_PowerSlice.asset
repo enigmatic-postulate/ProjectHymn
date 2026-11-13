@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Broadsword_PowerSlice
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Power Slice
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0.02, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -143, y: 6, z: -3}
+    - bone: LowerArm.R
+      euler: {x: -53, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -4, y: 0, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -14, y: 0, z: 0}
+  - beat: -0.15
+    rootOffset: {x: 0, y: 0.04, z: -0.04}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -145, y: 3, z: -8}
+    - bone: LowerArm.R
+      euler: {x: -27, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -35, y: -10, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -22, y: 0, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: -0.14, z: 0.39000002}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -42, y: 8, z: -40}
+    - bone: LowerArm.R
+      euler: {x: -80, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 120, y: -28, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 28.599998, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -48, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 40, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 30, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 30, y: 0, z: 0}
+  - beat: 0.25
+    rootOffset: {x: 0, y: -0.18, z: 0.41599998}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -7, y: 2, z: -25}
+    - bone: LowerArm.R
+      euler: {x: -79, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 111, y: -20, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 39, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -50, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 46, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 32, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 32, y: 0, z: 0}
+  - beat: 0.6
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  activeStart: -0.08
+  activeEnd: 0.14
+  damage: 28.599998
+  reach: 1.45
+  radius: 1
+  effect: power
+  trailColor: {r: 1, g: 0.47843137, b: 0.3529412, a: 1}
+  offHandFree: 0

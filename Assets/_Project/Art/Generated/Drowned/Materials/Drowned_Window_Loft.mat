@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Drowned_Window_Loft
+  m_Shader: {fileID: 4800000, guid: 8cf1b5c9ab8c5bc49835f01cc7036389, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BeatPulse: 0.3
+    - _Cull: 2
+    - _GradientMax: 1
+    - _GradientMin: 0
+    - _Lit: 0.2
+    - _RimPower: 2.5
+    - _Sparkle: 0
+    m_Colors:
+    - _ColorA: {r: 1.6, g: 1.1520001, b: 0.48000002, a: 1.6}
+    - _ColorB: {r: 2.6, g: 2.4699998, b: 1.9499999, a: 2.6}
+    - _RimColor: {r: 1, g: 0.95, b: 0.75, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

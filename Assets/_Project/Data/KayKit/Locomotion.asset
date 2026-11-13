@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 965bd412535294748a6925c8129f1ced, type: 3}
+  m_Name: Locomotion
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.LocomotionSet
+  run: []
+  jump:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  airJump:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  fall:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  land:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  hang:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  climbPull:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  climbOver:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  runClip: {fileID: 11400000, guid: 0547bddce2e122c4e9839cbf2544b1aa, type: 2}
+  runRightFootDown: 0.684
+  jumpClip: {fileID: 11400000, guid: 918645dd6a75419408f192d57295bd62, type: 2}
+  airClip: {fileID: 11400000, guid: 0dc339edb07701844b083a2d56c0a761, type: 2}
+  landClip: {fileID: 11400000, guid: 5b76ea0738a0143408666418d9454abc, type: 2}
+  hangClip: {fileID: 11400000, guid: 0dc339edb07701844b083a2d56c0a761, type: 2}
+  hangClipTime: 0.5
+  hurt: {fileID: 11400000, guid: 96483f32113d5e64e9efadaad145ac04, type: 2}
+  dodgeClip: {fileID: 11400000, guid: 257e01db1d244b24697b51d210b538b6, type: 2}
+  dodgeClipStart: 0.05
+  dodgeClipEnd: 0.85
+  cadence: 2.8
+  flipSeconds: 0.42
+  landSeconds: 0.14
+  minStride: 0.4
+  additiveBones:
+  - Spine
+  - Chest

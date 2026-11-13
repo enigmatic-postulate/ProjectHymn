@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aecc5103dc4d7f479613de2e25e9376, type: 3}
+  m_Name: Greatsword
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.WeaponSet
+  id: greatsword
+  displayName: Greatsword
+  swordObject: Greatsword
+  twoHanded: 0
+  stance:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  sequences:
+  - {fileID: 11400000, guid: efab8e25f8db3de40a5ef0335a8eacfc, type: 2}
+  - {fileID: 11400000, guid: ccca8a4574b6ba643a7bf3c90530b26c, type: 2}
+  - {fileID: 11400000, guid: dc76692d5e010fa47b0dc114d3782a53, type: 2}
+  - {fileID: 11400000, guid: af754babdab73a34aa568b63a41657a6, type: 2}
+  - {fileID: 11400000, guid: 20fe6278938424d4eb541371c420d019, type: 2}
+  - {fileID: 11400000, guid: df664201632681b45b8798d1b00bd943, type: 2}
+  - {fileID: 11400000, guid: d154eca974240954a8a0631b3eef2bc0, type: 2}
+  - {fileID: 11400000, guid: e9d86eeae32250f4b8c974dec86b4e9a, type: 2}
+  - {fileID: 11400000, guid: ce4763818915ff248ad1de178619be4b, type: 2}
+  - {fileID: 11400000, guid: 297304f805d5ae2438034eff1ab7aabf, type: 2}
+  - {fileID: 11400000, guid: 5ac808022e6070f4fbf20bf9b71d3198, type: 2}
+  - {fileID: 11400000, guid: ee44a68bfae24614a8291779587a7510, type: 2}
+  - {fileID: 11400000, guid: 6e08fd61980465f46af847a41c99f9f2, type: 2}
+  - {fileID: 11400000, guid: cfed519144bbf0c4f8f21883ce8c5b07, type: 2}
+  - {fileID: 11400000, guid: 9de189cd12f36a940b16106ac84e2f80, type: 2}
+  - {fileID: 11400000, guid: caa2702c669ef1740a0d90a3d92abff6, type: 2}
+  - {fileID: 11400000, guid: 6598b63bfb960a147b345987b020a9b3, type: 2}
+  - {fileID: 11400000, guid: 4d1d7078b7bd1484d832483faf984de6, type: 2}
+  - {fileID: 11400000, guid: e3ca8f9aadfeaa54086fc49ee4d9ea58, type: 2}
+  - {fileID: 11400000, guid: 97fd8c2a222de5f4db5da394d5ab15c3, type: 2}
+  - {fileID: 11400000, guid: 530cbc03c8e04bd44a4979d7baf820b6, type: 2}
+  - {fileID: 11400000, guid: b6afe18351273b64dba0f5f1bcd1abaa, type: 2}
+  - {fileID: 11400000, guid: 3c4d1a4210f73be43b590ac6c160070f, type: 2}
+  - {fileID: 11400000, guid: c782523853377cf44a9fb67cffba1d6b, type: 2}
+  - {fileID: 11400000, guid: 3c9e7732185b9c943be0b34d23980343, type: 2}
+  - {fileID: 11400000, guid: fa480edf69f47d24488389e37b7da051, type: 2}
+  - {fileID: 11400000, guid: 5aae33907e15133419989bbd82b600ed, type: 2}
+  - {fileID: 11400000, guid: e4230bd193a89ff43b264f9ceed5289d, type: 2}
+  lightA: {fileID: 11400000, guid: 440c0461418048f45b753797f831ec82, type: 2}
+  lightB: {fileID: 11400000, guid: 03f2ec9513b2ef249905385dea479ee7, type: 2}
+  heavy: {fileID: 11400000, guid: 24f74c3a2f150a547908f6d9d4328de5, type: 2}
+  guard: {fileID: 11400000, guid: fc95991b3b855924fadec4d640ad3044, type: 2}
+  idleClip: {fileID: 11400000, guid: afbfde9039b77e849b08bcfee12b2859, type: 2}
+  offHandObject: 
+  damageScale: 1.3
+  weight: 1
+  price: 300

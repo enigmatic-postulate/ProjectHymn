@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aecc5103dc4d7f479613de2e25e9376, type: 3}
+  m_Name: Broadsword
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.WeaponSet
+  displayName: Broadsword
+  swordObject: Broadsword
+  twoHanded: 1
+  stance:
+    beat: 0
+    rootOffset: {x: 0, y: -0.06, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: -8, z: 0}
+    - bone: Chest
+      euler: {x: 4, y: -4, z: 0}
+    - bone: UpperArm.R
+      euler: {x: -29, y: 10, z: -1}
+    - bone: LowerArm.R
+      euler: {x: -70, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 50, y: 14, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -34, y: 18, z: -8}
+    - bone: LowerArm.L
+      euler: {x: -62, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -18, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 22, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 14, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 24, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: -14, y: 0, z: 0}
+    - bone: Head
+      euler: {x: 0, y: 6, z: 0}
+  sequences:
+  - {fileID: 11400000, guid: f05cd097a5a6c9a44b4027cd5849fc1c, type: 2}
+  - {fileID: 11400000, guid: 4ca2c33bf299e104fb3a4802594a6331, type: 2}
+  - {fileID: 11400000, guid: 06cdbcc8514a0d74f8d41855e37437d5, type: 2}
+  lightA: {fileID: 11400000, guid: d7d9c82a5fc4aa44e9c5163d3c81d567, type: 2}
+  lightB: {fileID: 11400000, guid: 0db02212120784044a610b4fb425ee21, type: 2}
+  heavy: {fileID: 11400000, guid: 4046c6d4de2685a4186dff4ba53ef060, type: 2}
+  guard: {fileID: 11400000, guid: 18f66069e636eb64b9978a0177bcfe77, type: 2}
+  damageScale: 1

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dba82d244e0ae949b126a6a9ee09827, type: 3}
+  m_Name: HymnDatabase
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.GameDatabase
+  classes:
+  - {fileID: 11400000, guid: 0eae48d0229240a429449cda76b16cd9, type: 2}
+  - {fileID: 11400000, guid: 2cca502a49ec3ca4e84edf6839356d6c, type: 2}
+  - {fileID: 11400000, guid: 3582525cebe64a44c8f89fbd69ec3dfb, type: 2}
+  - {fileID: 11400000, guid: faba912be5eb38942a86af9f537f1653, type: 2}
+  weapons:
+  - {fileID: 11400000, guid: 6672dea146d9e834d82bc8eb2708c841, type: 2}
+  - {fileID: 11400000, guid: 07d74307b260de640abb5e335077b84f, type: 2}
+  items:
+  - {fileID: 11400000, guid: 2f4ccdbc256f2a14e9d2f13bd572b8de, type: 2}
+  - {fileID: 11400000, guid: 96a4a164dc28fdf418da292e64647d82, type: 2}
+  - {fileID: 11400000, guid: f5199e05a425f8a46aefa94abc46263f, type: 2}
+  - {fileID: 11400000, guid: 9986c20635a97ea46a7e06c81d88a28e, type: 2}
+  - {fileID: 11400000, guid: 867a2fdf5b640e249b4fcabc482a1908, type: 2}
+  - {fileID: 11400000, guid: 5bb89814bb4563b4f9d949f56fabf7c9, type: 2}
+  - {fileID: 11400000, guid: f1367ca2ef4ca81419e2c6485f0ebf31, type: 2}
+  - {fileID: 11400000, guid: 7777299691395c348b1175eca7d39222, type: 2}
+  shopStock: []
+  startingItems: []
+  hubScene: Village
+  titleScene: Title

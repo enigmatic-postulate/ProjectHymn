@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Broadsword_RisingCut
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Rising Cut
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  - beat: -0.2
+    rootOffset: {x: 0, y: -0.06, z: 0}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -48, y: 22, z: -9}
+    - bone: LowerArm.R
+      euler: {x: -7, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 76, y: 35, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -26, z: 0}
+    - bone: Chest
+      euler: {x: 12, y: -49.399998, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: -0.02, z: 0.13}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -82, y: 3, z: -21}
+    - bone: LowerArm.R
+      euler: {x: -10, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 47, y: 38, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 7.7999997, z: 0}
+    - bone: Chest
+      euler: {x: -6, y: 13, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -28, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 22, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 18, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 22, y: 0, z: 0}
+  - beat: 0.2
+    rootOffset: {x: 0, y: 0, z: 0.15599999}
+    bones:
+    - bone: UpperArm.R
+      euler: {x: -120, y: 7, z: 7}
+    - bone: LowerArm.R
+      euler: {x: -12, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 57, y: 54, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 18.199999, z: 0}
+    - bone: Chest
+      euler: {x: -12, y: 36.399998, z: 0}
+  - beat: 0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  activeStart: -0.08
+  activeEnd: 0.14
+  damage: 13
+  reach: 1.25
+  radius: 0.9
+  effect: cut
+  trailColor: {r: 1, g: 0.7529412, b: 0.4392157, a: 1}
+  offHandFree: 0

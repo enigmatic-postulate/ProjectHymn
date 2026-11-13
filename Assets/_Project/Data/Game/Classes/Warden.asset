@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91373d2e50a2db24fb81d0bc59e245c9, type: 3}
+  m_Name: Warden
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.ClassDefinition
+  id: warden
+  displayName: Warden
+  description: 'Unlocked by clean clears that lean on the guard. The simple class: read, guard, punish. A parry cuts the attacker; a block makes it skip a note. Shields and lighter weapons only.'
+  bracket: 2
+  lean: 1
+  hearts: 6
+  damage: 1
+  weapons:
+  - {fileID: 11400000, guid: 6672dea146d9e834d82bc8eb2708c841, type: 2}
+  startingSequences:
+  - Bulwark
+  - Counterpoint
+  - LanternStep
+  - Undertow
+  - HobbleGuard
+  - Breakwater
+  blockBonus: 0
+  blockDamage: 0
+  parryDamage: 20
+  blockSkipsNote: 1
+  dodgeInvulnerable: 0.25
+  commonTimeOnly: 0

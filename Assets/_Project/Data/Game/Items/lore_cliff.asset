@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12590da673892d14a91e7790c60d1374, type: 3}
+  m_Name: lore_cliff
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.ItemDefinition
+  id: lore_cliff
+  displayName: Cairn on the Shore
+  description: Carved into a cairn on the beach below the cliffs.
+  kind: 3
+  price: 0
+  heal: 2
+  damageBoost: 1.25
+  boostBeats: 16
+  teaches: 
+  loreText: "HERE THE FIRST CANTOR CLIMBED. HE COUNTED FOUR AND STRUCK ON ONE. THE BONES ON THE LEDGES COUNT TOO \u2014 LISTEN FOR THEIR BAR."
+  color: {r: 0.6039216, g: 0.72156864, b: 1, a: 1}

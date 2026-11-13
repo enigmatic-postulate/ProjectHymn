@@ -6,6 +6,48 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Project/Scenes/Title.unity
+    guid: fbd14420107318b478830f1943bfecda
+  - enabled: 1
+    path: Assets/_Project/Scenes/Village.unity
+    guid: ceb1cc47939a1154d990472de9762891
+  - enabled: 1
+    path: Assets/_Project/Scenes/Yard.unity
+    guid: e207e32c51946724c993bc089da4a6d3
+  - enabled: 1
+    path: Assets/_Project/Scenes/Cliffside.unity
+    guid: f065349eb2253d942b943fed203b6e02
+  - enabled: 1
+    path: Assets/_Project/Scenes/Belfry.unity
+    guid: b7eb814a5b7f49647bda8f9d27da95b9
+  - enabled: 1
+    path: Assets/_Project/Scenes/Summit.unity
+    guid: cd4a4d117b504bf4eacaf89ba9e422a9
+  - enabled: 1
+    path: Assets/_Project/Scenes/Arena.unity
+    guid: 0d11f1f79ad18614393554f23c0bb3da
+  - enabled: 1
+    path: Assets/_Project/Scenes/Spring.unity
+    guid: 8154b67e0b92f6f46a778f45fb79f948
+  - enabled: 1
+    path: Assets/_Project/Scenes/Ending.unity
+    guid: 761b39afdddc6b94cb8d407e0b314c8a
+  - enabled: 1
+    path: Assets/_Project/Scenes/AirBell.unity
+    guid: 990bb1e23b597884a9b52d8b010ab483
+  - enabled: 1
+    path: Assets/_Project/Scenes/Nave.unity
+    guid: a55d432649157294ab65f1683c621532
+  - enabled: 1
+    path: Assets/_Project/Scenes/Loft.unity
+    guid: 8d118e841f2cf4f40a07b4be602873c8
+  - enabled: 1
+    path: Assets/_Project/Scenes/Apse.unity
+    guid: 17ce53074ad1a084da54ede9b31f9832
+  - enabled: 1
+    path: Assets/_Project/Scenes/Prototype.unity
+    guid: 2402c87cd1ee5f04f822c52983621942
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects:

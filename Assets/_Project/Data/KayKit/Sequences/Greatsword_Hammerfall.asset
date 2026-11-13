@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: Greatsword_Hammerfall
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Hammerfall
+  id: Hammerfall
+  meter: 4/4
+  tree: fighter
+  effect: 0
+  notes: 020000000200000002000000i
+  moves:
+  - {fileID: 11400000, guid: 24f74c3a2f150a547908f6d9d4328de5, type: 2}
+  - {fileID: 11400000, guid: 590193de9f01178428bf5849ac9db602, type: 2}
+  - {fileID: 11400000, guid: 24f74c3a2f150a547908f6d9d4328de5, type: 2}
+  finisherMultiplier: 2
+  color: {r: 1, g: 0.6039216, b: 0.2901961, a: 1}

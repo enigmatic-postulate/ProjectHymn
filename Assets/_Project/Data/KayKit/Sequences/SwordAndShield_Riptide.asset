@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: SwordAndShield_Riptide
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Riptide
+  id: Riptide
+  meter: 9/8
+  tree: crusader
+  effect: 0
+  notes: 020000000100000001000000020000000100000001000000020000000100000001000000i
+  moves:
+  - {fileID: 11400000, guid: fc720c35147c2074ab93accbc27a8a2b, type: 2}
+  - {fileID: 11400000, guid: 40bc11bde83de814e9cb96070ab4b691, type: 2}
+  - {fileID: 11400000, guid: e360bac34bc90744fa1d835884d88e99, type: 2}
+  - {fileID: 11400000, guid: fc720c35147c2074ab93accbc27a8a2b, type: 2}
+  - {fileID: 11400000, guid: 40bc11bde83de814e9cb96070ab4b691, type: 2}
+  - {fileID: 11400000, guid: e360bac34bc90744fa1d835884d88e99, type: 2}
+  - {fileID: 11400000, guid: 68950aa3fb0a5884697d125c94b81828, type: 2}
+  - {fileID: 11400000, guid: 40bc11bde83de814e9cb96070ab4b691, type: 2}
+  - {fileID: 11400000, guid: b251343b2737b194286381857a9544ee, type: 2}
+  finisherMultiplier: 3
+  color: {r: 0.2509804, g: 0.84705883, b: 1, a: 1}

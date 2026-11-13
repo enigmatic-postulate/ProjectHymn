@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91373d2e50a2db24fb81d0bc59e245c9, type: 3}
+  m_Name: Crusader
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.ClassDefinition
+  id: crusader
+  displayName: Crusader
+  description: Unlocked by clean clears that dodge rather than block. Longer dodge frames, heavier blows, fewer hearts. No shield, heavier weapons only (taking the class brings the greatsword). The brandish is still to come.
+  bracket: 2
+  lean: 2
+  hearts: 4
+  damage: 1.15
+  weapons:
+  - {fileID: 11400000, guid: 07d74307b260de640abb5e335077b84f, type: 2}
+  startingSequences:
+  - Brandish
+  - Judgement
+  - Crusade
+  - Riptide
+  - Processional
+  - Keelhaul
+  blockBonus: 0
+  blockDamage: 0
+  parryDamage: 0
+  blockSkipsNote: 0
+  dodgeInvulnerable: 0.4
+  commonTimeOnly: 0

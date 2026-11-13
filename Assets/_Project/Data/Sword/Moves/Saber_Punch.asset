@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f8917e47af666489141f1a00560193, type: 3}
+  m_Name: Saber_Punch
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordMove
+  displayName: Quick Punch
+  keys:
+  - beat: -0.5
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  - beat: -0.15
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones:
+    - bone: UpperArm.L
+      euler: {x: 60, y: 8, z: 3}
+    - bone: LowerArm.L
+      euler: {x: -140, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 78, y: 0, z: 0}
+    - bone: UpperArm.R
+      euler: {x: 0, y: -15, z: -8}
+    - bone: LowerArm.R
+      euler: {x: -101, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 3, y: 4, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: 14, z: 0}
+    - bone: Chest
+      euler: {x: 0, y: 22, z: 0}
+  - beat: 0
+    rootOffset: {x: 0, y: -0.03, z: 0.14}
+    bones:
+    - bone: UpperArm.L
+      euler: {x: -63, y: 25, z: 40}
+    - bone: LowerArm.L
+      euler: {x: -38, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 28, y: 0, z: 0}
+    - bone: UpperArm.R
+      euler: {x: 35, y: -120, z: -40}
+    - bone: LowerArm.R
+      euler: {x: -116, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -6, y: -49, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -20, z: 0}
+    - bone: Chest
+      euler: {x: 4, y: -30, z: 0}
+  - beat: 0.15
+    rootOffset: {x: 0, y: -0.03, z: 0.12}
+    bones:
+    - bone: UpperArm.L
+      euler: {x: -61, y: 22, z: 39}
+    - bone: LowerArm.L
+      euler: {x: -36, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 14, y: 0, z: 0}
+    - bone: UpperArm.R
+      euler: {x: 48, y: -120, z: -40}
+    - bone: LowerArm.R
+      euler: {x: -121, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: -16, y: -46, z: 0}
+    - bone: Hips
+      euler: {x: 0, y: -18, z: 0}
+    - bone: Chest
+      euler: {x: 4, y: -26, z: 0}
+  - beat: 0.45
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones: []
+  activeStart: -0.04
+  activeEnd: 0.08
+  damage: 7
+  reach: 0.9
+  radius: 0.7
+  effect: punch
+  trailColor: {r: 1, g: 1, b: 1, a: 1}
+  offHandFree: 1

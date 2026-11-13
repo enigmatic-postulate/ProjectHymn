@@ -1,0 +1,334 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 965bd412535294748a6925c8129f1ced, type: 3}
+  m_Name: Locomotion
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.LocomotionSet
+  run:
+  - beat: 0
+    rootOffset: {x: 0, y: -0.035, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: -8, z: 0}
+    - bone: Chest
+      euler: {x: 12, y: 8, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -38, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 16, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 30, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 62, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: -12, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 30, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -42, y: 0, z: -10}
+    - bone: LowerArm.L
+      euler: {x: -58, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -8, y: 0, z: 0}
+  - beat: 0.25
+    rootOffset: {x: 0, y: 0.05, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 14, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: 10, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 28, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -52, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 105, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 12, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 10, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -8, y: 0, z: -12}
+    - bone: LowerArm.L
+      euler: {x: -64, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -8, y: 0, z: 0}
+  - beat: 0.5
+    rootOffset: {x: 0, y: -0.035, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 8, z: 0}
+    - bone: Chest
+      euler: {x: 12, y: -8, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: 30, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 62, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -38, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 16, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 30, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: -12, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: 34, y: 0, z: -12}
+    - bone: LowerArm.L
+      euler: {x: -36, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -8, y: 0, z: 0}
+  - beat: 0.75
+    rootOffset: {x: 0, y: 0.05, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 14, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -52, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 105, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 10, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 28, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 10, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 12, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -8, y: 0, z: -12}
+    - bone: LowerArm.L
+      euler: {x: -64, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -8, y: 0, z: 0}
+  jump:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -8, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -62, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 78, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 18, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 36, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 10, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 35, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -150, y: 0, z: -22}
+    - bone: LowerArm.L
+      euler: {x: -20, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -10, y: 0, z: 0}
+  airJump:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 28, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -105, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 130, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -95, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 130, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 20, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 20, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -70, y: 0, z: -18}
+    - bone: LowerArm.L
+      euler: {x: -95, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: 22, y: 0, z: 0}
+  fall:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 2, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -28, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 42, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 14, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 30, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: -6, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 18, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -60, y: 0, z: -62}
+    - bone: LowerArm.L
+      euler: {x: -24, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: 6, y: 0, z: 0}
+  land:
+    beat: 0
+    rootOffset: {x: 0, y: -0.3, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 26, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -62, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 100, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -38, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 92, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: -36, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: -50, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -36, y: 0, z: -36}
+    - bone: LowerArm.L
+      euler: {x: -40, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -14, y: 0, z: 0}
+  hang:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0.18}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: -4, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -14, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 22, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: 6, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 14, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: 25, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: 30, y: 0, z: 0}
+    - bone: UpperArm.R
+      euler: {x: -166, y: 0, z: -6}
+    - bone: LowerArm.R
+      euler: {x: -8, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 0, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -166, y: 0, z: 6}
+    - bone: LowerArm.L
+      euler: {x: -8, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -18, y: 0, z: 0}
+  climbPull:
+    beat: 0
+    rootOffset: {x: 0, y: 0, z: 0.26}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 34, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -95, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 115, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -10, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 40, y: 0, z: 0}
+    - bone: UpperArm.R
+      euler: {x: -40, y: 0, z: 12}
+    - bone: LowerArm.R
+      euler: {x: -70, y: 0, z: 0}
+    - bone: Hand.R
+      euler: {x: 0, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -40, y: 0, z: -12}
+    - bone: LowerArm.L
+      euler: {x: -70, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -20, y: 0, z: 0}
+  climbOver:
+    beat: 0
+    rootOffset: {x: 0, y: -0.28, z: 0}
+    bones:
+    - bone: Hips
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Chest
+      euler: {x: 24, y: 0, z: 0}
+    - bone: UpperLeg.R
+      euler: {x: -60, y: 0, z: 4}
+    - bone: LowerLeg.R
+      euler: {x: 98, y: 0, z: 0}
+    - bone: UpperLeg.L
+      euler: {x: -36, y: 0, z: -4}
+    - bone: LowerLeg.L
+      euler: {x: 88, y: 0, z: 0}
+    - bone: Foot.R
+      euler: {x: -34, y: 0, z: 0}
+    - bone: Foot.L
+      euler: {x: -48, y: 0, z: 0}
+    - bone: UpperArm.L
+      euler: {x: -40, y: 0, z: -30}
+    - bone: LowerArm.L
+      euler: {x: -50, y: 0, z: 0}
+    - bone: Hand.L
+      euler: {x: 0, y: 0, z: 0}
+    - bone: Head
+      euler: {x: -10, y: 0, z: 0}
+  cadence: 2.8
+  flipSeconds: 0.42
+  landSeconds: 0.14
+  minStride: 0.35
+  additiveBones:
+  - Spine
+  - Chest

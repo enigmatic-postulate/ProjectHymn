@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91373d2e50a2db24fb81d0bc59e245c9, type: 3}
+  m_Name: Minstrel
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.ClassDefinition
+  id: minstrel
+  displayName: Minstrel
+  description: 'Everyone starts here: a wandering Cantor who fights to the beat. What you become depends on how you play.'
+  bracket: 1
+  lean: 0
+  hearts: 5
+  damage: 1
+  weapons:
+  - {fileID: 11400000, guid: 6672dea146d9e834d82bc8eb2708c841, type: 2}
+  - {fileID: 11400000, guid: 07d74307b260de640abb5e335077b84f, type: 2}
+  startingSequences:
+  - CrossingCuts
+  - Powerslice
+  - RisingVerse
+  - Swell
+  - Barcarolle
+  - Roundel
+  - LimpingVerse
+  - TideVerse
+  blockBonus: 0
+  blockDamage: 0
+  parryDamage: 0
+  blockSkipsNote: 0
+  dodgeInvulnerable: 0.25
+  commonTimeOnly: 0

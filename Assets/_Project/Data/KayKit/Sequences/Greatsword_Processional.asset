@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7982bfb07f800ee49bce2e30600dca18, type: 3}
+  m_Name: Greatsword_Processional
+  m_EditorClassIdentifier: ProjectHymn.Runtime::ProjectHymn.Gameplay.SwordSequence
+  displayName: Processional
+  id: Processional
+  meter: 3/4
+  tree: crusader
+  effect: 0
+  notes: 020000000100000002000000i
+  moves:
+  - {fileID: 11400000, guid: 24f74c3a2f150a547908f6d9d4328de5, type: 2}
+  - {fileID: 11400000, guid: 440c0461418048f45b753797f831ec82, type: 2}
+  - {fileID: 11400000, guid: 822538d66cc54ba4aba5d9790f803b91, type: 2}
+  finisherMultiplier: 1.9
+  color: {r: 1, g: 0.8784314, b: 0.627451, a: 1}
